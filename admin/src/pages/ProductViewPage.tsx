@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Shirt } from 'lucide-react';
+import { ArrowLeft, Layers, List, Palette, Shirt, Type } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { getProduct, type AdminProduct } from '@/api/products';
 import { routes } from '@/app/constants';
@@ -8,9 +8,32 @@ import { useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/Button';
-import { FormSection } from '@/components/ui/form-section';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatMoney } from '@/lib/format';
+
+function DetailTable({ children, caption }: { children: ReactNode; caption: string }) {
+  return (
+    <div className="min-w-0 overflow-hidden border border-border bg-background">
+      <Table>
+        <caption className="sr-only">{caption}</caption>
+        {children}
+      </Table>
+    </div>
+  );
+}
+
+function DetailHead({ children }: { children: ReactNode }) {
+  return (
+    <TableHead className="bg-muted px-4 py-3 font-sans text-sm font-extrabold tracking-wide text-muted-foreground uppercase">
+      {children}
+    </TableHead>
+  );
+}
+
+function DetailCell({ children }: { children: ReactNode }) {
+  return <TableCell className="px-4 py-3 font-sans">{children}</TableCell>;
+}
 
 function statusLabel(product: AdminProduct): { text: string; className: string } {
   if (product.deleted_at) {
@@ -88,7 +111,7 @@ export function ProductViewPage() {
   const frontUrl = product?.front_image?.url;
 
   return (
-    <div className="page">
+    <div className="page min-w-0">
       <PageHeader
         title={product?.name ?? 'Продукт'}
         help="Преглед на продукт, параметри, опции, варианти и персонализация. Редакцията ще бъде отделен екран."
@@ -114,8 +137,8 @@ export function ProductViewPage() {
       ) : null}
 
       {product ? (
-        <div className="form-grid">
-          <FormSection>
+        <div className="min-w-0 max-w-full columns-1 gap-3 min-[960px]:columns-2">
+          <CollapsibleSection title="Общи данни" icon={Shirt}>
             <div className="flex flex-wrap gap-4">
               <div className="flex size-24 items-center justify-center overflow-hidden rounded-[6px] border border-border bg-muted">
                 {frontUrl ? (
@@ -157,34 +180,32 @@ export function ProductViewPage() {
             {product.description ? (
               <p className="mb-0 mt-3 whitespace-pre-wrap text-muted-foreground">{product.description}</p>
             ) : null}
-          </FormSection>
+          </CollapsibleSection>
 
-          <FormSection>
-            <h2 className="section-label mt-0">Параметри</h2>
+          <CollapsibleSection title="Параметри" icon={List}>
             {product.parameters.length === 0 ? (
               <p className="mb-0 text-muted-foreground">Няма информационни параметри.</p>
             ) : (
-              <Table>
+              <DetailTable caption="Параметри на продукта">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Име</TableHead>
-                    <TableHead>Стойност</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <DetailHead>Име</DetailHead>
+                    <DetailHead>Стойност</DetailHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {product.parameters.map((row) => (
                     <TableRow key={row.id}>
-                      <TableCell>{row.name}</TableCell>
-                      <TableCell>{row.value}</TableCell>
+                      <DetailCell>{row.name}</DetailCell>
+                      <DetailCell>{row.value}</DetailCell>
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </DetailTable>
             )}
-          </FormSection>
+          </CollapsibleSection>
 
-          <FormSection>
-            <h2 className="section-label mt-0">Опции</h2>
+          <CollapsibleSection title="Опции" icon={Palette}>
             {product.options.length === 0 ? (
               <p className="mb-0 text-muted-foreground">Няма опции за избор.</p>
             ) : (
@@ -204,28 +225,27 @@ export function ProductViewPage() {
                 ))}
               </div>
             )}
-          </FormSection>
+          </CollapsibleSection>
 
-          <FormSection>
-            <h2 className="section-label mt-0">Варианти</h2>
+          <CollapsibleSection title="Варианти" icon={Layers}>
             {product.variants.length === 0 ? (
               <p className="mb-0 text-muted-foreground">Няма варианти.</p>
             ) : (
-              <Table>
+              <DetailTable caption="Варианти на продукта">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Вариант</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Цена</TableHead>
-                    <TableHead>Наличност</TableHead>
-                    <TableHead>Статус</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <DetailHead>Вариант</DetailHead>
+                    <DetailHead>SKU</DetailHead>
+                    <DetailHead>Цена</DetailHead>
+                    <DetailHead>Наличност</DetailHead>
+                    <DetailHead>Статус</DetailHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {product.variants.map((variant) => (
                     <TableRow key={variant.id}>
-                      <TableCell>
-                        <span className="flex flex-wrap items-center gap-2">
+                      <DetailCell>
+                        <span className="inline-flex items-center gap-2">
                           {variant.option_values.map((value) => (
                             <span key={`${variant.id}-${value.option}-${value.value}`} className="inline-flex items-center gap-1">
                               <ColorDot hex={value.hex_color} />
@@ -234,57 +254,56 @@ export function ProductViewPage() {
                           ))}
                           {variant.is_default ? <span className="badge info">По подразбиране</span> : null}
                         </span>
-                      </TableCell>
-                      <TableCell>{variant.sku || '—'}</TableCell>
-                      <TableCell>{formatMoney(variant.price ?? product.price)}</TableCell>
-                      <TableCell>{variant.stock}</TableCell>
-                      <TableCell>
+                      </DetailCell>
+                      <DetailCell>{variant.sku || '—'}</DetailCell>
+                      <DetailCell>{formatMoney(variant.price ?? product.price)}</DetailCell>
+                      <DetailCell>{variant.stock}</DetailCell>
+                      <DetailCell>
                         <span className={`badge ${variant.is_active ? 'ok' : 'idle'}`}>
                           {variant.is_active ? 'Активен' : 'Неактивен'}
                         </span>
-                      </TableCell>
+                      </DetailCell>
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </DetailTable>
             )}
-          </FormSection>
+          </CollapsibleSection>
 
           {product.personalization_enabled ? (
-            <FormSection>
-              <h2 className="section-label mt-0">Персонализация</h2>
+            <CollapsibleSection title="Персонализация" icon={Type}>
               <p className="mt-0">{product.personalization_label || 'Текст за персонализация'}</p>
               {product.personalization_description ? (
                 <p className="text-muted-foreground">{product.personalization_description}</p>
               ) : null}
               {product.personalization_fields.length > 0 ? (
-                <Table>
+                <DetailTable caption="Полета за персонализация">
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Поле</TableHead>
-                      <TableHead>Тип</TableHead>
-                      <TableHead>Задължително</TableHead>
-                      <TableHead>Макс. дължина</TableHead>
+                    <TableRow className="hover:bg-transparent">
+                      <DetailHead>Поле</DetailHead>
+                      <DetailHead>Тип</DetailHead>
+                      <DetailHead>Задължително</DetailHead>
+                      <DetailHead>Макс. дължина</DetailHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {product.personalization_fields.map((field) => (
                       <TableRow key={field.id}>
-                        <TableCell>
+                        <DetailCell>
                           <p className="m-0 font-bold">{field.name}</p>
                           {field.description ? (
                             <p className="mb-0 mt-1 text-muted-foreground">{field.description}</p>
                           ) : null}
-                        </TableCell>
-                        <TableCell>{field.field_type === 'textarea' ? 'Многоредов текст' : 'Текст'}</TableCell>
-                        <TableCell>{field.is_required ? 'Да' : 'Не'}</TableCell>
-                        <TableCell>{field.max_length ?? '—'}</TableCell>
+                        </DetailCell>
+                        <DetailCell>{field.field_type === 'textarea' ? 'Многоредов текст' : 'Текст'}</DetailCell>
+                        <DetailCell>{field.is_required ? 'Да' : 'Не'}</DetailCell>
+                        <DetailCell>{field.max_length ?? '—'}</DetailCell>
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </DetailTable>
               ) : null}
-            </FormSection>
+            </CollapsibleSection>
           ) : null}
         </div>
       ) : null}
