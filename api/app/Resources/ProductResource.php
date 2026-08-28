@@ -23,6 +23,8 @@ class ProductResource
             'variants.variantValues.option',
             'variants.variantValues.optionValue',
             'personalizationFields',
+            'frontImage',
+            'galleryImages',
         ]);
 
         return [
@@ -41,6 +43,10 @@ class ProductResource
             'personalization_required' => $product->personalization_required,
             'personalization_max_length' => $product->personalization_max_length,
             'sort_order' => $product->sort_order,
+            'front_image' => $product->frontImage
+                ? ProductImageResource::toArray($product->frontImage)
+                : null,
+            'gallery_images' => ProductImageResource::collection($product->galleryImages),
             'parameters' => $product->parameters->map(static fn (ProductParameter $row): array => [
                 'id' => $row->id,
                 'name' => $row->name,
@@ -110,6 +116,9 @@ class ProductResource
             'personalization_enabled' => $product->personalization_enabled,
             'sort_order' => $product->sort_order,
             'variants_count' => (int) ($product->variants_count ?? $product->variants()->count()),
+            'front_image' => $product->frontImage
+                ? ProductImageResource::toArray($product->frontImage)
+                : null,
             'created_at' => $product->created_at?->toIso8601String(),
             'updated_at' => $product->updated_at?->toIso8601String(),
             'deleted_at' => $product->deleted_at?->toIso8601String(),

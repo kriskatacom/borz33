@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\Admin\ProductImagesController;
 use App\Controllers\Admin\ProductsController;
 use App\Controllers\Admin\UsersController;
 use App\Controllers\Auth\EmailVerificationController;
@@ -50,3 +51,8 @@ $router->put('/admin/products/{id}', [ProductsController::class, 'update'], $adm
 $router->patch('/admin/products/{id}', [ProductsController::class, 'update'], $admin);
 $router->delete('/admin/products/{id}', [ProductsController::class, 'destroy'], $admin);
 $router->post('/admin/products/{id}/restore', [ProductsController::class, 'restore'], $admin);
+$router->post('/admin/products/{id}/images/front', [ProductImagesController::class, 'storeFront'], $admin);
+$router->post('/admin/products/{id}/images', [ProductImagesController::class, 'storeGallery'], $admin);
+$router->post('/admin/products/{id}/images/{imageId}/front', [ProductImagesController::class, 'makeFront'], $admin);
+$router->patch('/admin/products/{id}/images/{imageId}', [ProductImagesController::class, 'update'], $admin);
+$router->delete('/admin/products/{id}/images/{imageId}', [ProductImagesController::class, 'destroy'], $admin);

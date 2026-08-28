@@ -142,7 +142,8 @@ $mailer->sendTemplate('user@example.com', 'Заглавие', 'verify-registrati
 - **product_options** / **product_option_values** — избор като размер и цвят (`hex_color` за мостри).
 - **product_variants** — конкретна комбинация с SKU, цена и наличност.
 - **product_variant_values** — връзка вариант ↔ опция (по една стойност на опция).
-- **Персонализация** — `personalization_enabled` плюс етикет и описание върху продукта; допълнителни полета в `product_personalization_fields` (текст/textarea, задължително, макс. дължина). Ако няма полета, `Product::personalizationInputs()` връща едно поле от етикета и описанието на продукта. Текстът на клиента ще се пази по-късно върху реда в количката.
+- **product_images** — едно предно (`role=front`) и неограничена галерия (`role=gallery`). Файлове в `api/public/uploads/products/{id}/`.
+- **Персонализация** — `personalization_enabled` плюс етикет и описание върху продукта; допълнителни полета в `product_personalization_fields`. Ако няма полета, `Product::personalizationInputs()` връща едно поле от етикета и описанието на продукта.
 
 Админ (Bearer, роля `admin`):
 
@@ -152,8 +153,15 @@ $mailer->sendTemplate('user@example.com', 'Заглавие', 'verify-registrati
 | POST | `/admin/products` | Нов продукт с параметри, опции, варианти и персонализация |
 | GET | `/admin/products/{id}` | Детайли, включително изтрит продукт |
 | PATCH / PUT | `/admin/products/{id}` | Редакция |
-| DELETE | `/admin/products/{id}` | Меко изтриване |
+| DELETE | `/admin/products/{id}` | Меко изтриване. `?purge_images=1` трие и файловете на изображенията |
 | POST | `/admin/products/{id}/restore` | Възстановяване |
+| POST | `/admin/products/{id}/images/front` | Предно изображение (`multipart`: `image`, по желание `alt`). Заменя старото |
+| POST | `/admin/products/{id}/images` | Допълнителни изображения (`image` или `images[]`) |
+| PATCH | `/admin/products/{id}/images/{imageId}` | `alt`, `sort_order` |
+| POST | `/admin/products/{id}/images/{imageId}/front` | Прави галерийно изображение предно (старото предно отива в галерията) |
+| DELETE | `/admin/products/{id}/images/{imageId}` | Изтрива изображение и файла |
+
+JPEG, PNG и WebP, до 8 MB. Файловете са в `api/public/uploads/products/{id}/` и се сервират като `/uploads/products/{id}/...`. Без `purge_images` мекото изтриване пази файловете, за да може продуктът да се възстанови със снимките.
 
 Ако в PATCH се подадат `parameters`, `options`, `variants` или `personalization_fields` (дори празен масив), колекцията се заменя. Ако ключът липсва, съществуващите записи остават. `slug` се генерира от името, ако не е подаден.
 

@@ -621,7 +621,7 @@
               { "key": "Authorization", "value": "Bearer {{adminToken}}" }
             ],
             "url": "{{baseUrl}}/admin/products/{{productId}}",
-            "description": "Меко изтриване."
+            "description": "Меко изтриване. Добави ?purge_images=1 за да се изтрият и файловете на изображенията."
           },
           "response": []
         },
@@ -635,6 +635,102 @@
             ],
             "url": "{{baseUrl}}/admin/products/{{productId}}/restore",
             "description": "Възстановяване след меко изтриване."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload front image",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "image", "type": "file", "src": [], "description": "JPEG, PNG или WebP" },
+                { "key": "alt", "type": "text", "value": "Класическа тениска" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/products/{{productId}}/images/front",
+            "description": "Едно предно изображение. Повторно качване заменя файла."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload gallery images",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "images[]", "type": "file", "src": [], "description": "Може няколко файла" },
+                { "key": "alt", "type": "text", "value": "Детайл" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/products/{{productId}}/images",
+            "description": "Неограничен брой допълнителни изображения. Поле image или images[]."
+          },
+          "response": []
+        },
+        {
+          "name": "Update image",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alt\": \"Преден изглед\",\n  \"sort_order\": 1\n}"
+            },
+            "url": "{{baseUrl}}/admin/products/{{productId}}/images/1",
+            "description": "Смяна на alt и ред в галерията."
+          },
+          "response": []
+        },
+        {
+          "name": "Make image front",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/admin/products/{{productId}}/images/1/front",
+            "description": "Галерийното изображение става предно. Старото предно отива в галерията."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete image",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/admin/products/{{productId}}/images/1"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete product and images",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/admin/products/{{productId}}?purge_images=1",
+            "description": "Меко изтриване на продукта и физическо изтриване на всички негови изображения."
           },
           "response": []
         }

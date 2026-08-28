@@ -28,6 +28,7 @@ class ProductAdminService
         $query = $this->filteredQuery($filters);
         $total = (clone $query)->count();
         $products = $query
+            ->with('frontImage')
             ->withCount('variants')
             ->orderBy('sort_order')
             ->orderByDesc('id')
@@ -80,10 +81,14 @@ class ProductAdminService
         return $product;
     }
 
-    public function delete(Product $product): void
+    public function delete(Product $product, bool $purgeImages = false): void
     {
         if ($product->trashed()) {
             throw new AuthException('Продуктът вече е изтрит.');
+        }
+
+        if ($purgeImages) {
+            (new ProductImageService())->purgeForProduct($product);
         }
 
         $product->delete();

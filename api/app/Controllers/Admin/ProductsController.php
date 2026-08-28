@@ -49,7 +49,7 @@ class ProductsController extends Controller
 
     public function destroy(string $id): never
     {
-        $this->products->delete($this->products->find($this->id($id)));
+        $this->products->delete($this->products->find($this->id($id)), Request::wantsTrue('purge_images'));
 
         $this->ok([], 'Продуктът е изтрит.');
     }

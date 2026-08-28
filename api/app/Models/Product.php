@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
@@ -78,6 +79,24 @@ class Product extends Model
     public function personalizationFields(): HasMany
     {
         return $this->hasMany(ProductPersonalizationField::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('role')->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function frontImage(): HasOne
+    {
+        return $this->hasOne(ProductImage::class)->where('role', ProductImage::ROLE_FRONT);
+    }
+
+    public function galleryImages(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)
+            ->where('role', ProductImage::ROLE_GALLERY)
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     /** @return Collection<int, ProductPersonalizationField> */

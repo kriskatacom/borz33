@@ -8,3 +8,5 @@ dist/
 .tmp/
 .npm-cache/
 admin/.npm-cache/
+api/public/uploads/**
+!api/public/uploads/.gitkeep

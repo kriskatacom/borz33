@@ -1,0 +1,117 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Products;
+
+use App\Exceptions\ValidationException;
+
+class ProductImageStorage
+{
+    /** @var array<string, string> */
+    public const MIME_EXTENSIONS = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+    ];
+
+    public function publicRoot(): string
+    {
+        return dirname(__DIR__, 3) . '/public';
+    }
+
+    public function absolutePath(string $relativePath): string
+    {
+        return $this->publicRoot() . '/' . ltrim($relativePath, '/');
+    }
+
+    public function directory(int $productId): string
+    {
+        return 'uploads/products/' . $productId;
+    }
+
+    /**
+     * @param array<string, mixed> $file
+     * @return array{path: string, mime: string}
+     */
+    public function store(int $productId, array $file, string $prefix): array
+    {
+        $mime = $this->detectMime($file);
+        $extension = self::MIME_EXTENSIONS[$mime] ?? null;
+
+        if ($extension === null) {
+            throw new ValidationException(['image' => ['Разрешени са JPEG, PNG и WebP.']]);
+        }
+
+        $directory = $this->directory($productId);
+        $absoluteDirectory = $this->publicRoot() . '/' . $directory;
+
+        if (!is_dir($absoluteDirectory) && !mkdir($absoluteDirectory, 0775, true) && !is_dir($absoluteDirectory)) {
+            throw new ValidationException(['image' => ['Изображението не можа да се запише.']]);
+        }
+
+        $filename = $prefix . '-' . bin2hex(random_bytes(8)) . '.' . $extension;
+        $relative = $directory . '/' . $filename;
+        $target = $this->absolutePath($relative);
+        $tmp = (string) $file['tmp_name'];
+
+        if (is_uploaded_file($tmp)) {
+            $moved = move_uploaded_file($tmp, $target);
+        } else {
+            $moved = copy($tmp, $target);
+        }
+
+        if (!$moved) {
+            throw new ValidationException(['image' => ['Изображението не можа да се запише.']]);
+        }
+
+        return ['path' => $relative, 'mime' => $mime];
+    }
+
+    public function deleteFile(string $relativePath): void
+    {
+        $absolute = $this->absolutePath($relativePath);
+
+        if (is_file($absolute)) {
+            unlink($absolute);
+        }
+    }
+
+    public function deleteProductDirectory(int $productId): void
+    {
+        $directory = $this->publicRoot() . '/' . $this->directory($productId);
+
+        if (!is_dir($directory)) {
+            return;
+        }
+
+        $items = scandir($directory);
+
+        if ($items === false) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $path = $directory . '/' . $item;
+
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+
+        @rmdir($directory);
+    }
+
+    /** @param array<string, mixed> $file */
+    public function detectMime(array $file): string
+    {
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file((string) $file['tmp_name']);
+
+        return is_string($mime) ? $mime : 'application/octet-stream';
+    }
+}
