@@ -53,6 +53,7 @@ export function ForgotPasswordPage() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           error={error}
+          placeholder="admin@example.com"
           required
         />
         {message ? (

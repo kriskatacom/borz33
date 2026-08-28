@@ -16,6 +16,34 @@ import { cn } from '@/lib/utils';
 
 const EMPTY_DATA: never[] = [];
 
+function getPageItems(page: number, lastPage: number): Array<number | 'ellipsis'> {
+  const total = Math.max(1, lastPage);
+
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, index) => index + 1);
+  }
+
+  const start = Math.max(2, page - 1);
+  const end = Math.min(total - 1, page + 1);
+  const items: Array<number | 'ellipsis'> = [1];
+
+  if (start > 2) {
+    items.push('ellipsis');
+  }
+
+  for (let current = start; current <= end; current += 1) {
+    items.push(current);
+  }
+
+  if (end < total - 1) {
+    items.push('ellipsis');
+  }
+
+  items.push(total);
+
+  return items;
+}
+
 export type DataTablePagination = {
   page: number;
   lastPage: number;
@@ -148,27 +176,55 @@ export function DataTable<TData extends RowData>({
 
       {pagination ? (
         <div className="pager">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={pagination.page <= 1 || loading}
-            onClick={() => pagination.onPageChange(pagination.page - 1)}
-          >
-            <ChevronLeft />
-            Назад
-          </Button>
           <p className="m-0 font-sans text-sm text-muted-foreground">
-            Страница {pagination.page} от {pagination.lastPage} · {pagination.total} записа
+            Страница {pagination.page} от {Math.max(1, pagination.lastPage)} · {pagination.total} записа
           </p>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={pagination.page >= pagination.lastPage || loading}
-            onClick={() => pagination.onPageChange(pagination.page + 1)}
-          >
-            Напред
-            <ChevronRight />
-          </Button>
+          <nav className="flex flex-wrap items-center gap-1" aria-label="Страници">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={pagination.page <= 1 || loading}
+              aria-label="Предишна страница"
+              onClick={() => pagination.onPageChange(pagination.page - 1)}
+            >
+              <ChevronLeft />
+            </Button>
+            {getPageItems(pagination.page, pagination.lastPage).map((item, index) =>
+              item === 'ellipsis' ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="grid size-9 place-items-center font-sans text-sm text-muted-foreground"
+                  aria-hidden
+                >
+                  …
+                </span>
+              ) : (
+                <Button
+                  key={item}
+                  type="button"
+                  variant={item === pagination.page ? 'default' : 'outline'}
+                  size="icon"
+                  disabled={loading}
+                  aria-label={`Страница ${item}`}
+                  aria-current={item === pagination.page ? 'page' : undefined}
+                  onClick={() => pagination.onPageChange(item)}
+                >
+                  {item}
+                </Button>
+              )
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={pagination.page >= pagination.lastPage || loading || pagination.lastPage <= 1}
+              aria-label="Следваща страница"
+              onClick={() => pagination.onPageChange(pagination.page + 1)}
+            >
+              <ChevronRight />
+            </Button>
+          </nav>
         </div>
       ) : null}
     </div>

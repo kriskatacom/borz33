@@ -72,6 +72,7 @@ export function ResetPasswordPage() {
               onChange={(event) => setPassword(event.target.value)}
               error={errors.password}
               hint="Поне 8 символа."
+              placeholder="Поне 8 символа"
               required
             />
             <Field
@@ -82,6 +83,7 @@ export function ResetPasswordPage() {
               value={passwordConfirmation}
               onChange={(event) => setPasswordConfirmation(event.target.value)}
               error={errors.password_confirmation}
+              placeholder="Повторете паролата"
               required
             />
             {message ? (

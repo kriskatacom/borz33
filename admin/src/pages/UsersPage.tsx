@@ -7,10 +7,11 @@ import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { DataTable } from '@/components/data-table/DataTable';
 import { useGlobalLoading } from '@/components/loading-provider';
+import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Field } from '@/components/ui/Field';
-import { HelpHint, LabelWithHelp } from '@/components/ui/HelpHint';
+import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getUsersColumns } from '@/features/users/usersColumns';
 
@@ -138,21 +139,22 @@ export function UsersPage() {
 
   return (
     <div className="page">
-      <header className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="m-0 flex items-center gap-1.5 text-xl! font-normal">
-          Потребители
-          <HelpHint label="Потребители">
-            Списък с администратори и клиенти. От тук търсите, филтрирате, редактирате, изтривате или възстановявате
-            профили.
-          </HelpHint>
-        </h1>
-        <Button asChild>
-          <Link to={routes.usersNew}>
-            <UserPlus />
-            Нов потребител
-          </Link>
-        </Button>
-      </header>
+      <PageHeader
+        title="Потребители"
+        help="Списък с администратори и клиенти. От тук търсите, филтрирате, редактирате, изтривате или възстановявате профили."
+        crumbs={[
+          { label: 'Табло', to: routes.home },
+          { label: 'Потребители' },
+        ]}
+        actions={
+          <Button asChild>
+            <Link to={routes.usersNew}>
+              <UserPlus />
+              Нов потребител
+            </Link>
+          </Button>
+        }
+      />
 
       <form className="filters" onSubmit={(event) => event.preventDefault()}>
         <Field

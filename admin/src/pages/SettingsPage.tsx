@@ -1,11 +1,13 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
+import { routes } from '@/app/constants';
 import { useTheme, type Theme } from '@/components/theme-provider';
+import { PageHeader } from '@/components/page-header';
 import { HelpHint } from '@/components/ui/HelpHint';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const options: Array<{ value: Theme; label: string; help: string; icon: typeof Sun }> = [
-  { value: 'light', label: 'Светла', help: 'Крем и горско зелено, независимо от темата на устройството.', icon: Sun },
+  { value: 'light', label: 'Светла', help: 'Бял фон с горско зелено, независимо от темата на устройството.', icon: Sun },
   { value: 'dark', label: 'Тъмна', help: 'Тъмен фон с по-мек контраст за вечерна работа.', icon: Moon },
   { value: 'system', label: 'Системна', help: 'Следва светлата или тъмната тема на устройството.', icon: Monitor },
 ];
@@ -15,15 +17,14 @@ export function SettingsPage() {
 
   return (
     <div className="page">
-      <header className="page-head">
-        <p className="eyebrow">Настройки</p>
-        <h1 className="flex items-center gap-1.5">
-          Външен вид
-          <HelpHint label="Външен вид">
-            Изберете светла, тъмна или системна тема. Изборът се запомня в този браузър.
-          </HelpHint>
-        </h1>
-      </header>
+      <PageHeader
+        title="Външен вид"
+        help="Изберете светла, тъмна или системна тема. Изборът се запомня в този браузър."
+        crumbs={[
+          { label: 'Табло', to: routes.home },
+          { label: 'Настройки' },
+        ]}
+      />
 
       <RadioGroup
         value={theme}
@@ -37,7 +38,7 @@ export function SettingsPage() {
           return (
             <div
               key={option.value}
-              className="flex items-center gap-3 rounded-[22px] border border-border bg-card p-4"
+              className="flex items-center gap-3 rounded-[6px] border border-border bg-card p-4"
             >
               <Label
                 htmlFor={`theme-${option.value}`}

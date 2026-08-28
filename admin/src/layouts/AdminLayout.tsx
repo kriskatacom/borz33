@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { LogOut, Menu, X } from 'lucide-react';
+import { routes } from '@/app/constants';
 import { navItems } from '@/app/nav';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/Button';
@@ -67,22 +68,19 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       ) : null}
 
       <aside id={menuId} className={`admin-sidebar ${menuOpen ? 'is-open' : ''}`}>
-        <div className="sidebar-brand">
-          <p className="eyebrow">Админ панел</p>
-          <p className="brand">Borz33</p>
-        </div>
+        <Link to={routes.home} className="sidebar-brand">
+          Borz33
+        </Link>
         <nav className="side-nav" aria-label="Основна навигация">
           {navItems.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
-              <span>{item.label}</span>
-              <small>{item.hint}</small>
+              {item.label}
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-user">
-          <p>{displayName}</p>
-          <p className="muted-line">{user?.email}</p>
-          <Button type="button" variant="outline" onClick={() => void dispatch(logout())}>
+          <p className="sidebar-user-name">{displayName}</p>
+          <Button type="button" variant="ghost" size="sm" className="w-full justify-start px-0" onClick={() => void dispatch(logout())}>
             <LogOut />
             Изход
           </Button>

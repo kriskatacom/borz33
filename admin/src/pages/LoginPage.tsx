@@ -129,6 +129,7 @@ export function LoginPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               error={errors.email}
+              placeholder="admin@example.com"
               required
             />
             <Field
@@ -139,6 +140,7 @@ export function LoginPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               error={errors.password}
+              placeholder="Вашата парола"
               required
               trailing={
                 <button type="button" className="field-action" onClick={() => setShowPassword((value) => !value)}>

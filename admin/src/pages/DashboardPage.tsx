@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { navItems } from '@/app/nav';
 import { useAppSelector } from '@/app/hooks';
+import { PageHeader } from '@/components/page-header';
 
 export function DashboardPage() {
   const user = useAppSelector((state) => state.auth.user);
@@ -9,11 +10,11 @@ export function DashboardPage() {
 
   return (
     <div className="page">
-      <header className="page-head">
-        <p className="eyebrow">Табло</p>
-        <h1>Добре дошли, {firstName}.</h1>
-        <p className="muted">Най-важното за деня е събрано тук. Модулите ще се пълнят с реални данни, когато ги изградим.</p>
-      </header>
+      <PageHeader
+        title={`Добре дошли, ${firstName}.`}
+        help="Най-важното за деня е събрано тук. Модулите ще се пълнят с реални данни, когато ги изградим."
+        crumbs={[{ label: 'Табло' }]}
+      />
 
       <section className="stat-grid" aria-label="Обобщение">
         <article className="stat-card">
