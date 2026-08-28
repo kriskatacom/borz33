@@ -12,7 +12,54 @@ import {
 import { Button } from '@/components/ui/Button';
 import { dataTableFeatures, type DataTableFeatures } from '@/components/data-table/features';
 import { HelpHint } from '@/components/ui/HelpHint';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+
+export const DATA_TABLE_PAGE_SIZES = [10, 20, 50, 100] as const;
+export const DEFAULT_PAGE_SIZE = 20;
+
+export function scrollPageToTop() {
+  const active = document.activeElement;
+  const keepFocus =
+    active instanceof HTMLElement && active.matches('input, textarea, select, [contenteditable="true"]');
+
+  if (!keepFocus && active instanceof HTMLElement) {
+    active.blur();
+  }
+
+  const jump = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+
+  const settle = () => {
+    if (!keepFocus) {
+      const heading = document.querySelector('.admin-main h1');
+
+      if (heading instanceof HTMLElement) {
+        heading.focus({ preventScroll: true });
+      }
+    }
+
+    jump();
+  };
+
+  jump();
+  requestAnimationFrame(() => {
+    settle();
+    requestAnimationFrame(settle);
+  });
+}
+
+function goToPage(pagination: DataTablePagination, page: number) {
+  if (page === pagination.page) {
+    return;
+  }
+
+  pagination.onPageChange(page);
+  scrollPageToTop();
+}
 
 const EMPTY_DATA: never[] = [];
 
@@ -48,7 +95,10 @@ export type DataTablePagination = {
   page: number;
   lastPage: number;
   total: number;
+  pageSize: number;
+  pageSizeOptions?: readonly number[];
   onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 };
 
 type DataTableProps<TData extends RowData> = {
@@ -179,52 +229,85 @@ export function DataTable<TData extends RowData>({
           <p className="m-0 font-sans text-sm text-muted-foreground">
             Страница {pagination.page} от {Math.max(1, pagination.lastPage)} · {pagination.total} записа
           </p>
-          <nav className="flex flex-wrap items-center gap-1" aria-label="Страници">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              disabled={pagination.page <= 1 || loading}
-              aria-label="Предишна страница"
-              onClick={() => pagination.onPageChange(pagination.page - 1)}
-            >
-              <ChevronLeft />
-            </Button>
-            {getPageItems(pagination.page, pagination.lastPage).map((item, index) =>
-              item === 'ellipsis' ? (
-                <span
-                  key={`ellipsis-${index}`}
-                  className="grid size-9 place-items-center font-sans text-sm text-muted-foreground"
-                  aria-hidden
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 font-sans text-sm text-muted-foreground">
+              <span>На страница</span>
+              <Select
+                value={String(pagination.pageSize)}
+                disabled={loading}
+                onValueChange={(value) => {
+                  const nextSize = Number(value);
+                  if (nextSize === pagination.pageSize) {
+                    return;
+                  }
+                  pagination.onPageSizeChange(nextSize);
+                  scrollPageToTop();
+                }}
+              >
+                <SelectTrigger
+                  id="page-size"
+                  size="sm"
+                  className="w-[4.75rem] min-h-9 font-sans"
+                  aria-label="Записи на страница"
                 >
-                  …
-                </span>
-              ) : (
-                <Button
-                  key={item}
-                  type="button"
-                  variant={item === pagination.page ? 'default' : 'outline'}
-                  size="icon"
-                  disabled={loading}
-                  aria-label={`Страница ${item}`}
-                  aria-current={item === pagination.page ? 'page' : undefined}
-                  onClick={() => pagination.onPageChange(item)}
-                >
-                  {item}
-                </Button>
-              )
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              disabled={pagination.page >= pagination.lastPage || loading || pagination.lastPage <= 1}
-              aria-label="Следваща страница"
-              onClick={() => pagination.onPageChange(pagination.page + 1)}
-            >
-              <ChevronRight />
-            </Button>
-          </nav>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(pagination.pageSizeOptions ?? DATA_TABLE_PAGE_SIZES).map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            <nav className="flex flex-wrap items-center gap-1" aria-label="Страници">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={pagination.page <= 1 || loading}
+                aria-label="Предишна страница"
+                onClick={() => goToPage(pagination, pagination.page - 1)}
+              >
+                <ChevronLeft />
+              </Button>
+              {getPageItems(pagination.page, pagination.lastPage).map((item, index) =>
+                item === 'ellipsis' ? (
+                  <span
+                    key={`ellipsis-${index}`}
+                    className="grid size-9 place-items-center font-sans text-sm text-muted-foreground"
+                    aria-hidden
+                  >
+                    …
+                  </span>
+                ) : (
+                  <Button
+                    key={item}
+                    type="button"
+                    variant={item === pagination.page ? 'default' : 'outline'}
+                    size="icon"
+                    disabled={loading || item === pagination.page}
+                    aria-label={`Страница ${item}`}
+                    aria-current={item === pagination.page ? 'page' : undefined}
+                    onClick={() => goToPage(pagination, item)}
+                  >
+                    {item}
+                  </Button>
+                )
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={pagination.page >= pagination.lastPage || loading || pagination.lastPage <= 1}
+                aria-label="Следваща страница"
+                onClick={() => goToPage(pagination, pagination.page + 1)}
+              >
+                <ChevronRight />
+              </Button>
+            </nav>
+          </div>
         </div>
       ) : null}
     </div>

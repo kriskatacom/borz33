@@ -12,12 +12,17 @@
         "robmorgan/phinx": "^0.16",
         "symfony/mailer": "^7.3"
     },
+    "require-dev": {
+        "fakerphp/faker": "^1.24"
+    },
     "config": {
         "sort-packages": true
     },
     "scripts": {
         "migrate": "phinx migrate",
         "migrate:rollback": "phinx rollback",
-        "migrate:status": "phinx status"
+        "migrate:status": "phinx status",
+        "seed": "phinx seed:run",
+        "seed:users": "phinx seed:run -s UserSeeder"
     }
 }

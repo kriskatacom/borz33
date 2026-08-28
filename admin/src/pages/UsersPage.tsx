@@ -5,7 +5,7 @@ import { ApiError } from '@/api/client';
 import { deleteUser, listUsers, restoreUser, type ManagedUser } from '@/api/users';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
-import { DataTable } from '@/components/data-table/DataTable';
+import { DataTable, DATA_TABLE_PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/components/data-table/DataTable';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +14,12 @@ import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getUsersColumns } from '@/features/users/usersColumns';
+
+function parsePageSize(raw: string | null): number {
+  const value = Number(raw);
+
+  return (DATA_TABLE_PAGE_SIZES as readonly number[]).includes(value) ? value : DEFAULT_PAGE_SIZE;
+}
 
 export function UsersPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
@@ -35,6 +41,7 @@ export function UsersPage() {
       role: params.get('role') ?? '',
       status: params.get('status') ?? 'all',
       page: Number(params.get('page') ?? '1') || 1,
+      per_page: parsePageSize(params.get('per_page')),
     }),
     [params]
   );
@@ -222,7 +229,10 @@ export function UsersPage() {
           page: filters.page,
           lastPage,
           total,
+          pageSize: filters.per_page,
           onPageChange: (page) => updateParams({ page: String(page) }, false),
+          onPageSizeChange: (pageSize) =>
+            updateParams({ per_page: pageSize === DEFAULT_PAGE_SIZE ? '' : String(pageSize) }),
         }}
       />
 

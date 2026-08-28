@@ -1,4 +1,5 @@
-import type { InputHTMLAttributes, ReactNode } from 'react';
+import type { ChangeEvent, InputHTMLAttributes, ReactNode } from 'react';
+import { X } from 'lucide-react';
 import { HelpHint } from '@/components/ui/HelpHint';
 
 type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
@@ -8,10 +9,40 @@ type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
   hint?: string;
   help?: string;
   trailing?: ReactNode;
+  clearable?: boolean;
 };
 
-export function Field({ id, label, error, hint, help, trailing, className = '', ...input }: FieldProps) {
+const UNCLEARABLE_TYPES = new Set(['password', 'hidden', 'checkbox', 'radio', 'file', 'submit', 'button', 'image']);
+
+export function Field({
+  id,
+  label,
+  error,
+  hint,
+  help,
+  trailing,
+  clearable,
+  className = '',
+  onChange,
+  value,
+  ...input
+}: FieldProps) {
   const describedBy = [hint ? `${id}-hint` : null, error ? `${id}-error` : null].filter(Boolean).join(' ') || undefined;
+  const inputType = input.type ?? 'text';
+  const canClear = clearable ?? !UNCLEARABLE_TYPES.has(inputType);
+  const hasValue = typeof value === 'string' ? value.length > 0 : value != null && value !== '';
+  const showClear = canClear && hasValue && !input.disabled && !input.readOnly;
+  const wrapped = Boolean(trailing) || showClear;
+
+  function clearField() {
+    const event = {
+      target: { value: '', name: input.name ?? '', id },
+      currentTarget: { value: '', name: input.name ?? '', id },
+    } as ChangeEvent<HTMLInputElement>;
+
+    onChange?.(event);
+    requestAnimationFrame(() => document.getElementById(id)?.focus());
+  }
 
   return (
     <div className={`field ${className}`.trim()}>
@@ -19,8 +50,20 @@ export function Field({ id, label, error, hint, help, trailing, className = '', 
         <label htmlFor={id}>{label}</label>
         {help ? <HelpHint label={label}>{help}</HelpHint> : null}
       </div>
-      <div className={trailing ? 'field-control' : undefined}>
-        <input id={id} aria-invalid={error ? true : undefined} aria-describedby={describedBy} {...input} />
+      <div className={wrapped ? 'field-control' : undefined}>
+        <input
+          {...input}
+          id={id}
+          value={value}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          onChange={onChange}
+        />
+        {showClear ? (
+          <button type="button" className="field-action" aria-label={`Изчисти: ${label}`} onClick={clearField}>
+            <X className="size-4" aria-hidden />
+          </button>
+        ) : null}
         {trailing}
       </div>
       {hint ? (

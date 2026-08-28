@@ -22,27 +22,43 @@ class AdminBootstrapService
 
     public function ensureExists(): void
     {
-        if (User::withTrashed()->where('role', User::ROLE_ADMIN)->exists()) {
-            return;
-        }
-
         $password = (string) (getenv('ADMIN_PASSWORD') ?: '');
 
         if ($password === '') {
             throw new RuntimeException('ADMIN_PASSWORD не е конфигурирана.');
         }
 
-        $admin = new User();
+        $email = self::configuredEmail();
+        $admin = User::withTrashed()->where('email', $email)->first() ?? new User();
+        $isNew = !$admin->exists;
+
+        if ($admin->trashed()) {
+            $admin->restore();
+        }
+
+        if ($isNew) {
+            $admin->forceFill([
+                'first_name' => (string) (getenv('ADMIN_FIRST_NAME') ?: 'Admin'),
+                'last_name' => (string) (getenv('ADMIN_LAST_NAME') ?: 'User'),
+                'email' => $email,
+                'phone' => null,
+                'email_verified_at' => Carbon::now(),
+            ]);
+        }
+
+        $needsPassword = $isNew || !$this->passwordHasher->verify($password, (string) $admin->password);
+
         $admin->forceFill([
-            'first_name' => (string) (getenv('ADMIN_FIRST_NAME') ?: 'Admin'),
-            'last_name' => (string) (getenv('ADMIN_LAST_NAME') ?: 'User'),
-            'email' => self::configuredEmail(),
-            'password' => $this->passwordHasher->hash($password),
-            'phone' => null,
+            'email' => $email,
             'role' => User::ROLE_ADMIN,
             'is_active' => true,
-            'email_verified_at' => Carbon::now(),
+            'email_verified_at' => $admin->email_verified_at ?? Carbon::now(),
         ]);
+
+        if ($needsPassword) {
+            $admin->password = $this->passwordHasher->hash($password);
+        }
+
         $admin->save();
     }
 }

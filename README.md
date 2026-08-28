@@ -171,11 +171,21 @@ docker compose up -d --build
 
 Връщане с няколко стъпки: `./bin/phinx rollback -t 0` (всички) или `./bin/phinx rollback -t YYYYMMDDHHMMSS` до конкретна версия.
 
-**Seeds** (тестови данни): файлове в `database/seeds/`.
+**Seeds** (тестови данни): фабрики в `api/app/Database/Factories/`, seed файлове в `database/seeds/`.
+
+Потребителите се пълнят през `UserFactory` (български имена, обща парола `password`, bulk insert) и `UserSeeder`. По подразбиране се създават около 80 записа с клиенти, админи, неактивни и изтрити. Броят се сменя с `USER_SEED_COUNT`. Повторно пускане изтрива само имейлите `@seed.borz33.local` и ги създава наново — реалният админ от `.env` (`admin@borz33.local`) не се пипа. Seed админите влизат с парола `password`.
 
 ```bash
-./bin/phinx seed:create UserSeeder
 ./bin/phinx seed:run
+./bin/phinx seed:run -s UserSeeder
+USER_SEED_COUNT=200 ./bin/phinx seed:run -s UserSeeder
+```
+
+Или през Composer в PHP контейнера:
+
+```bash
+docker compose exec php composer seed
+docker compose exec php composer seed:users
 ```
 
 Еквивалент без `./bin/phinx`:

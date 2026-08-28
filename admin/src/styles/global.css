@@ -634,8 +634,8 @@ h1 {
   }
 
   .admin-shell {
-    grid-template-columns: var(--sidebar) 1fr;
-    grid-template-rows: 1fr;
+    display: block;
+    min-height: 100dvh;
   }
 
   .admin-topbar,
@@ -645,12 +645,22 @@ h1 {
   }
 
   .admin-sidebar {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 40;
+    width: var(--sidebar);
     height: 100dvh;
-    width: auto;
+    max-height: 100dvh;
     transform: none;
-    inset: auto;
+    inset: 0 auto 0 0;
+  }
+
+  .admin-main {
+    margin-left: var(--sidebar);
+    min-height: 100dvh;
+    min-width: 0;
   }
 
   .link-grid {
