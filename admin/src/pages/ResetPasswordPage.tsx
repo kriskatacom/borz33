@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { AuthLayout } from '@/layouts/AuthLayout';
+import { toast, toastError } from '@/lib/toast';
 
 export function ResetPasswordPage() {
   const [params] = useSearchParams();
@@ -37,13 +38,12 @@ export function ResetPasswordPage() {
       });
       setDone(true);
       setMessage(response.message);
+      toast.success(response.message);
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(error.fieldErrors());
-        setMessage(error.message);
-      } else {
-        setMessage('Паролата не можа да се обнови.');
       }
+      toastError(error, 'Паролата не можа да се обнови.');
     } finally {
       setBusy(false);
     }
@@ -86,11 +86,6 @@ export function ResetPasswordPage() {
               placeholder="Повторете паролата"
               required
             />
-            {message ? (
-              <p className="form-message" role="status">
-                {message}
-              </p>
-            ) : null}
             <Button type="submit" disabled={busy}>
               <Save />
               {busy ? 'Запис…' : 'Запази паролата'}

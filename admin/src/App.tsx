@@ -6,6 +6,7 @@ import { useAppDispatch } from '@/app/hooks';
 import { hydrateSession } from '@/features/auth/authThunks';
 import { ThemeProvider } from '@/components/theme-provider';
 import { LoadingProvider } from '@/components/loading-provider';
+import { Toaster } from '@/components/ui/Toaster';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ProductsPage } from '@/pages/ProductsPage';
@@ -28,6 +29,7 @@ export function App() {
   return (
     <ThemeProvider defaultTheme="system">
       <LoadingProvider>
+        <Toaster />
         <BrowserRouter>
           <Routes>
             <Route element={<GuestOnly />}>

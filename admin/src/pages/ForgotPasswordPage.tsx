@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { AuthLayout } from '@/layouts/AuthLayout';
+import { toast } from '@/lib/toast';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -25,12 +26,15 @@ export function ForgotPasswordPage() {
     try {
       const response = await forgotAdminPassword(email.trim());
       setMessage(response.message);
+      toast.success(response.message);
     } catch (caught) {
       if (caught instanceof ApiError) {
         setError(caught.fieldErrors().email);
         setMessage(caught.message);
+        toast.error(caught.message);
       } else {
         setMessage('Заявката не беше успешна.');
+        toast.error('Заявката не беше успешна.');
       }
     } finally {
       setBusy(false);

@@ -20,6 +20,11 @@ use Illuminate\Support\Str;
 
 class ProductAdminService
 {
+    public function __construct(
+        private readonly ProductImageService $images = new ProductImageService()
+    ) {
+    }
+
     /** @param array<string, mixed> $filters */
     public function paginate(array $filters): array
     {
@@ -375,13 +380,12 @@ class ProductAdminService
     {
         $product->load(['options.values']);
         $keep = [];
-        $defaultSet = false;
+        $defaultId = null;
 
         foreach ($rows as $index => $row) {
             $sku = trim((string) $row['sku']);
             $this->assertVariantSkuAvailable($sku, isset($row['id']) ? (int) $row['id'] : null);
             $variant = $this->ownedVariant($product, $row['id'] ?? null);
-            $isDefault = !$defaultSet && (bool) ($row['is_default'] ?? false);
             $variant->forceFill([
                 'product_id' => $product->id,
                 'sku' => $sku,
@@ -389,13 +393,13 @@ class ProductAdminService
                 'price' => $row['price'],
                 'compare_at_price' => $row['compare_at_price'] ?? null,
                 'stock' => (int) $row['stock'],
-                'is_default' => $isDefault,
+                'is_default' => false,
                 'is_active' => (bool) $row['is_active'],
                 'sort_order' => (int) ($row['sort_order'] ?? $index),
             ])->save();
 
-            if ($isDefault) {
-                $defaultSet = true;
+            if ($defaultId === null && $this->isFlag($row['is_default'] ?? false)) {
+                $defaultId = (int) $variant->id;
             }
 
             $this->syncVariantValues(
@@ -407,8 +411,13 @@ class ProductAdminService
             $keep[] = (int) $variant->id;
         }
 
-        if ($keep !== [] && !$defaultSet) {
-            ProductVariant::query()->where('id', $keep[0])->update(['is_default' => true]);
+        if ($keep !== []) {
+            if ($defaultId === null) {
+                $defaultId = $keep[0];
+            }
+
+            ProductVariant::query()->whereIn('id', $keep)->update(['is_default' => false]);
+            ProductVariant::query()->where('id', $defaultId)->update(['is_default' => true]);
         }
 
         $removed = ProductVariant::withTrashed()->where('product_id', $product->id);
@@ -417,7 +426,22 @@ class ProductAdminService
             $removed->whereNotIn('id', $keep);
         }
 
+        $this->images->deleteForVariantIds($removed->pluck('id')->all());
         $removed->forceDelete();
+    }
+
+    public function findVariant(Product $product, int $variantId): ProductVariant
+    {
+        $variant = ProductVariant::query()
+            ->where('product_id', $product->id)
+            ->where('id', $variantId)
+            ->first();
+
+        if ($variant === null) {
+            throw new AuthException('Вариантът не е намерен.', 404);
+        }
+
+        return $variant;
     }
 
     /** @param list<array<string, mixed>> $rows */
@@ -609,6 +633,11 @@ class ProductAdminService
         }
 
         return $candidate;
+    }
+
+    private function isFlag(mixed $value): bool
+    {
+        return $value === true || $value === 1 || $value === '1' || $value === 'true';
     }
 
     private function childSlug(string $slug, string $name): string

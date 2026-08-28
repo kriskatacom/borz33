@@ -22,6 +22,7 @@ class ProductResource
             'options.values',
             'variants.variantValues.option',
             'variants.variantValues.optionValue',
+            'variants.image',
             'personalizationFields',
             'frontImage',
             'galleryImages',
@@ -76,6 +77,7 @@ class ProductResource
                 'is_default' => $variant->is_default,
                 'is_active' => $variant->is_active,
                 'sort_order' => $variant->sort_order,
+                'image' => $variant->image ? ProductImageResource::toArray($variant->image) : null,
                 'option_values' => $variant->variantValues->map(static fn (ProductVariantValue $row): array => [
                     'option' => $row->option?->slug,
                     'option_name' => $row->option?->name,

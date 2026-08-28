@@ -21,7 +21,7 @@ export function HelpHint({ label, children, className }: HelpHintProps) {
         <button
           type="button"
           className={cn(
-            'inline-flex size-6 shrink-0 items-center justify-center rounded-[6px] text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
+            'inline-flex size-6 shrink-0 items-center justify-center rounded-[6px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
             className
           )}
           aria-label={`Помощ: ${label}`}
@@ -49,7 +49,7 @@ export function LabelWithHelp({
 }) {
   return (
     <div className={cn('flex items-center gap-1', className)}>
-      {htmlFor ? <Label htmlFor={htmlFor}>{label}</Label> : <span className="text-base font-medium">{label}</span>}
+      {htmlFor ? <Label htmlFor={htmlFor}>{label}</Label> : <span className="text-base font-bold">{label}</span>}
       <HelpHint label={label}>{help}</HelpHint>
     </div>
   );

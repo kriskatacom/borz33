@@ -14,6 +14,7 @@ import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getUsersColumns } from '@/features/users/usersColumns';
+import { toast, toastError } from '@/lib/toast';
 
 function parsePageSize(raw: string | null): number {
   const value = Number(raw);
@@ -101,7 +102,9 @@ export function UsersPage() {
         setLastPage(response.data.pagination.last_page);
       } catch (error) {
         if (!cancelled) {
-          setMessage(error instanceof ApiError ? error.message : 'Списъкът не можа да се зареди.');
+          const text = error instanceof ApiError ? error.message : 'Списъкът не можа да се зареди.';
+          setMessage(text);
+          toast.error(text);
           setUsers([]);
         }
       } finally {
@@ -124,13 +127,14 @@ export function UsersPage() {
     }
 
     setActing(true);
-    setMessage(null);
 
     try {
       if (pending.deleted_at) {
-        await restoreUser(token, pending.id);
+        const response = await restoreUser(token, pending.id);
+        toast.success(response.message || 'Профилът е възстановен.');
       } else {
-        await deleteUser(token, pending.id);
+        const response = await deleteUser(token, pending.id);
+        toast.success(response.message || 'Профилът е изтрит.');
       }
       setPending(null);
       const response = await listUsers(token, filters);
@@ -138,7 +142,7 @@ export function UsersPage() {
       setTotal(response.data.pagination.total);
       setLastPage(response.data.pagination.last_page);
     } catch (error) {
-      setMessage(error instanceof ApiError ? error.message : 'Действието не беше успешно.');
+      toastError(error, 'Действието не беше успешно.');
     } finally {
       setActing(false);
     }

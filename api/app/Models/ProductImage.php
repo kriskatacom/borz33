@@ -10,9 +10,11 @@ class ProductImage extends Model
 {
     public const ROLE_FRONT = 'front';
     public const ROLE_GALLERY = 'gallery';
+    public const ROLE_VARIANT = 'variant';
 
     protected $fillable = [
         'product_id',
+        'product_variant_id',
         'role',
         'path',
         'original_name',
@@ -27,6 +29,7 @@ class ProductImage extends Model
         return [
             'size' => 'integer',
             'sort_order' => 'integer',
+            'product_variant_id' => 'integer',
         ];
     }
 
@@ -35,8 +38,18 @@ class ProductImage extends Model
         return $this->role === self::ROLE_FRONT;
     }
 
+    public function isVariant(): bool
+    {
+        return $this->role === self::ROLE_VARIANT;
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 }

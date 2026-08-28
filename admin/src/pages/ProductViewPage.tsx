@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Layers, List, Palette, Pencil, Shirt, Type } from 'lucide-react';
+import { ArrowLeft, Images, Layers, List, Palette, Pencil, Shirt, Type } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { getProduct, type AdminProduct } from '@/api/products';
 import { routes } from '@/app/constants';
@@ -11,10 +11,12 @@ import { Button } from '@/components/ui/Button';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatMoney } from '@/lib/format';
+import { toast } from '@/lib/toast';
+import { ProductImagesPreview } from '@/features/products/ProductImagesSection';
 
 function DetailTable({ children, caption }: { children: ReactNode; caption: string }) {
   return (
-    <div className="min-w-0 overflow-hidden border border-border bg-background">
+    <div className="min-w-0 overflow-hidden border border-border bg-card">
       <Table>
         <caption className="sr-only">{caption}</caption>
         {children}
@@ -76,6 +78,7 @@ export function ProductViewPage() {
     async function load() {
       if (!Number.isInteger(productId) || productId < 1) {
         setMessage('Продуктът не е намерен.');
+        toast.error('Продуктът не е намерен.');
         setBusy(false);
         return;
       }
@@ -91,7 +94,9 @@ export function ProductViewPage() {
       } catch (error) {
         if (!cancelled) {
           setProduct(null);
-          setMessage(error instanceof ApiError ? error.message : 'Продуктът не можа да се зареди.');
+          const text = error instanceof ApiError ? error.message : 'Продуктът не можа да се зареди.';
+          setMessage(text);
+          toast.error(text);
         }
       } finally {
         if (!cancelled) {
@@ -108,13 +113,12 @@ export function ProductViewPage() {
   }, [productId, token]);
 
   const status = product ? statusLabel(product) : null;
-  const frontUrl = product?.front_image?.url;
 
   return (
     <div className="page min-w-0">
       <PageHeader
         title={product?.name ?? 'Продукт'}
-        help="Преглед на продукт, параметри, опции, варианти и персонализация. Редакцията ще бъде отделен екран."
+        help="Преглед на продукт, изображения, параметри, опции, варианти и персонализация."
         crumbs={[
           { label: 'Табло', to: routes.home },
           { label: 'Продукти', to: routes.products },
@@ -148,48 +152,38 @@ export function ProductViewPage() {
 
       {product ? (
         <div className="flex min-w-0 max-w-full flex-col gap-3">
+          <CollapsibleSection title="Изображения" icon={Images}>
+            <ProductImagesPreview product={product} />
+          </CollapsibleSection>
           <CollapsibleSection title="Общи данни" icon={Shirt}>
-            <div className="flex flex-wrap gap-4">
-              <div className="flex size-24 items-center justify-center overflow-hidden rounded-[6px] border border-border bg-muted">
-                {frontUrl ? (
-                  <img
-                    src={frontUrl}
-                    alt={product.front_image?.alt || product.name}
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <Shirt className="size-8 text-muted-foreground" aria-hidden />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="m-0 flex flex-wrap items-center gap-2">
-                  <span className={status?.className}>{status?.text}</span>
-                  {product.personalization_enabled ? <span className="badge info">Персонализация</span> : null}
-                </p>
-                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-muted-foreground">SKU</dt>
-                    <dd className="m-0 font-bold">{product.sku || '—'}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Slug</dt>
-                    <dd className="m-0 font-mono text-sm">{product.slug}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Цена</dt>
-                    <dd className="m-0 font-bold">{formatMoney(product.price)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Сравнителна цена</dt>
-                    <dd className="m-0">{formatMoney(product.compare_at_price)}</dd>
-                  </div>
-                </dl>
-              </div>
+            <div className="min-w-0">
+              <p className="m-0 flex flex-wrap items-center gap-2">
+                <span className={status?.className}>{status?.text}</span>
+                {product.personalization_enabled ? <span className="badge info">Персонализация</span> : null}
+              </p>
+              <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div>
+                  <dt className="text-muted-foreground">SKU</dt>
+                  <dd className="m-0 font-bold">{product.sku || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Slug</dt>
+                  <dd className="m-0 font-mono text-sm">{product.slug}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Цена</dt>
+                  <dd className="m-0 font-bold">{formatMoney(product.price)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Сравнителна цена</dt>
+                  <dd className="m-0">{formatMoney(product.compare_at_price)}</dd>
+                </div>
+              </dl>
+              {product.short_description ? <p className="mb-0 mt-4">{product.short_description}</p> : null}
+              {product.description ? (
+                <p className="mb-0 mt-3 whitespace-pre-wrap text-muted-foreground">{product.description}</p>
+              ) : null}
             </div>
-            {product.short_description ? <p className="mb-0 mt-4">{product.short_description}</p> : null}
-            {product.description ? (
-              <p className="mb-0 mt-3 whitespace-pre-wrap text-muted-foreground">{product.description}</p>
-            ) : null}
           </CollapsibleSection>
 
           <CollapsibleSection title="Параметри" icon={List}>
@@ -244,6 +238,7 @@ export function ProductViewPage() {
               <DetailTable caption="Варианти на продукта">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
+                    <DetailHead>Снимка</DetailHead>
                     <DetailHead>Вариант</DetailHead>
                     <DetailHead>SKU</DetailHead>
                     <DetailHead>Цена</DetailHead>
@@ -254,6 +249,19 @@ export function ProductViewPage() {
                 <TableBody>
                   {product.variants.map((variant) => (
                     <TableRow key={variant.id}>
+                      <DetailCell>
+                        <div className="flex size-12 items-center justify-center overflow-hidden rounded-[6px] border border-border bg-muted">
+                          {variant.image?.url ? (
+                            <img
+                              src={variant.image.url}
+                              alt={variant.image.alt || variant.sku || 'Вариант'}
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            <Shirt className="size-5 text-muted-foreground" aria-hidden />
+                          )}
+                        </div>
+                      </DetailCell>
                       <DetailCell>
                         <span className="inline-flex items-center gap-2">
                           {variant.option_values.map((value) => (

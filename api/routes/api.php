@@ -53,6 +53,8 @@ $router->delete('/admin/products/{id}', [ProductsController::class, 'destroy'], 
 $router->post('/admin/products/{id}/restore', [ProductsController::class, 'restore'], $admin);
 $router->post('/admin/products/{id}/images/front', [ProductImagesController::class, 'storeFront'], $admin);
 $router->post('/admin/products/{id}/images', [ProductImagesController::class, 'storeGallery'], $admin);
+$router->post('/admin/products/{id}/variants/{variantId}/image', [ProductImagesController::class, 'storeVariant'], $admin);
+$router->delete('/admin/products/{id}/variants/{variantId}/image', [ProductImagesController::class, 'destroyVariant'], $admin);
 $router->post('/admin/products/{id}/images/{imageId}/front', [ProductImagesController::class, 'makeFront'], $admin);
 $router->patch('/admin/products/{id}/images/{imageId}', [ProductImagesController::class, 'update'], $admin);
 $router->delete('/admin/products/{id}/images/{imageId}', [ProductImagesController::class, 'destroy'], $admin);

@@ -1,7 +1,8 @@
-import { apiRequest } from '@/api/client';
+import { apiRequest, apiUpload } from '@/api/client';
 
 export type ProductImage = {
   id: number;
+  product_variant_id?: number | null;
   role: string;
   url: string;
   original_name: string;
@@ -70,6 +71,7 @@ export type ProductVariant = {
   is_default: boolean;
   is_active: boolean;
   sort_order: number;
+  image: ProductImage | null;
   option_values: ProductVariantOptionValue[];
 };
 
@@ -123,4 +125,90 @@ export function getProduct(token: string, id: number) {
 
 export function updateProduct(token: string, id: number, body: Record<string, unknown>) {
   return apiRequest<{ product: AdminProduct }>(`/admin/products/${id}`, { method: 'PATCH', token, body });
+}
+
+export function uploadProductFrontImage(
+  token: string,
+  productId: number,
+  file: File,
+  options: { signal?: AbortSignal; onProgress?: (percent: number) => void } = {}
+) {
+  const form = new FormData();
+  form.append('image', file);
+
+  return apiUpload<{ image: ProductImage }>(`/admin/products/${productId}/images/front`, {
+    token,
+    form,
+    signal: options.signal,
+    onProgress: options.onProgress,
+  });
+}
+
+export function uploadProductGalleryImage(
+  token: string,
+  productId: number,
+  file: File,
+  options: { signal?: AbortSignal; onProgress?: (percent: number) => void } = {}
+) {
+  const form = new FormData();
+  form.append('image', file);
+
+  return apiUpload<{ images: ProductImage[] }>(`/admin/products/${productId}/images`, {
+    token,
+    form,
+    signal: options.signal,
+    onProgress: options.onProgress,
+  });
+}
+
+export function updateProductImage(
+  token: string,
+  productId: number,
+  imageId: number,
+  body: { alt?: string | null; sort_order?: number }
+) {
+  return apiRequest<{ image: ProductImage }>(`/admin/products/${productId}/images/${imageId}`, {
+    method: 'PATCH',
+    token,
+    body,
+  });
+}
+
+export function makeProductImageFront(token: string, productId: number, imageId: number) {
+  return apiRequest<{ image: ProductImage }>(`/admin/products/${productId}/images/${imageId}/front`, {
+    method: 'POST',
+    token,
+  });
+}
+
+export function deleteProductImage(token: string, productId: number, imageId: number) {
+  return apiRequest<Record<string, never>>(`/admin/products/${productId}/images/${imageId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function uploadVariantImage(
+  token: string,
+  productId: number,
+  variantId: number,
+  file: File,
+  options: { signal?: AbortSignal; onProgress?: (percent: number) => void } = {}
+) {
+  const form = new FormData();
+  form.append('image', file);
+
+  return apiUpload<{ image: ProductImage }>(`/admin/products/${productId}/variants/${variantId}/image`, {
+    token,
+    form,
+    signal: options.signal,
+    onProgress: options.onProgress,
+  });
+}
+
+export function deleteVariantImage(token: string, productId: number, variantId: number) {
+  return apiRequest<Record<string, never>>(`/admin/products/${productId}/variants/${variantId}/image`, {
+    method: 'DELETE',
+    token,
+  });
 }

@@ -77,13 +77,82 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   const data: unknown = await response.json().catch(() => null);
 
-  if (!response.ok) {
+  return readEnvelope<T>(response.status, data);
+}
+
+type UploadOptions = {
+  method?: 'POST' | 'PUT' | 'PATCH';
+  form: FormData;
+  token?: string | null;
+  signal?: AbortSignal;
+  onProgress?: (percent: number) => void;
+};
+
+export function apiUpload<T>(path: string, options: UploadOptions): Promise<ApiEnvelope<T>> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(options.method ?? 'POST', path);
+    xhr.responseType = 'json';
+    xhr.setRequestHeader('Accept', 'application/json');
+
+    if (options.token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${options.token}`);
+    }
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        options.onProgress?.(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      try {
+        resolve(readEnvelope<T>(xhr.status, xhrBody(xhr)));
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new ApiError('Заявката не беше успешна.', 0));
+    };
+
+    xhr.onabort = () => {
+      reject(new DOMException('Качването е отказано.', 'AbortError'));
+    };
+
+    const abort = () => xhr.abort();
+    options.signal?.addEventListener('abort', abort, { once: true });
+    xhr.send(options.form);
+  });
+}
+
+function xhrBody(xhr: XMLHttpRequest): unknown {
+  const raw = xhr.response ?? xhr.responseText;
+
+  if (raw === null || raw === '') {
+    return null;
+  }
+
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  return raw;
+}
+
+function readEnvelope<T>(status: number, data: unknown): ApiEnvelope<T> {
+  if (status < 200 || status >= 300) {
     const message =
       data !== null && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
         ? data.message
         : 'Заявката не беше успешна.';
 
-    throw new ApiError(message, response.status, data);
+    throw new ApiError(message, status, data);
   }
 
   return data as ApiEnvelope<T>;

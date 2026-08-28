@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Products;
 
 use App\Exceptions\AuthException;
+use App\Exceptions\ValidationException;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use App\Validation\ProductImageValidator;
 
 class ProductImageService
@@ -27,6 +29,7 @@ class ProductImageService
         if ($existing !== null) {
             $this->storage->deleteFile($existing->path);
             $existing->forceFill([
+                'product_variant_id' => null,
                 'path' => $stored['path'],
                 'original_name' => $this->originalName($file),
                 'mime' => $stored['mime'],
@@ -41,6 +44,7 @@ class ProductImageService
         $image = new ProductImage();
         $image->forceFill([
             'product_id' => $product->id,
+            'product_variant_id' => null,
             'role' => ProductImage::ROLE_FRONT,
             'path' => $stored['path'],
             'original_name' => $this->originalName($file),
@@ -63,6 +67,7 @@ class ProductImageService
         $image = new ProductImage();
         $image->forceFill([
             'product_id' => $product->id,
+            'product_variant_id' => null,
             'role' => ProductImage::ROLE_GALLERY,
             'path' => $stored['path'],
             'original_name' => $this->originalName($file),
@@ -73,6 +78,61 @@ class ProductImageService
         ])->save();
 
         return $image;
+    }
+
+    /** @param array<string, mixed> $file */
+    public function storeVariant(Product $product, ProductVariant $variant, array $file, ?string $alt = null): ProductImage
+    {
+        $this->validator->validateUpload($file);
+        $stored = $this->storage->store((int) $product->id, $file, ProductImage::ROLE_VARIANT);
+        $existing = ProductImage::query()
+            ->where('product_id', $product->id)
+            ->where('product_variant_id', $variant->id)
+            ->first();
+
+        if ($existing !== null) {
+            $this->storage->deleteFile($existing->path);
+            $existing->forceFill([
+                'role' => ProductImage::ROLE_VARIANT,
+                'path' => $stored['path'],
+                'original_name' => $this->originalName($file),
+                'mime' => $stored['mime'],
+                'size' => (int) ($file['size'] ?? 0),
+                'alt' => $alt !== null ? $this->nullableAlt($alt) : $existing->alt,
+                'sort_order' => 0,
+            ])->save();
+
+            return $existing->fresh() ?? $existing;
+        }
+
+        $image = new ProductImage();
+        $image->forceFill([
+            'product_id' => $product->id,
+            'product_variant_id' => $variant->id,
+            'role' => ProductImage::ROLE_VARIANT,
+            'path' => $stored['path'],
+            'original_name' => $this->originalName($file),
+            'mime' => $stored['mime'],
+            'size' => (int) ($file['size'] ?? 0),
+            'alt' => $this->nullableAlt($alt),
+            'sort_order' => 0,
+        ])->save();
+
+        return $image;
+    }
+
+    /** @param array<int, mixed> $variantIds */
+    public function deleteForVariantIds(array $variantIds): void
+    {
+        if ($variantIds === []) {
+            return;
+        }
+
+        $images = ProductImage::query()->whereIn('product_variant_id', $variantIds)->get();
+
+        foreach ($images as $image) {
+            $this->deleteImage($image);
+        }
     }
 
     /** @param array<string, mixed> $data */
@@ -97,6 +157,10 @@ class ProductImageService
 
     public function makeFront(ProductImage $image): ProductImage
     {
+        if ($image->isVariant()) {
+            throw new ValidationException(['image' => ['Снимката на вариант не може да е предна.']]);
+        }
+
         if ($image->isFront()) {
             return $image;
         }
@@ -114,6 +178,7 @@ class ProductImageService
         }
 
         $image->forceFill([
+            'product_variant_id' => null,
             'role' => ProductImage::ROLE_FRONT,
             'sort_order' => 0,
         ])->save();

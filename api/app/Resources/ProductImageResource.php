@@ -13,6 +13,7 @@ class ProductImageResource
     {
         return [
             'id' => $image->id,
+            'product_variant_id' => $image->product_variant_id,
             'role' => $image->role,
             'url' => '/' . ltrim($image->path, '/'),
             'original_name' => $image->original_name,

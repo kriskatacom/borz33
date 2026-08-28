@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductVariant extends Model
@@ -62,5 +63,11 @@ class ProductVariant extends Model
         return $this->belongsToMany(ProductOptionValue::class, 'product_variant_values')
             ->withPivot('product_option_id')
             ->withTimestamps();
+    }
+
+    public function image(): HasOne
+    {
+        return $this->hasOne(ProductImage::class, 'product_variant_id')
+            ->where('role', ProductImage::ROLE_VARIANT);
     }
 }

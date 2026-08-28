@@ -34,7 +34,7 @@
 :root {
   --ink: #171717;
   --muted-foreground: #737373;
-  --paper: #f5f5f5;
+  --paper: #e6e6e6;
   --cream: #ffffff;
   --forest: #173f32;
   --moss: #5f7a70;
@@ -49,7 +49,7 @@
   --topbar: 56px;
   --bottom: 64px;
   --sidebar: 232px;
-  --background: #ffffff;
+  --background: #e6e6e6;
   --foreground: #171717;
   --card: #ffffff;
   --card-foreground: #171717;
@@ -81,7 +81,7 @@
   --sun: #e7c56a;
   --line: #323a36;
   --shadow: 0 16px 40px rgb(0 0 0 / 35%);
-  --background: #1b211e;
+  --background: #121614;
   --foreground: #f3efe6;
   --card: #1b211e;
   --card-foreground: #f3efe6;
@@ -276,7 +276,7 @@ h1 {
 .field-action,
 .link-btn,
 .text-btn {
-  border: 0;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--forest);
   font-family: var(--font-sans);
@@ -285,6 +285,25 @@ h1 {
   min-height: 44px;
   padding: 0 12px;
   cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field-action:hover,
+.link-btn:hover,
+.text-btn:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.field-action:focus-visible,
+.link-btn:focus-visible,
+.text-btn:focus-visible {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent);
+  outline: none;
 }
 
 .field-hint,
@@ -387,10 +406,25 @@ h1 {
   height: 44px;
   display: grid;
   place-items: center;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 12px;
   background: var(--paper);
+  color: var(--ink);
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.icon-btn:focus-visible {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent);
+  outline: none;
 }
 
 .nav-backdrop {
@@ -519,6 +553,16 @@ h1 {
   font-size: 12px;
   font-weight: 800;
   border-radius: 12px;
+}
+
+.bottom-link:hover {
+  background: var(--paper);
+}
+
+.bottom-link:focus-visible {
+  background: var(--paper);
+  outline: 3px solid var(--sun);
+  outline-offset: 2px;
 }
 
 .bottom-link.active {
@@ -940,5 +984,81 @@ h1 {
 
   .play-progress-bar.is-late {
     display: none;
+  }
+}
+
+.toast-stack {
+  pointer-events: none;
+  position: fixed;
+  z-index: 110;
+  top: calc(var(--topbar) + 12px);
+  right: 12px;
+  left: 12px;
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  width: min(100%, 380px);
+  padding: 12px 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--cream);
+  box-shadow: var(--shadow);
+  animation: toast-in 0.22s ease;
+}
+
+.toast-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--forest);
+  background: color-mix(in srgb, var(--forest) 14%, transparent);
+}
+
+.toast.is-error .toast-icon {
+  color: var(--coral);
+  background: color-mix(in srgb, var(--coral) 16%, transparent);
+}
+
+.toast.is-info .toast-icon {
+  color: var(--moss);
+  background: color-mix(in srgb, var(--moss) 16%, transparent);
+}
+
+.toast-message {
+  margin: 0;
+  padding-top: 4px;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 960px) {
+  .toast-stack {
+    top: 16px;
+    right: 16px;
+    left: auto;
   }
 }

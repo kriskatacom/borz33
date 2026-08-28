@@ -11,6 +11,7 @@ import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getProductsColumns } from '@/features/products/productsColumns';
+import { toast } from '@/lib/toast';
 
 function parsePageSize(raw: string | null): number {
   const value = Number(raw);
@@ -86,7 +87,9 @@ export function ProductsPage() {
         setLastPage(response.data.pagination.last_page);
       } catch (error) {
         if (!cancelled) {
-          setMessage(error instanceof ApiError ? error.message : 'Списъкът не можа да се зареди.');
+          const text = error instanceof ApiError ? error.message : 'Списъкът не можа да се зареди.';
+          setMessage(text);
+          toast.error(text);
           setProducts([]);
         }
       } finally {

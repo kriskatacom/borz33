@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Eye, Layers, List, Palette, Plus, Save, Shirt, Trash2, Type } from 'lucide-react';
+import { ArrowLeft, Eye, Images, Layers, List, Palette, Plus, Save, Shirt, Trash2, Type } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import {
   getProduct,
@@ -21,6 +21,9 @@ import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { toast, toastError } from '@/lib/toast';
+import { ProductImagesEditor } from '@/features/products/ProductImagesSection';
+import { VariantImageField } from '@/features/products/VariantImageField';
 
 type ParameterDraft = { key: string; id?: number; name: string; value: string };
 type OptionValueDraft = { key: string; id?: number; name: string; slug: string; hex_color: string };
@@ -75,21 +78,14 @@ function fieldError(errors: Record<string, string>, key: string): string | undef
   return errors[key];
 }
 
-function SectionActions({ busy, message, ok = false }: { busy: boolean; message: string | null; ok?: boolean }) {
+function SectionActions({ busy }: { busy: boolean }) {
   return (
-    <>
-      {message ? (
-        <p className={`form-message ${ok ? '' : 'is-error'}`} role={ok ? 'status' : 'alert'}>
-          {message}
-        </p>
-      ) : null}
-      <div className="row-actions">
-        <Button type="submit" disabled={busy}>
-          <Save />
-          {busy ? 'Запис…' : 'Запази секцията'}
-        </Button>
-      </div>
-    </>
+    <div className="row-actions">
+      <Button type="submit" disabled={busy}>
+        <Save />
+        {busy ? 'Запис…' : 'Запази секцията'}
+      </Button>
+    </div>
   );
 }
 
@@ -98,20 +94,25 @@ function SwitchField({
   label,
   help,
   checked,
+  disabled = false,
+  note,
   onCheckedChange,
 }: {
   id: string;
   label: string;
   help: string;
   checked: boolean;
+  disabled?: boolean;
+  note?: string;
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
     <div className="field">
       <LabelWithHelp htmlFor={id} label={label} help={help} />
       <div className="flex min-h-12 items-center">
-        <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
+        <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
       </div>
+      {note ? <p className="m-0 text-base text-muted-foreground">{note}</p> : null}
     </div>
   );
 }
@@ -132,15 +133,11 @@ function GeneralForm({ product, token, onSaved }: SectionFormProps) {
   const [description, setDescription] = useState(product.description ?? '');
   const [isActive, setIsActive] = useState(product.is_active);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setMessage(null);
-    setOk(false);
     setErrors({});
 
     try {
@@ -155,15 +152,12 @@ function GeneralForm({ product, token, onSaved }: SectionFormProps) {
         is_active: isActive,
       });
       onSaved(response.data.product);
-      setOk(true);
-      setMessage(response.message || 'Записано.');
+      toast.success(response.message || 'Записано.');
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(error.fieldErrors());
-        setMessage(error.message);
-      } else {
-        setMessage('Записът не беше успешен.');
       }
+      toastError(error, 'Записът не беше успешен.');
     } finally {
       setBusy(false);
     }
@@ -181,7 +175,7 @@ function GeneralForm({ product, token, onSaved }: SectionFormProps) {
       </div>
       <Field id="short_description" label="Кратко описание" help="Едно изречение за списъка и картите." value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} error={errors.short_description} />
       <Field id="description" label="Описание" multiline rows={6} help="Пълният текст на продуктовата страница." value={description} onChange={(event) => setDescription(event.target.value)} error={errors.description} />
-      <SectionActions busy={busy} message={message} ok={ok} />
+      <SectionActions busy={busy} />
     </form>
   );
 }
@@ -189,15 +183,11 @@ function GeneralForm({ product, token, onSaved }: SectionFormProps) {
 function ParametersForm({ product, token, onSaved }: SectionFormProps) {
   const [rows, setRows] = useState<ParameterDraft[]>(() => mapParameters(product.parameters));
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setMessage(null);
-    setOk(false);
     setErrors({});
 
     try {
@@ -211,15 +201,12 @@ function ParametersForm({ product, token, onSaved }: SectionFormProps) {
       });
       onSaved(response.data.product);
       setRows(mapParameters(response.data.product.parameters));
-      setOk(true);
-      setMessage(response.message || 'Записано.');
+      toast.success(response.message || 'Записано.');
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(error.fieldErrors());
-        setMessage(error.message);
-      } else {
-        setMessage('Записът не беше успешен.');
       }
+      toastError(error, 'Записът не беше успешен.');
     } finally {
       setBusy(false);
     }
@@ -243,7 +230,7 @@ function ParametersForm({ product, token, onSaved }: SectionFormProps) {
         <Plus />
         Параметър
       </Button>
-      <SectionActions busy={busy} message={message} ok={ok} />
+      <SectionActions busy={busy} />
     </form>
   );
 
@@ -259,15 +246,11 @@ function mapParameters(rows: ProductParameter[]): ParameterDraft[] {
 function OptionsForm({ product, token, onSaved }: SectionFormProps) {
   const [rows, setRows] = useState<OptionDraft[]>(() => mapOptions(product.options));
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setMessage(null);
-    setOk(false);
     setErrors({});
 
     try {
@@ -288,15 +271,12 @@ function OptionsForm({ product, token, onSaved }: SectionFormProps) {
       });
       onSaved(response.data.product);
       setRows(mapOptions(response.data.product.options));
-      setOk(true);
-      setMessage(response.message || 'Записано.');
+      toast.success(response.message || 'Записано.');
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(error.fieldErrors());
-        setMessage(error.message);
-      } else {
-        setMessage('Записът не беше успешен.');
       }
+      toastError(error, 'Записът не беше успешен.');
     } finally {
       setBusy(false);
     }
@@ -338,7 +318,7 @@ function OptionsForm({ product, token, onSaved }: SectionFormProps) {
         <Plus />
         Опция
       </Button>
-      <SectionActions busy={busy} message={message} ok={ok} />
+      <SectionActions busy={busy} />
     </form>
   );
 
@@ -392,15 +372,11 @@ function mapOptions(options: ProductOption[]): OptionDraft[] {
 function VariantsForm({ product, token, onSaved }: SectionFormProps) {
   const [rows, setRows] = useState<VariantDraft[]>(() => mapVariants(product.variants));
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setMessage(null);
-    setOk(false);
     setErrors({});
 
     try {
@@ -421,15 +397,12 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
       });
       onSaved(response.data.product);
       setRows(mapVariants(response.data.product.variants));
-      setOk(true);
-      setMessage(response.message || 'Записано.');
+      toast.success(response.message || 'Записано.');
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(error.fieldErrors());
-        setMessage(error.message);
-      } else {
-        setMessage('Записът не беше успешен.');
       }
+      toastError(error, 'Записът не беше успешен.');
     } finally {
       setBusy(false);
     }
@@ -439,60 +412,82 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
     <form className="grid gap-3" onSubmit={(event) => void onSubmit(event)} noValidate>
       {rows.length === 0 ? <p className="m-0 text-muted-foreground">Няма варианти. Добавете комбинация от опциите.</p> : null}
       {rows.map((row, index) => (
-        <div key={row.key} className="grid gap-3 rounded-[6px] border border-border p-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field id={`${row.key}-sku`} label="SKU" value={row.sku} onChange={(event) => patchRow(index, { sku: event.target.value })} error={fieldError(errors, `variants.${index}.sku`)} />
-            <Field id={`${row.key}-price`} label="Цена" type="number" step="0.01" min="0" value={row.price} onChange={(event) => patchRow(index, { price: event.target.value })} error={fieldError(errors, `variants.${index}.price`)} />
-            <Field id={`${row.key}-stock`} label="Наличност" type="number" min="0" value={row.stock} onChange={(event) => patchRow(index, { stock: event.target.value })} error={fieldError(errors, `variants.${index}.stock`)} />
-          </div>
-          {product.options.map((option) => (
-            <div key={option.id} className="field">
-              <LabelWithHelp htmlFor={`${row.key}-${option.slug}`} label={option.name} help="Стойността на тази опция за варианта." />
-              <Select
-                value={row.option_values[option.slug] || undefined}
-                onValueChange={(value) =>
-                  patchRow(index, { option_values: { ...row.option_values, [option.slug]: value } })
-                }
-              >
-                <SelectTrigger id={`${row.key}-${option.slug}`} className="w-full min-h-12 font-sans">
-                  <SelectValue placeholder="Изберете" />
-                </SelectTrigger>
-                <SelectContent>
-                  {option.values.map((value) => (
-                    <SelectItem key={value.id} value={value.slug}>
-                      {value.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <CollapsibleSection
+          key={row.key}
+          heading="h3"
+          title={<VariantCardTitle row={row} options={product.options} />}
+        >
+          <div className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field id={`${row.key}-sku`} label="SKU" value={row.sku} onChange={(event) => patchRow(index, { sku: event.target.value })} error={fieldError(errors, `variants.${index}.sku`)} />
+              <Field id={`${row.key}-price`} label="Цена" type="number" step="0.01" min="0" value={row.price} onChange={(event) => patchRow(index, { price: event.target.value })} error={fieldError(errors, `variants.${index}.price`)} />
+              <Field id={`${row.key}-stock`} label="Наличност" type="number" min="0" value={row.stock} onChange={(event) => patchRow(index, { stock: event.target.value })} error={fieldError(errors, `variants.${index}.stock`)} />
             </div>
-          ))}
-          <div className="flex flex-wrap items-center gap-4">
-            <SwitchField
-              id={`${row.key}-active`}
-              label="Активен"
-              help="Неактивен вариант не се предлага за покупка."
-              checked={row.is_active}
-              onCheckedChange={(checked) => patchRow(index, { is_active: checked })}
+            <VariantImageField
+              product={product}
+              variantId={row.id}
+              token={token}
+              onProductChange={onSaved}
             />
-            <SwitchField
-              id={`${row.key}-default`}
-              label="По подразбиране"
-              help="Този вариант се избира първи в магазина."
-              checked={row.is_default}
-              onCheckedChange={(checked) => setDefault(index, checked)}
-            />
-            <Button type="button" variant="outline" size="icon" aria-label="Премахни вариант" onClick={() => setRows((current) => current.filter((_, item) => item !== index))}>
-              <Trash2 />
-            </Button>
+            {product.options.map((option) => (
+              <div key={option.id} className="field">
+                <LabelWithHelp htmlFor={`${row.key}-${option.slug}`} label={option.name} help="Стойността на тази опция за варианта." />
+                <Select
+                  value={row.option_values[option.slug] || undefined}
+                  onValueChange={(value) =>
+                    patchRow(index, { option_values: { ...row.option_values, [option.slug]: value } })
+                  }
+                >
+                  <SelectTrigger id={`${row.key}-${option.slug}`} className="w-full min-h-12 font-sans">
+                    <SelectValue placeholder="Изберете" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {option.values.map((value) => (
+                      <SelectItem key={value.id} value={value.slug}>
+                        {value.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+            <div className="flex flex-wrap items-center gap-4">
+              <SwitchField
+                id={`${row.key}-active`}
+                label="Активен"
+                help="Неактивен вариант не се предлага за покупка."
+                checked={row.is_active}
+                onCheckedChange={(checked) => patchRow(index, { is_active: checked })}
+              />
+              <SwitchField
+                id={`${row.key}-default`}
+                label="По подразбиране"
+                help="Само един вариант може да е избран първи в магазина. Включете го на друг вариант, за да преместите избора."
+                checked={row.is_default}
+                disabled={row.is_default}
+                note={
+                  row.is_default
+                    ? 'Включено е и не може да се кликва. За да го смените, отворете друг вариант и включете „По подразбиране“ там.'
+                    : undefined
+                }
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setDefault(index);
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" size="icon" aria-label="Премахни вариант" onClick={() => setRows((current) => current.filter((_, item) => item !== index))}>
+                <Trash2 />
+              </Button>
+            </div>
           </div>
-        </div>
+        </CollapsibleSection>
       ))}
       <Button type="button" variant="outline" onClick={() => addVariant()}>
         <Plus />
         Вариант
       </Button>
-      <SectionActions busy={busy} message={message} ok={ok} />
+      <SectionActions busy={busy} />
     </form>
   );
 
@@ -500,13 +495,8 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
     setRows((current) => current.map((row, item) => (item === index ? { ...row, ...patch } : row)));
   }
 
-  function setDefault(index: number, checked: boolean) {
-    setRows((current) =>
-      current.map((row, item) => ({
-        ...row,
-        is_default: checked ? item === index : item === index ? false : row.is_default,
-      }))
-    );
+  function setDefault(index: number) {
+    setRows((current) => current.map((row, item) => ({ ...row, is_default: item === index })));
   }
 
   function addVariant() {
@@ -544,6 +534,22 @@ function mapVariants(variants: ProductVariant[]): VariantDraft[] {
   }));
 }
 
+function VariantCardTitle({ row, options }: { row: VariantDraft; options: ProductOption[] }) {
+  const optionLabel = options
+    .map((option) => option.values.find((value) => value.slug === row.option_values[option.slug])?.name)
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-2">
+      <span className="truncate">{row.sku.trim() || 'Нов вариант'}</span>
+      {optionLabel ? <span className="truncate font-medium tracking-normal text-muted-foreground">{optionLabel}</span> : null}
+      {row.is_default ? <span className="badge info">По подразбиране</span> : null}
+      {!row.is_active ? <span className="badge idle">Неактивен</span> : null}
+    </span>
+  );
+}
+
 function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
   const [enabled, setEnabled] = useState(product.personalization_enabled);
   const [label, setLabel] = useState(product.personalization_label ?? '');
@@ -552,15 +558,11 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
   const [maxLength, setMaxLength] = useState(String(product.personalization_max_length ?? 80));
   const [fields, setFields] = useState<PersonalizationFieldDraft[]>(() => mapPersonalization(product.personalization_fields));
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setMessage(null);
-    setOk(false);
     setErrors({});
 
     try {
@@ -582,15 +584,12 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
       });
       onSaved(response.data.product);
       setFields(mapPersonalization(response.data.product.personalization_fields));
-      setOk(true);
-      setMessage(response.message || 'Записано.');
+      toast.success(response.message || 'Записано.');
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(error.fieldErrors());
-        setMessage(error.message);
-      } else {
-        setMessage('Записът не беше успешен.');
       }
+      toastError(error, 'Записът не беше успешен.');
     } finally {
       setBusy(false);
     }
@@ -632,7 +631,7 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
         <Plus />
         Поле
       </Button>
-      <SectionActions busy={busy} message={message} ok={ok} />
+      <SectionActions busy={busy} />
     </form>
   );
 
@@ -676,6 +675,7 @@ export function ProductEditPage() {
     async function load() {
       if (!Number.isInteger(productId) || productId < 1) {
         setMessage('Продуктът не е намерен.');
+        toast.error('Продуктът не е намерен.');
         setBusy(false);
         return;
       }
@@ -691,7 +691,9 @@ export function ProductEditPage() {
       } catch (error) {
         if (!cancelled) {
           setProduct(null);
-          setMessage(error instanceof ApiError ? error.message : 'Продуктът не можа да се зареди.');
+          const text = error instanceof ApiError ? error.message : 'Продуктът не можа да се зареди.';
+          setMessage(text);
+          toast.error(text);
         }
       } finally {
         if (!cancelled) {
@@ -713,7 +715,7 @@ export function ProductEditPage() {
     <div className="page min-w-0">
       <PageHeader
         title={product ? `Редакция · ${product.name}` : 'Редакция'}
-        help="Всяка секция се записва отделно. Незапазените промени в другите секции не се пращат."
+        help="Всяка секция се записва отделно. Изображенията се качват веднага. Незапазените промени в другите секции не се пращат."
         crumbs={[
           { label: 'Табло', to: routes.home },
           { label: 'Продукти', to: routes.products },
@@ -752,6 +754,9 @@ export function ProductEditPage() {
 
       {canEdit && product ? (
         <div className="flex min-w-0 max-w-full flex-col gap-3">
+          <SectionShell title="Изображения" icon={Images}>
+            <ProductImagesEditor product={product} token={token} onProductChange={setProduct} />
+          </SectionShell>
           <SectionShell title="Общи данни" icon={Shirt}>
             <GeneralForm key={`general-${product.id}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>

@@ -6,6 +6,7 @@ import { navItems } from '@/app/nav';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/Button';
 import { logout } from '@/features/auth/authThunks';
+import { toast } from '@/lib/toast';
 
 type AdminLayoutProps = {
   children: ReactNode;
@@ -57,7 +58,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {menuOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
         </button>
         <p className="brand">Borz33</p>
-        <Button type="button" variant="ghost" size="sm" onClick={() => void dispatch(logout())}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            toast.info('Излязохте от профила.');
+            void dispatch(logout());
+          }}
+        >
           <LogOut />
           Изход
         </Button>
@@ -80,7 +89,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
         <div className="sidebar-user">
           <p className="sidebar-user-name">{displayName}</p>
-          <Button type="button" variant="ghost" size="sm" className="w-full justify-start px-0" onClick={() => void dispatch(logout())}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start px-0"
+            onClick={() => {
+              toast.info('Излязохте от профила.');
+              void dispatch(logout());
+            }}
+          >
             <LogOut />
             Изход
           </Button>

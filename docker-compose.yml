@@ -58,6 +58,7 @@ services:
       AUTH_TOKEN_TTL_DAYS: ${AUTH_TOKEN_TTL_DAYS}
       AUTH_PASSWORD_RESET_TTL_MINUTES: ${AUTH_PASSWORD_RESET_TTL_MINUTES}
       ADMIN_PUBLIC_URL: ${ADMIN_PUBLIC_URL}
+      HOST_UID: ${HOST_UID:-1000}
     volumes:
       - .:/var/www
     depends_on:

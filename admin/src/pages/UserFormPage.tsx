@@ -14,6 +14,7 @@ import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast, toastError } from '@/lib/toast';
 
 type FormState = {
   first_name: string;
@@ -51,46 +52,37 @@ function tabForErrors(errors: Record<string, string>): FormTab | null {
   return tabs.find((tab) => tabFields[tab].some((field) => errors[field])) ?? null;
 }
 
-function FormActions({ busy, message }: { busy: boolean; message: string | null }) {
+function FormActions({ busy }: { busy: boolean }) {
   return (
-    <>
-      {message ? (
-        <p className="form-message is-error" role="alert">
-          {message}
-        </p>
-      ) : null}
-      <div className="row-actions">
-        <Button type="submit" disabled={busy}>
-          <Save />
-          {busy ? 'Запис…' : 'Запази'}
-        </Button>
-        <Button asChild variant="outline">
-          <Link to={routes.users}>
-            <X />
-            Отказ
-          </Link>
-        </Button>
-      </div>
-    </>
+    <div className="row-actions">
+      <Button type="submit" disabled={busy}>
+        <Save />
+        {busy ? 'Запис…' : 'Запази'}
+      </Button>
+      <Button asChild variant="outline">
+        <Link to={routes.users}>
+          <X />
+          Отказ
+        </Link>
+      </Button>
+    </div>
   );
 }
 
 function TabForm({
   children,
   busy,
-  message,
   onSubmit,
 }: {
   children: ReactNode;
   busy: boolean;
-  message: string | null;
   onSubmit: (event: FormEvent) => void;
 }) {
   return (
     <form className="contents" onSubmit={(event) => void onSubmit(event)} noValidate>
       <FormSection className="grid gap-3">
         <div className="form-grid">{children}</div>
-        <FormActions busy={busy} message={message} />
+        <FormActions busy={busy} />
       </FormSection>
     </form>
   );
@@ -141,6 +133,7 @@ export function UserFormPage() {
       } catch (error) {
         if (!cancelled) {
           setMessage(error instanceof ApiError ? error.message : 'Потребителят не можа да се зареди.');
+          toastError(error, 'Потребителят не можа да се зареди.');
         }
       } finally {
         if (!cancelled) {
@@ -163,7 +156,6 @@ export function UserFormPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setMessage(null);
     setErrors({});
 
     const payload = {
@@ -182,23 +174,23 @@ export function UserFormPage() {
 
     try {
       if (isNew) {
-        await createUser(token, payload);
+        const response = await createUser(token, payload);
+        toast.success(response.message || 'Профилът е създаден.');
       } else if (userId !== null) {
-        await updateUser(token, userId, payload);
+        const response = await updateUser(token, userId, payload);
+        toast.success(response.message || 'Профилът е обновен.');
       }
       navigate(routes.users, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         const fieldErrors = error.fieldErrors();
         setErrors(fieldErrors);
-        setMessage(error.message);
         const nextTab = tabForErrors(fieldErrors);
         if (nextTab) {
           setTab(nextTab);
         }
-      } else {
-        setMessage('Записът не беше успешен.');
       }
+      toastError(error, 'Записът не беше успешен.');
     } finally {
       setBusy(false);
     }
@@ -220,6 +212,12 @@ export function UserFormPage() {
         ]}
       />
 
+      {message ? (
+        <p className="form-message is-error" role="alert">
+          {message}
+        </p>
+      ) : null}
+
       <Tabs value={tab} onValueChange={(value) => setTab(value as FormTab)}>
         <TabsList>
           <TabsTrigger value="profile">
@@ -237,7 +235,7 @@ export function UserFormPage() {
         </TabsList>
 
         <TabsContent value="profile" className="grid gap-3">
-          <TabForm busy={busy} message={message} onSubmit={onSubmit}>
+          <TabForm busy={busy} onSubmit={onSubmit}>
             <Field
               id="first_name"
               label="Име"
@@ -280,7 +278,7 @@ export function UserFormPage() {
         </TabsContent>
 
         <TabsContent value="access" className="grid gap-3">
-          <TabForm busy={busy} message={message} onSubmit={onSubmit}>
+          <TabForm busy={busy} onSubmit={onSubmit}>
             <div className="field">
               <LabelWithHelp
                 htmlFor="role"
@@ -329,7 +327,7 @@ export function UserFormPage() {
         </TabsContent>
 
         <TabsContent value="security" className="grid gap-3">
-          <TabForm busy={busy} message={message} onSubmit={onSubmit}>
+          <TabForm busy={busy} onSubmit={onSubmit}>
             <Field
               id="password"
               label={isNew ? 'Парола' : 'Нова парола'}

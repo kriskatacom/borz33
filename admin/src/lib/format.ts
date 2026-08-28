@@ -71,6 +71,22 @@ const moneyFormatter = new Intl.NumberFormat('bg-BG', {
   currency: 'BGN',
 });
 
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return '—';
+  }
+
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+}
+
 export function formatMoney(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === '') {
     return '—';

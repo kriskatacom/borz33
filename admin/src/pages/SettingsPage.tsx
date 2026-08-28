@@ -1,6 +1,7 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { routes } from '@/app/constants';
 import { useTheme, type Theme } from '@/components/theme-provider';
+import { toast } from '@/lib/toast';
 import { PageHeader } from '@/components/page-header';
 import { HelpHint } from '@/components/ui/HelpHint';
 import { Label } from '@/components/ui/label';
@@ -28,7 +29,13 @@ export function SettingsPage() {
 
       <RadioGroup
         value={theme}
-        onValueChange={(value) => setTheme(value as Theme)}
+        onValueChange={(value) => {
+          const next = value as Theme;
+          setTheme(next);
+          toast.success(
+            next === 'light' ? 'Светлата тема е включена.' : next === 'dark' ? 'Тъмната тема е включена.' : 'Системната тема е включена.'
+          );
+        }}
         className="grid max-w-xl gap-3"
         aria-label="Тема на приложението"
       >

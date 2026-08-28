@@ -133,7 +133,7 @@ export function DataTable<TData extends RowData>({
 
   return (
     <div className="grid gap-3">
-      <div className="overflow-hidden border border-border bg-background" aria-busy={loading}>
+      <div className="overflow-hidden border border-border bg-card" aria-busy={loading}>
         <Table>
           {caption ? <caption className="sr-only">{caption}</caption> : null}
           <TableHeader>
@@ -209,7 +209,7 @@ export function DataTable<TData extends RowData>({
                         key={cell.id}
                         className={cn(
                           'px-4 py-3 font-sans',
-                          meta?.sticky && 'sticky left-0 z-10 bg-background group-hover:bg-muted',
+                          meta?.sticky && 'sticky left-0 z-10 bg-card group-hover:bg-muted',
                           meta?.className
                         )}
                       >

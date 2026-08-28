@@ -12,6 +12,7 @@ import { OtpInputs } from '@/components/ui/OtpInputs';
 import { setCredentials, type AdminUser } from '@/features/auth/authSlice';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { deviceName, getOrCreateDeviceUuid } from '@/lib/device';
+import { toast, toastError } from '@/lib/toast';
 
 export function LoginPage() {
   const dispatch = useAppDispatch();
@@ -41,6 +42,7 @@ export function LoginPage() {
     }
 
     dispatch(setCredentials({ token, user }));
+    toast.success('Входът е успешен.');
     navigate(routes.home, { replace: true });
   }
 
@@ -59,6 +61,7 @@ export function LoginPage() {
           setStep('device');
           setMessage(response.message);
           setIsError(false);
+          toast.info(response.message);
           return;
         }
 
@@ -73,9 +76,11 @@ export function LoginPage() {
         setErrors(error.fieldErrors());
         setMessage(error.message);
         setIsError(true);
+        toast.error(error.message);
       } else {
         setMessage('Неуспешен вход. Опитайте отново.');
         setIsError(true);
+        toast.error('Неуспешен вход. Опитайте отново.');
       }
     } finally {
       setBusy(false);
@@ -90,9 +95,11 @@ export function LoginPage() {
       const response = await resendAdminDeviceCode(deviceFields());
       setMessage(response.message);
       setIsError(false);
+      toast.success(response.message);
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : 'Кодът не можа да се изпрати отново.');
       setIsError(true);
+      toastError(error, 'Кодът не можа да се изпрати отново.');
     } finally {
       setBusy(false);
     }

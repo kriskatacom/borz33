@@ -58,6 +58,36 @@ class ProductImagesController extends Controller
         $this->created(['images' => $stored], count($stored) === 1 ? 'Изображението е добавено.' : 'Изображенията са добавени.');
     }
 
+    public function storeVariant(string $id, string $variantId): never
+    {
+        $product = $this->products->find($this->id($id));
+        $variant = $this->products->findVariant($product, $this->id($variantId));
+        $file = Request::file('image');
+
+        if ($file === null) {
+            throw new ValidationException(['image' => ['Изберете изображение.']]);
+        }
+
+        $image = $this->images->storeVariant($product, $variant, $file, $this->alt());
+
+        $this->created(['image' => ProductImageResource::toArray($image)], 'Изображението на варианта е записано.');
+    }
+
+    public function destroyVariant(string $id, string $variantId): never
+    {
+        $product = $this->products->find($this->id($id));
+        $variant = $this->products->findVariant($product, $this->id($variantId));
+        $image = $variant->image()->first();
+
+        if ($image === null) {
+            $this->error('Изображението не е намерено.', 404);
+        }
+
+        $this->images->deleteImage($image);
+
+        $this->ok([], 'Изображението на варианта е изтрито.');
+    }
+
     public function update(string $id, string $imageId): never
     {
         $product = $this->products->find($this->id($id));
