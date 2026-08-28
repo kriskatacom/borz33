@@ -12,8 +12,16 @@ if [ ! -x vendor/bin/phinx ]; then
     docker compose exec php composer install --no-interaction
 fi
 
-if [ -n "${USER_SEED_COUNT:-}" ]; then
-    docker compose exec -e "USER_SEED_COUNT=${USER_SEED_COUNT}" php vendor/bin/phinx "$@"
+if [ -n "${USER_SEED_COUNT:-}" ] || [ -n "${PRODUCT_SEED_COUNT:-}" ]; then
+    extra=""
+    if [ -n "${USER_SEED_COUNT:-}" ]; then
+        extra="${extra} -e USER_SEED_COUNT=${USER_SEED_COUNT}"
+    fi
+    if [ -n "${PRODUCT_SEED_COUNT:-}" ]; then
+        extra="${extra} -e PRODUCT_SEED_COUNT=${PRODUCT_SEED_COUNT}"
+    fi
+    # shellcheck disable=SC2086
+    docker compose exec $extra php vendor/bin/phinx "$@"
 else
     docker compose exec php vendor/bin/phinx "$@"
 fi

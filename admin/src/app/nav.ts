@@ -25,5 +25,9 @@ export function navItemByPath(path: string): NavItem | undefined {
     return navItems.find((item) => item.to === routes.users);
   }
 
+  if (path.startsWith(`${routes.products}/`) || path === routes.products) {
+    return navItems.find((item) => item.to === routes.products);
+  }
+
   return navItems.find((item) => item.to === path);
 }

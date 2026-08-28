@@ -207,10 +207,14 @@ docker compose up -d --build
 
 Потребителите се пълнят през `UserFactory` (български имена, обща парола `password`, bulk insert) и `UserSeeder`. По подразбиране се създават около 80 записа с клиенти, админи, неактивни и изтрити. Броят се сменя с `USER_SEED_COUNT`. Повторно пускане изтрива само имейлите `@seed.borz33.local` и ги създава наново — реалният админ от `.env` (`admin@borz33.local`) не се пипа. Seed админите влизат с парола `password`.
 
+Продуктите се пълнят през `ProductFactory` и `ProductSeeder` — тениски с размери, цветове, наличности и част с персонализация, **без изображения**. Повторно пускане трие само SKU `SEED-*`. Броят е `PRODUCT_SEED_COUNT` (по подразбиране 24).
+
 ```bash
 ./bin/phinx seed:run
 ./bin/phinx seed:run -s UserSeeder
+./bin/phinx seed:run -s ProductSeeder
 USER_SEED_COUNT=200 ./bin/phinx seed:run -s UserSeeder
+PRODUCT_SEED_COUNT=40 ./bin/phinx seed:run -s ProductSeeder
 ```
 
 Или през Composer в PHP контейнера:
@@ -218,6 +222,7 @@ USER_SEED_COUNT=200 ./bin/phinx seed:run -s UserSeeder
 ```bash
 docker compose exec php composer seed
 docker compose exec php composer seed:users
+docker compose exec php composer seed:products
 ```
 
 Еквивалент без `./bin/phinx`:

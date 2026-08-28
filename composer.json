@@ -23,6 +23,7 @@
         "migrate:rollback": "phinx rollback",
         "migrate:status": "phinx status",
         "seed": "phinx seed:run",
-        "seed:users": "phinx seed:run -s UserSeeder"
+        "seed:users": "phinx seed:run -s UserSeeder",
+        "seed:products": "phinx seed:run -s ProductSeeder"
     }
 }

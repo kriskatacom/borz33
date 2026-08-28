@@ -11,6 +11,7 @@ export const routes = {
   home: '/',
   orders: '/orders',
   products: '/products',
+  productsShow: '/products/:id',
   users: '/users',
   usersNew: '/users/new',
   usersEdit: '/users/:id',

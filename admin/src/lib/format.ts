@@ -66,6 +66,25 @@ function parseDate(value: string): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+const moneyFormatter = new Intl.NumberFormat('bg-BG', {
+  style: 'currency',
+  currency: 'BGN',
+});
+
+export function formatMoney(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+
+  const amount = typeof value === 'number' ? value : Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return '—';
+  }
+
+  return moneyFormatter.format(amount);
+}
+
 export function roleLabel(role: string): string {
   if (role === 'admin') {
     return 'Администратор';
