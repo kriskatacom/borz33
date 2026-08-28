@@ -17,7 +17,7 @@
 | Сайт с плановете | PHP | `plans/` | Готов за преглед |
 | Магазин (клиенти) | PHP SSR, MVC + services | `web/` | Предстои |
 | API | PHP, MVC + services, JSON | `api/` | Начална структура |
-| Админ панел | React / Redux | `admin/` | Скелет (без вход/забравена парола още) |
+| Админ панел | React / Redux | `admin/` | Вход и табло |
 | База данни | MySQL 8.4 + phpMyAdmin + Phinx | `database/` | Работи през Docker |
 | Имейли (локално) | Mailpit + Symfony Mailer | — | Работи през Docker |
 
@@ -111,6 +111,12 @@ $mailer->sendTemplate('user@example.com', 'Заглавие', 'verify-registrati
 - Устройството от регистрацията е доверено и влиза директно с Bearer token (30 дни).
 - Ново устройство получава 6-цифрен код по имейл. Потвърждение: `POST /auth/login/device`. Нов код: `POST /auth/login/device/resend`.
 - Грешната парола не издава дали имейлът съществува.
+
+Админ панелът ползва отделни маршрути: `POST /auth/admin/login`, `POST /auth/admin/login/device`, `POST /auth/admin/login/device/resend`. Влизат само потребители с роля `admin`. Ако админ още няма, първият админски вход го създава от `ADMIN_*` в `.env`. Клиентски профил получава същия отговор като грешна парола.
+
+Сесия: `GET /auth/me` и `POST /auth/logout` с `Authorization: Bearer`.
+
+Забравена парола (само админ): `POST /auth/admin/password/forgot` и `POST /auth/admin/password/reset`. Линкът в писмото води към `ADMIN_PUBLIC_URL` (по подразбиране http://localhost:5173/reset-password).
 
 ### Миграции (Phinx)
 
@@ -223,7 +229,7 @@ docker compose up -d
 
 Адрес: http://localhost:5173. Браузърът говори само с Vite; `/auth` и `/health` се проксират към API (`http://nginx:8080` в Docker, или `http://127.0.0.1:8080` при `npm run dev` на хоста).
 
-Има страници `/login` и `/forgot-password` като скелет. Регистрация в админ панела няма и няма да има. Формите и връзката с API ще се добавят следващо.
+Има работещ вход, забравена парола и табло с бързи връзки към бъдещите раздели. Регистрация в админ панела няма.
 
 Локално без Docker:
 

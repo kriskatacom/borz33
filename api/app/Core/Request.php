@@ -51,6 +51,21 @@ class Request
         return $data[$key] ?? $default;
     }
 
+    public static function bearerToken(): ?string
+    {
+        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['Authorization'] ?? '';
+
+        if (!is_string($header) || $header === '') {
+            return null;
+        }
+
+        if (!preg_match('/^Bearer\s+(\S+)/i', $header, $matches)) {
+            return null;
+        }
+
+        return $matches[1];
+    }
+
     public static function ip(): string
     {
         $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';

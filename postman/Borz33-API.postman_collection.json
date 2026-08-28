@@ -355,6 +355,89 @@
             "description": "Нов код за вход от ново устройство."
           },
           "response": []
+        },
+        {
+          "name": "Admin login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@borz33.local\",\n  \"password\": \"admin12345\",\n  \"device_uuid\": \"{{deviceUuid}}\",\n  \"device_name\": \"Postman admin\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/admin/login",
+            "description": "Вход само за администратор. Създава админа от .env ако още го няма. Първото устройство се доверява автоматично."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin forgot password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@borz33.local\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/admin/password/forgot",
+            "description": "Винаги връща еднакъв успех. Писмо се праща само на админски профил."
+          },
+          "response": []
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/me",
+            "description": "Текущ потребител по Bearer token. Сложи token от admin login в adminToken."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/logout"
+          },
+          "response": []
         }
       ]
     }

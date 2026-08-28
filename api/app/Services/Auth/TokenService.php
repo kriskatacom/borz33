@@ -41,4 +41,36 @@ class TokenService
             'expires_at' => $expiresAt->toIso8601String(),
         ];
     }
+
+    public function findValid(string $plain): ?ApiToken
+    {
+        /** @var ApiToken|null $token */
+        $token = ApiToken::query()
+            ->with('user')
+            ->where('token_hash', hash('sha256', $plain))
+            ->first();
+
+        if ($token === null || $token->expires_at === null || $token->expires_at->lt(Carbon::now())) {
+            return null;
+        }
+
+        return $token;
+    }
+
+    public function touch(ApiToken $token): void
+    {
+        $token->forceFill([
+            'last_used_at' => Carbon::now(),
+        ])->save();
+    }
+
+    public function revoke(?ApiToken $token): void
+    {
+        $token?->delete();
+    }
+
+    public function revokeAllForUser(User $user): void
+    {
+        $user->apiTokens()->delete();
+    }
 }

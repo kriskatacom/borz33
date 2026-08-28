@@ -15,12 +15,17 @@ class LoginService
         private readonly LoginAttemptService $loginAttemptService = new LoginAttemptService(),
         private readonly DeviceService $deviceService = new DeviceService(),
         private readonly DeviceLoginService $deviceLoginService = new DeviceLoginService(),
-        private readonly TokenService $tokenService = new TokenService()
+        private readonly TokenService $tokenService = new TokenService(),
+        private readonly AdminBootstrapService $adminBootstrapService = new AdminBootstrapService()
     ) {
     }
 
-    public function login(array $data): AuthResult
+    public function login(array $data, bool $adminOnly = false): AuthResult
     {
+        if ($adminOnly) {
+            $this->adminBootstrapService->ensureExists();
+        }
+
         $email = strtolower(trim((string) $data['email']));
         $ip = Request::ip();
         $deviceUuid = (string) $data['device_uuid'];
@@ -32,7 +37,7 @@ class LoginService
         $hash = $user?->password ?: PasswordHasher::DUMMY_HASH;
         $passwordValid = $this->passwordHasher->verify((string) $data['password'], $hash);
 
-        if ($user === null || !$passwordValid) {
+        if ($user === null || !$passwordValid || ($adminOnly && !$user->isAdmin())) {
             $this->loginAttemptService->record($email, $ip, false);
             throw new AuthException('Невалиден имейл или парола.');
         }
@@ -65,12 +70,12 @@ class LoginService
         return new AuthResult($user, true);
     }
 
-    public function verifyDevice(array $data): AuthResult
+    public function verifyDevice(array $data, bool $adminOnly = false): AuthResult
     {
         $email = strtolower(trim((string) $data['email']));
         $user = User::query()->where('email', $email)->first();
 
-        if ($user === null || !$user->isActive() || !$user->hasVerifiedEmail()) {
+        if ($user === null || !$user->isActive() || !$user->hasVerifiedEmail() || ($adminOnly && !$user->isAdmin())) {
             throw new AuthException('Невалиден код за устройство.');
         }
 
@@ -84,12 +89,12 @@ class LoginService
         return $this->complete($user, $device);
     }
 
-    public function resendDeviceCode(array $data): void
+    public function resendDeviceCode(array $data, bool $adminOnly = false): void
     {
         $email = strtolower(trim((string) $data['email']));
         $user = User::query()->where('email', $email)->first();
 
-        if ($user === null || !$user->isActive() || !$user->hasVerifiedEmail()) {
+        if ($user === null || !$user->isActive() || !$user->hasVerifiedEmail() || ($adminOnly && !$user->isAdmin())) {
             return;
         }
 

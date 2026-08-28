@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Exceptions\AuthException;
+use App\Exceptions\ValidationException;
+
 class Router
 {
     protected array $routes = [];
@@ -64,39 +67,61 @@ class Router
                     $handler = $routeData['handler'];
                     $middlewares = $routeData['middlewares'];
 
-                    foreach ($middlewares as $middlewareClass) {
-                        if (class_exists($middlewareClass)) {
-                            $middleware = new $middlewareClass();
-                            $middleware->handle();
-                        }
-                    }
-
-                    $controllerClass = $handler[0];
-                    $methodName = $handler[1];
-
-                    if (class_exists($controllerClass)) {
-                        $controller = new $controllerClass();
-                        $params = array_map('urldecode', $matches);
-
-                        if (method_exists($controller, $methodName)) {
-                            if (method_exists($controller, 'callAction')) {
-                                $controller->callAction($methodName, $params);
-                            } else {
-                                call_user_func_array([$controller, $methodName], $params);
+                    try {
+                        foreach ($middlewares as $middlewareClass) {
+                            if (class_exists($middlewareClass)) {
+                                $middleware = new $middlewareClass();
+                                $middleware->handle();
                             }
-                            return;
                         }
+
+                        $controllerClass = $handler[0];
+                        $methodName = $handler[1];
+
+                        if (class_exists($controllerClass)) {
+                            $controller = new $controllerClass();
+                            $params = array_map('urldecode', $matches);
+
+                            if (method_exists($controller, $methodName)) {
+                                if (method_exists($controller, 'callAction')) {
+                                    $controller->callAction($methodName, $params);
+                                } else {
+                                    call_user_func_array([$controller, $methodName], $params);
+                                }
+                                return;
+                            }
+                        }
+                    } catch (ValidationException $exception) {
+                        $this->error($exception->getMessage(), 422, $exception->errors());
+                    } catch (AuthException $exception) {
+                        if ($exception->retryAfter() !== null) {
+                            header('Retry-After: ' . $exception->retryAfter());
+                        }
+
+                        $this->error($exception->getMessage(), $exception->status());
                     }
                 }
             }
         }
 
-        http_response_code(404);
+        $this->error('Not found', 404, ['path' => $path]);
+    }
+
+    private function error(string $message, int $status = 400, mixed $errors = null): never
+    {
+        http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode([
+
+        $payload = [
             'success' => false,
-            'message' => 'Not found',
-            'path' => $path,
-        ], JSON_UNESCAPED_UNICODE);
+            'message' => $message,
+        ];
+
+        if ($errors !== null) {
+            $payload['errors'] = $errors;
+        }
+
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
     }
 }

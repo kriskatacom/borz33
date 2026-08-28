@@ -12,14 +12,42 @@ export type AdminUser = {
   email_verified_at: string | null;
 };
 
+export type AuthStatus = 'hydrating' | 'ready';
+
 export type AuthState = {
+  status: AuthStatus;
   token: string | null;
   user: AdminUser | null;
 };
 
+function readStoredUser(): AdminUser | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(STORAGE_KEYS.user);
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+
+    if (parsed !== null && typeof parsed === 'object' && 'id' in parsed && 'email' in parsed) {
+      return parsed as AdminUser;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 const initialState: AuthState = {
+  status: 'hydrating',
   token: typeof window === 'undefined' ? null : window.localStorage.getItem(STORAGE_KEYS.token),
-  user: null,
+  user: readStoredUser(),
 };
 
 const authSlice = createSlice({
@@ -30,14 +58,19 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.user = action.payload.user;
       window.localStorage.setItem(STORAGE_KEYS.token, action.payload.token);
+      window.localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(action.payload.user));
     },
     clearCredentials(state) {
       state.token = null;
       state.user = null;
       window.localStorage.removeItem(STORAGE_KEYS.token);
+      window.localStorage.removeItem(STORAGE_KEYS.user);
+    },
+    setReady(state) {
+      state.status = 'ready';
     },
   },
 });
 
-export const { setCredentials, clearCredentials } = authSlice.actions;
+export const { setCredentials, clearCredentials, setReady } = authSlice.actions;
 export const authReducer = authSlice.reducer;

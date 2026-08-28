@@ -9,7 +9,35 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+
+  fieldErrors(): Record<string, string> {
+    if (this.payload === null || typeof this.payload !== 'object' || !('errors' in this.payload)) {
+      return {};
+    }
+
+    const raw = this.payload.errors;
+
+    if (raw === null || typeof raw !== 'object') {
+      return {};
+    }
+
+    const mapped: Record<string, string> = {};
+
+    for (const [field, messages] of Object.entries(raw)) {
+      if (Array.isArray(messages) && typeof messages[0] === 'string') {
+        mapped[field] = messages[0];
+      }
+    }
+
+    return mapped;
+  }
 }
+
+export type ApiEnvelope<T> = {
+  success: boolean;
+  message: string;
+  data: T;
+};
 
 type RequestOptions = {
   method?: HttpMethod;
@@ -17,7 +45,7 @@ type RequestOptions = {
   token?: string | null;
 };
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<ApiEnvelope<T>> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
   };
@@ -47,5 +75,5 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     throw new ApiError(message, response.status, data);
   }
 
-  return data as T;
+  return data as ApiEnvelope<T>;
 }
