@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -85,5 +86,15 @@ class User extends Model
     public function fullName(): string
     {
         return trim($this->first_name . ' ' . $this->last_name);
+    }
+
+    public function devices(): HasMany
+    {
+        return $this->hasMany(UserDevice::class);
+    }
+
+    public function deviceLoginCodes(): HasMany
+    {
+        return $this->hasMany(DeviceLoginCode::class);
     }
 }
