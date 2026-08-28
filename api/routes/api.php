@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\Admin\MediaController;
 use App\Controllers\Admin\ProductImagesController;
 use App\Controllers\Admin\ProductsController;
 use App\Controllers\Admin\UsersController;
@@ -43,6 +44,14 @@ $router->put('/admin/users/{id}', [UsersController::class, 'update'], $admin);
 $router->patch('/admin/users/{id}', [UsersController::class, 'update'], $admin);
 $router->delete('/admin/users/{id}', [UsersController::class, 'destroy'], $admin);
 $router->post('/admin/users/{id}/restore', [UsersController::class, 'restore'], $admin);
+$router->post('/admin/users/{id}/avatar', [UsersController::class, 'storeAvatar'], $admin);
+$router->delete('/admin/users/{id}/avatar', [UsersController::class, 'destroyAvatar'], $admin);
+
+$router->get('/admin/media', [MediaController::class, 'index'], $admin);
+$router->post('/admin/media', [MediaController::class, 'store'], $admin);
+$router->get('/admin/media/{id}', [MediaController::class, 'show'], $admin);
+$router->patch('/admin/media/{id}', [MediaController::class, 'update'], $admin);
+$router->delete('/admin/media/{id}', [MediaController::class, 'destroy'], $admin);
 
 $router->post('/admin/products', [ProductsController::class, 'store'], $admin);
 $router->get('/admin/products', [ProductsController::class, 'index'], $admin);

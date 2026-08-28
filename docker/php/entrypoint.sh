@@ -6,7 +6,7 @@ if [ -f /var/www/composer.json ] && [ ! -f /var/www/vendor/autoload.php ]; then
 fi
 
 uploads="/var/www/api/public/uploads"
-mkdir -p "$uploads/products"
+mkdir -p "$uploads/products" "$uploads/users" "$uploads/media"
 # Host bind-mount user (usually 1000) and php-fpm (www-data) both need to write.
 chown -R "${HOST_UID:-1000}:www-data" "$uploads"
 chmod -R ug+rwX "$uploads"

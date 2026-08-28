@@ -17,6 +17,7 @@ class UserResource
             'last_name' => $user->last_name,
             'email' => $user->email,
             'phone' => $user->phone,
+            'avatar_url' => self::avatarUrl($user),
             'role' => $user->role,
             'is_active' => $user->is_active,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
@@ -46,5 +47,14 @@ class UserResource
         }
 
         return $items;
+    }
+
+    private static function avatarUrl(User $user): ?string
+    {
+        if (!is_string($user->avatar_path) || $user->avatar_path === '') {
+            return null;
+        }
+
+        return '/' . ltrim($user->avatar_path, '/');
     }
 }

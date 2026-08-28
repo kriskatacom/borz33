@@ -9,6 +9,7 @@ import { LoadingProvider } from '@/components/loading-provider';
 import { Toaster } from '@/components/ui/Toaster';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { MediaPage } from '@/pages/MediaPage';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { ProductEditPage } from '@/pages/ProductEditPage';
 import { ProductViewPage } from '@/pages/ProductViewPage';
@@ -47,6 +48,7 @@ export function App() {
               <Route path={routes.productsEdit} element={<ProductEditPage />} />
               <Route path={routes.productsShow} element={<ProductViewPage />} />
               <Route path={routes.products} element={<ProductsPage />} />
+              <Route path={routes.media} element={<MediaPage />} />
               <Route path={routes.content} element={<ComingSoonPage />} />
               <Route path={routes.campaigns} element={<ComingSoonPage />} />
               <Route path={routes.shipments} element={<ComingSoonPage />} />

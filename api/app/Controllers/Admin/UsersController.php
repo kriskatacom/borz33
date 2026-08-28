@@ -6,8 +6,10 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\Controller;
 use App\Core\Request;
+use App\Exceptions\ValidationException;
 use App\Resources\UserResource;
 use App\Services\Users\UserAdminService;
+use App\Services\Users\UserAvatarService;
 use App\Validation\StoreUserValidator;
 use App\Validation\UpdateUserValidator;
 
@@ -16,7 +18,8 @@ class UsersController extends Controller
     public function __construct(
         private readonly UserAdminService $users = new UserAdminService(),
         private readonly StoreUserValidator $storeValidator = new StoreUserValidator(),
-        private readonly UpdateUserValidator $updateValidator = new UpdateUserValidator()
+        private readonly UpdateUserValidator $updateValidator = new UpdateUserValidator(),
+        private readonly UserAvatarService $avatars = new UserAvatarService()
     ) {
     }
 
@@ -61,6 +64,26 @@ class UsersController extends Controller
         $user = $this->users->restore($this->id($id));
 
         $this->ok(['user' => UserResource::toAdminArray($user)], 'Потребителят е възстановен.');
+    }
+
+    public function storeAvatar(string $id): never
+    {
+        $file = Request::file('image');
+
+        if ($file === null) {
+            throw new ValidationException(['image' => ['Изберете изображение.']]);
+        }
+
+        $user = $this->avatars->store($this->users->find($this->id($id)), $file);
+
+        $this->created(['user' => UserResource::toAdminArray($user)], 'Профилната снимка е записана.');
+    }
+
+    public function destroyAvatar(string $id): never
+    {
+        $user = $this->avatars->delete($this->users->find($this->id($id)));
+
+        $this->ok(['user' => UserResource::toAdminArray($user)], 'Профилната снимка е премахната.');
     }
 
     private function id(string $id): int

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MoreHorizontal, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, RotateCcw, Trash2, UserRound } from 'lucide-react';
 import { createDataTableHelper } from '@/components/data-table/columnHelper';
 import { Button } from '@/components/ui/Button';
 import {
@@ -70,6 +70,27 @@ function UsersRowActions({
 
 export function getUsersColumns({ currentId, onRestore, onDelete }: UsersColumnsOptions) {
   return helper.columns([
+    helper.display({
+      id: 'avatar',
+      header: 'Снимка',
+      enableSorting: false,
+      meta: { className: 'w-24', help: 'Профилна снимка. Липсваща снимка показва икона.' },
+      cell: ({ row }) => {
+        const user = row.original;
+        const url = user.avatar_url;
+        const alt = `${user.first_name} ${user.last_name}`.trim();
+
+        return (
+          <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-border bg-muted">
+            {url ? (
+              <img src={url} alt={alt || 'Профил'} className="size-full object-cover" />
+            ) : (
+              <UserRound className="size-5 text-muted-foreground" aria-hidden />
+            )}
+          </div>
+        );
+      },
+    }),
     helper.accessor((user) => `${user.first_name} ${user.last_name}`, {
       id: 'name',
       header: 'Име',

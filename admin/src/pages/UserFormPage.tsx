@@ -1,10 +1,10 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, KeyRound, Save, Shield, UserRound, X } from 'lucide-react';
+import { ArrowLeft, Camera, KeyRound, Save, Shield, UserRound, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
-import { createUser, getUser, updateUser } from '@/api/users';
+import { createUser, getUser, updateUser, type ManagedUser } from '@/api/users';
 import { routes } from '@/app/constants';
-import { useAppSelector } from '@/app/hooks';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +13,8 @@ import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { setCredentials, type AdminUser } from '@/features/auth/authSlice';
+import { UserAvatarField } from '@/features/users/UserAvatarField';
 import { toast, toastError } from '@/lib/toast';
 
 type FormState = {
@@ -49,6 +51,20 @@ function sectionForErrors(errors: Record<string, string>): FormSectionId | null 
   const sections: FormSectionId[] = ['profile', 'access', 'security'];
 
   return sections.find((section) => sectionFields[section].some((field) => errors[field])) ?? null;
+}
+
+function toSessionUser(user: ManagedUser): AdminUser {
+  return {
+    id: user.id,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    is_active: user.is_active,
+    email_verified_at: user.email_verified_at,
+    avatar_url: user.avatar_url ?? null,
+  };
 }
 
 function SectionActions({ busy }: { busy: boolean }) {
@@ -91,8 +107,10 @@ export function UserFormPage() {
   const userId = id && /^\d+$/.test(id) ? Number(id) : null;
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const currentId = useAppSelector((state) => state.auth.user?.id);
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(!isNew);
   const [message, setMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -127,6 +145,7 @@ export function UserFormPage() {
           password: '',
           password_confirmation: '',
         });
+        setAvatarUrl(user.avatar_url ?? null);
       } catch (error) {
         if (!cancelled) {
           setMessage(error instanceof ApiError ? error.message : 'Потребителят не можа да се зареди.');
@@ -145,6 +164,13 @@ export function UserFormPage() {
       cancelled = true;
     };
   }, [isNew, token, userId]);
+
+  function applyAvatarUser(user: ManagedUser) {
+    setAvatarUrl(user.avatar_url ?? null);
+    if (user.id === currentId && token) {
+      dispatch(setCredentials({ token, user: toSessionUser(user) }));
+    }
+  }
 
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -173,11 +199,12 @@ export function UserFormPage() {
       if (isNew) {
         const response = await createUser(token, payload);
         toast.success(response.message || 'Профилът е създаден.');
+        navigate(`/users/${response.data.user.id}`, { replace: true });
       } else if (userId !== null) {
         const response = await updateUser(token, userId, payload);
         toast.success(response.message || 'Профилът е обновен.');
+        navigate(routes.users, { replace: true });
       }
-      navigate(routes.users, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors(error.fieldErrors());
@@ -194,8 +221,8 @@ export function UserFormPage() {
         title={title}
         help={
           isNew
-            ? 'Профилът се създава потвърден и може да влиза веднага с паролата, която зададете. Записът от която и да е секция праща всички полета.'
-            : 'Променете данните на профила. Паролата се сменя само ако попълните полетата в секцията Парола. Записът от която и да е секция праща всички полета.'
+            ? 'Профилът се създава потвърден и може да влиза веднага с паролата, която зададете. След записа можете да добавите снимка. Записът от която и да е секция праща всички полета.'
+            : 'Променете данните на профила. Снимката се качва отделно. Паролата се сменя само ако попълните полетата в секцията Парола. Записът от която и да е секция праща всички полета.'
         }
         crumbs={[
           { label: 'Табло', to: routes.home },
@@ -266,6 +293,25 @@ export function UserFormPage() {
               error={errors.phone}
             />
           </SectionForm>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Снимка"
+          icon={Camera}
+          persistKey="user.avatar"
+          help={
+            isNew
+              ? 'Първо запишете профила. След това се отваря тази страница и можете да качите снимка.'
+              : 'Качете или сменете профилната снимка. JPEG, PNG или WebP, до 8 MB.'
+          }
+        >
+          <UserAvatarField
+            userId={userId}
+            avatarUrl={avatarUrl}
+            displayName={`${form.first_name} ${form.last_name}`}
+            token={token}
+            onUserChange={applyAvatarUser}
+          />
         </CollapsibleSection>
 
         <CollapsibleSection

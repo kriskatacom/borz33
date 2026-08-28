@@ -61,6 +61,7 @@ services:
       HOST_UID: ${HOST_UID:-1000}
     volumes:
       - .:/var/www
+      - ./docker/php/conf.d/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
     depends_on:
       mysql:
         condition: service_healthy

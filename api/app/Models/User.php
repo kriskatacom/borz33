@@ -22,6 +22,7 @@ class User extends Model
         'email',
         'password',
         'phone',
+        'avatar_path',
         'role',
         'is_active',
     ];

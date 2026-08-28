@@ -37,6 +37,15 @@ class ProductImageStorage
      */
     public function store(int $productId, array $file, string $stem): array
     {
+        return $this->storeNamed($this->directory($productId), $file, $stem);
+    }
+
+    /**
+     * @param array<string, mixed> $file
+     * @return array{path: string, mime: string}
+     */
+    public function storeNamed(string $directory, array $file, string $stem): array
+    {
         $mime = $this->detectMime($file);
         $extension = self::MIME_EXTENSIONS[$mime] ?? null;
 
@@ -44,12 +53,9 @@ class ProductImageStorage
             throw new ValidationException(['image' => ['Разрешени са JPEG, PNG и WebP.']]);
         }
 
-        $directory = $this->directory($productId);
+        $directory = trim($directory, '/');
         $absoluteDirectory = $this->publicRoot() . '/' . $directory;
-
-        if (!is_dir($absoluteDirectory) && !mkdir($absoluteDirectory, 0775, true) && !is_dir($absoluteDirectory)) {
-            throw new ValidationException(['image' => ['Изображението не можа да се запише.']]);
-        }
+        $this->ensureDirectory($absoluteDirectory);
 
         $filename = $this->uniqueFilename($absoluteDirectory, $this->safeStem($stem), $extension);
         $relative = $directory . '/' . $filename;
@@ -105,6 +111,23 @@ class ProductImageStorage
         }
 
         @rmdir($directory);
+    }
+
+    public function ensureDirectory(string $absoluteDirectory, string $errorKey = 'image'): void
+    {
+        if (is_dir($absoluteDirectory)) {
+            return;
+        }
+
+        $created = @mkdir($absoluteDirectory, 0775, true);
+
+        if ($created || is_dir($absoluteDirectory)) {
+            return;
+        }
+
+        throw new ValidationException([
+            $errorKey => [$errorKey === 'file' ? 'Файлът не можа да се запише.' : 'Изображението не можа да се запише.'],
+        ]);
     }
 
     private function safeStem(string $stem): string

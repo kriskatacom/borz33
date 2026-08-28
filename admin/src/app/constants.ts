@@ -13,6 +13,7 @@ export const routes = {
   products: '/products',
   productsShow: '/products/:id',
   productsEdit: '/products/:id/edit',
+  media: '/media',
   users: '/users',
   usersNew: '/users/new',
   usersEdit: '/users/:id',

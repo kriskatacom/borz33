@@ -91,7 +91,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           ))}
         </nav>
         <div className="sidebar-user">
-          <p className="sidebar-user-name">{displayName}</p>
+          <div className="sidebar-user-row">
+            <div className="sidebar-user-avatar" aria-hidden={!user?.avatar_url}>
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="size-full object-cover" />
+              ) : (
+                <span className="sidebar-user-avatar-fallback">{displayName.slice(0, 1)}</span>
+              )}
+            </div>
+            <p className="sidebar-user-name">{displayName}</p>
+          </div>
           <Button
             type="button"
             variant="ghost"

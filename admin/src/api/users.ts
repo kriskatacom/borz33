@@ -1,4 +1,4 @@
-import { apiRequest } from '@/api/client';
+import { apiRequest, apiUpload } from '@/api/client';
 
 export type ManagedUser = {
   id: number;
@@ -6,6 +6,7 @@ export type ManagedUser = {
   last_name: string;
   email: string;
   phone: string | null;
+  avatar_url?: string | null;
   role: 'admin' | 'customer' | string;
   is_active: boolean;
   email_verified_at: string | null;
@@ -67,4 +68,25 @@ export function deleteUser(token: string, id: number) {
 
 export function restoreUser(token: string, id: number) {
   return apiRequest<{ user: ManagedUser }>(`/admin/users/${id}/restore`, { method: 'POST', token });
+}
+
+export function uploadUserAvatar(
+  token: string,
+  id: number,
+  file: File,
+  options: { signal?: AbortSignal; onProgress?: (percent: number) => void } = {}
+) {
+  const form = new FormData();
+  form.append('image', file);
+
+  return apiUpload<{ user: ManagedUser }>(`/admin/users/${id}/avatar`, {
+    token,
+    form,
+    signal: options.signal,
+    onProgress: options.onProgress,
+  });
+}
+
+export function deleteUserAvatar(token: string, id: number) {
+  return apiRequest<{ user: ManagedUser }>(`/admin/users/${id}/avatar`, { method: 'DELETE', token });
 }
