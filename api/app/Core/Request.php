@@ -50,4 +50,22 @@ class Request
 
         return $data[$key] ?? $default;
     }
+
+    public static function ip(): string
+    {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+        return substr($ip, 0, 45);
+    }
+
+    public static function userAgent(): ?string
+    {
+        $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+
+        if ($agent === null || $agent === '') {
+            return null;
+        }
+
+        return substr($agent, 0, 512);
+    }
 }

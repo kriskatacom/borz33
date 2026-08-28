@@ -16,6 +16,10 @@ abstract class Controller
         } catch (ValidationException $exception) {
             $this->error($exception->getMessage(), 422, $exception->errors());
         } catch (AuthException $exception) {
+            if ($exception->retryAfter() !== null) {
+                header('Retry-After: ' . $exception->retryAfter());
+            }
+
             $this->error($exception->getMessage(), $exception->status());
         }
     }

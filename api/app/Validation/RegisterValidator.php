@@ -39,6 +39,8 @@ class RegisterValidator
             ],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'phone' => ['nullable', 'string', 'max:32'],
+            'device_uuid' => ['required', 'uuid'],
+            'device_name' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -60,6 +62,8 @@ class RegisterValidator
             'password' => 'парола',
             'password_confirmation' => 'потвърждение на паролата',
             'phone' => 'телефон',
+            'device_uuid' => 'устройство',
+            'device_name' => 'име на устройство',
         ];
     }
 }

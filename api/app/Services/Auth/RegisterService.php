@@ -12,7 +12,8 @@ class RegisterService
     public function __construct(
         private readonly PasswordHasher $passwordHasher = new PasswordHasher(),
         private readonly AdminBootstrapService $adminBootstrapService = new AdminBootstrapService(),
-        private readonly EmailVerificationService $emailVerificationService = new EmailVerificationService()
+        private readonly EmailVerificationService $emailVerificationService = new EmailVerificationService(),
+        private readonly DeviceService $deviceService = new DeviceService()
     ) {
     }
 
@@ -32,6 +33,12 @@ class RegisterService
                 'role' => User::ROLE_CUSTOMER,
                 'is_active' => true,
             ]);
+
+            $this->deviceService->trust(
+                $user,
+                (string) $data['device_uuid'],
+                isset($data['device_name']) ? (string) $data['device_name'] : null
+            );
 
             $code = $this->emailVerificationService->storeCode($user);
 

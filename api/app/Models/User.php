@@ -92,6 +92,11 @@ class User extends Model
         return $this->hasMany(UserDevice::class);
     }
 
+    public function apiTokens(): HasMany
+    {
+        return $this->hasMany(ApiToken::class);
+    }
+
     public function deviceLoginCodes(): HasMany
     {
         return $this->hasMany(DeviceLoginCode::class);

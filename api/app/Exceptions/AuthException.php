@@ -10,7 +10,8 @@ class AuthException extends RuntimeException
 {
     public function __construct(
         string $message,
-        private readonly int $status = 400
+        private readonly int $status = 400,
+        private readonly ?int $retryAfter = null
     ) {
         parent::__construct($message);
     }
@@ -18,5 +19,10 @@ class AuthException extends RuntimeException
     public function status(): int
     {
         return $this->status;
+    }
+
+    public function retryAfter(): ?int
+    {
+        return $this->retryAfter;
     }
 }

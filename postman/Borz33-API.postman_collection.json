@@ -92,7 +92,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.collectionVariables.set('registerEmail', 'user' + Date.now() + '@example.com');"
+                  "pm.collectionVariables.set('registerEmail', 'user' + Date.now() + '@example.com');",
+                  "if (!pm.collectionVariables.get('deviceUuid')) {",
+                  "    pm.collectionVariables.set('deviceUuid', (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : '11111111-1111-4111-8111-111111111111');",
+                  "}"
                 ]
               }
             },
@@ -130,10 +133,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Иван\",\n  \"last_name\": \"Петров\",\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"secret123\",\n  \"password_confirmation\": \"secret123\",\n  \"phone\": \"0888123456\"\n}"
+              "raw": "{\n  \"first_name\": \"Иван\",\n  \"last_name\": \"Петров\",\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"secret123\",\n  \"password_confirmation\": \"secret123\",\n  \"phone\": \"0888123456\",\n  \"device_uuid\": \"{{deviceUuid}}\",\n  \"device_name\": \"Postman\"\n}"
             },
             "url": "{{baseUrl}}/auth/register",
-            "description": "Регистрация на клиент. Изпраща 6-цифрен код към имейла (Mailpit). Админският потребител не получава писмо. Успех: 201. Валидация: 422."
+            "description": "Регистрация на клиент. Задължително е `device_uuid` (UUID) — това устройство се счита за доверено. Изпраща 6-цифрен код към имейла (Mailpit). Успех: 201."
           },
           "response": []
         },
@@ -247,6 +250,109 @@
             },
             "url": "{{baseUrl}}/auth/verify-email/resend",
             "description": "Изпраща нов код, ако имейлът още не е потвърден. Админският имейл не получава писмо."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"secret123\",\n  \"device_uuid\": \"{{deviceUuid}}\",\n  \"device_name\": \"Postman\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Вход от устройството на регистрацията. Изисква потвърден имейл. Успех връща Bearer token. Ново устройство: requires_device_verification и код по имейл. Заключване след 5 неуспешни опита за 15 мин (429)."
+          },
+          "response": []
+        },
+        {
+          "name": "Login (new device)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('deviceUuidNew', (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : '22222222-2222-4222-8222-222222222222');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"secret123\",\n  \"device_uuid\": \"{{deviceUuidNew}}\",\n  \"device_name\": \"Other device\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Вход от друго устройство. Очакван отговор: код по имейл, без token."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify device login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"code\": \"123456\",\n  \"device_uuid\": \"{{deviceUuidNew}}\",\n  \"device_name\": \"Other device\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login/device",
+            "description": "Потвърждава кода от Mailpit и издава token. Смени `code` преди изпращане."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend device login code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"device_uuid\": \"{{deviceUuidNew}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login/device/resend",
+            "description": "Нов код за вход от ново устройство."
           },
           "response": []
         }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Controllers\Auth\EmailVerificationController;
+use App\Controllers\Auth\LoginController;
 use App\Controllers\Auth\RegisterController;
 use App\Controllers\HealthController;
 
@@ -14,3 +15,6 @@ $router->get('/health', [HealthController::class, 'index']);
 $router->post('/auth/register', [RegisterController::class, 'store']);
 $router->post('/auth/verify-email', [EmailVerificationController::class, 'verify']);
 $router->post('/auth/verify-email/resend', [EmailVerificationController::class, 'resend']);
+$router->post('/auth/login', [LoginController::class, 'store']);
+$router->post('/auth/login/device', [LoginController::class, 'verifyDevice']);
+$router->post('/auth/login/device/resend', [LoginController::class, 'resendDeviceCode']);
