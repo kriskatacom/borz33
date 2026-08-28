@@ -1,13 +1,14 @@
 # Borz33
 
-Онлайн магазин с разделени части: сайт с плановете на проекта, JSON API, бъдещ PHP магазин за клиентите и (по-късно) React админ панел.
+Онлайн магазин с разделени части: сайт с плановете на проекта, JSON API, бъдещ PHP магазин за клиентите и React/Redux админ панел.
 
 ## Какво има към момента
 
 - **Сайт с плановете** — `plans/`. Това е представянето на проекта (етапи, страници, подготовка), не магазинът за клиенти. PHP страниците са в `plans/public/`, изгледите в `plans/views/`.
 - **Магазин за клиенти** — `web/`. Тук ще бъде истинският PHP SSR сайт (MVC + services). Папката е отделена нарочно, за да не се смесва с плановете.
 - **API** — `api/`. MVC + services, отговорите са JSON. Рутерът е в `api/app/Core/Router.php`, маршрутите в `api/routes/api.php`. Готов endpoint за проверка: `GET /health`.
-- **Docker** — `docker-compose.yml` в корена. Оттам се пускат всички услуги в една мрежа: MySQL, phpMyAdmin, Mailpit (локални имейли), PHP-FPM, Nginx (планове + API). React админът е предвиден, но още не се стартира по подразбиране.
+- **Админ панел** — `admin/`. Vite + React + Redux Toolkit. Има маршрути за вход и забравена парола (без форми още) и няма регистрация. API заявките минават през Vite proxy към JSON API.
+- **Docker** — `docker-compose.yml` в корена. Оттам се пускат всички услуги в една мрежа: MySQL, phpMyAdmin, Mailpit (локални имейли), PHP-FPM, Nginx (планове + API) и Vite за админа.
 
 Планирано разделение:
 
@@ -16,7 +17,7 @@
 | Сайт с плановете | PHP | `plans/` | Готов за преглед |
 | Магазин (клиенти) | PHP SSR, MVC + services | `web/` | Предстои |
 | API | PHP, MVC + services, JSON | `api/` | Начална структура |
-| Админ панел | React / Redux | `admin/` | Предстои |
+| Админ панел | React / Redux | `admin/` | Скелет (без вход/забравена парола още) |
 | База данни | MySQL 8.4 + phpMyAdmin + Phinx | `database/` | Работи през Docker |
 | Имейли (локално) | Mailpit + Symfony Mailer | — | Работи през Docker |
 
@@ -33,6 +34,7 @@
 | API health (Postman) | http://localhost:8080/health |
 | phpMyAdmin | http://localhost:8081 |
 | Mailpit (имейли) | http://localhost:8026 |
+| Админ панел | http://localhost:5173 |
 | MySQL от хоста | `localhost:3307` |
 | MySQL между контейнерите | хост `mysql`, порт `3306` |
 
@@ -211,14 +213,24 @@ docker compose down -v
 
 Колекцията ползва `baseUrl` = `http://localhost:8080`. Docker стекът трябва да е пуснат. Първата заявка за тест е **Health → Health check** (`GET /health`).
 
-### React админ (още не е готов)
+### React админ
 
-Услугата `admin` е в Compose с профил `admin`, за да не се пуска, докато няма папка `admin/`. Когато панелът съществува:
+Vite приложението е в `admin/` (React 19, Redux Toolkit, React Router). Стартира се с останалия стек:
 
 ```bash
-docker compose --profile admin up -d
+docker compose up -d
 ```
 
-По подразбиране ще е на http://localhost:5173.
+Адрес: http://localhost:5173. Браузърът говори само с Vite; `/auth` и `/health` се проксират към API (`http://nginx:8080` в Docker, или `http://127.0.0.1:8080` при `npm run dev` на хоста).
+
+Има страници `/login` и `/forgot-password` като скелет. Регистрация в админ панела няма и няма да има. Формите и връзката с API ще се добавят следващо.
+
+Локално без Docker:
+
+```bash
+cd admin
+npm install
+npm run dev
+```
 
 Портовете се сменят в `.env` (`PLANS_PORT`, `API_PORT`, `PHPMYADMIN_PORT`, `MAILPIT_UI_PORT`, `MYSQL_PORT`, `ADMIN_PORT`).
