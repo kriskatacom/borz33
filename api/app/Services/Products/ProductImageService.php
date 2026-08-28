@@ -23,7 +23,7 @@ class ProductImageService
     public function storeFront(Product $product, array $file, ?string $alt = null): ProductImage
     {
         $this->validator->validateUpload($file);
-        $stored = $this->storage->store((int) $product->id, $file, ProductImage::ROLE_FRONT);
+        $stored = $this->storage->store((int) $product->id, $file, $this->imageStem($product));
         $existing = $product->frontImage()->first();
 
         if ($existing !== null) {
@@ -61,7 +61,7 @@ class ProductImageService
     public function storeGallery(Product $product, array $file, ?string $alt = null): ProductImage
     {
         $this->validator->validateUpload($file);
-        $stored = $this->storage->store((int) $product->id, $file, ProductImage::ROLE_GALLERY);
+        $stored = $this->storage->store((int) $product->id, $file, $this->imageStem($product));
         $maxSort = (int) $product->galleryImages()->max('sort_order');
 
         $image = new ProductImage();
@@ -84,7 +84,7 @@ class ProductImageService
     public function storeVariant(Product $product, ProductVariant $variant, array $file, ?string $alt = null): ProductImage
     {
         $this->validator->validateUpload($file);
-        $stored = $this->storage->store((int) $product->id, $file, ProductImage::ROLE_VARIANT);
+        $stored = $this->storage->store((int) $product->id, $file, $this->imageStem($product, $variant));
         $existing = ProductImage::query()
             ->where('product_id', $product->id)
             ->where('product_variant_id', $variant->id)
@@ -216,6 +216,21 @@ class ProductImageService
         }
 
         return $image;
+    }
+
+    private function imageStem(Product $product, ?ProductVariant $variant = null): string
+    {
+        if ($variant !== null) {
+            $name = trim((string) ($variant->name ?? ''));
+
+            if ($name !== '') {
+                return $name;
+            }
+        }
+
+        $slug = trim((string) ($product->slug ?? ''));
+
+        return $slug !== '' ? $slug : 'image';
     }
 
     /** @param array<string, mixed> $file */

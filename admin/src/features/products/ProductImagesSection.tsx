@@ -463,7 +463,7 @@ export function ProductImagesEditor({
         />
         <div
           className={cn(
-            'mt-2 overflow-hidden rounded-[6px] border border-dashed border-border bg-muted/40 transition-colors',
+            'mt-2 overflow-hidden rounded-[6px] border border-dashed border-border bg-field transition-colors',
             dropTarget === 'front' && 'border-primary bg-primary/6'
           )}
           onDragOver={(event) => {
@@ -536,7 +536,7 @@ export function ProductImagesEditor({
         />
         <div
           className={cn(
-            'mt-2 rounded-[6px] border border-dashed border-border bg-muted/40 p-3 transition-colors',
+            'mt-2 rounded-[6px] border border-dashed border-border bg-field p-3 transition-colors',
             dropTarget === 'gallery' && 'border-primary bg-primary/6'
           )}
           onDragOver={(event) => {
@@ -618,7 +618,7 @@ export function ProductImagesEditor({
               <li>
                 <button
                   type="button"
-                  className="flex min-h-40 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-[6px] border border-dashed border-border bg-muted/40 px-3 py-4 text-center text-base text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="flex min-h-40 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-[6px] border border-dashed border-border bg-field px-3 py-4 text-center text-base text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                   onClick={() => galleryInputRef.current?.click()}
                 >
                   <ImagePlus className="size-6" aria-hidden />
@@ -735,7 +735,9 @@ function ImageTile({
     <>
       <img src={src} alt={alt} className="aspect-square size-full object-cover" />
       {badge ? (
-        <span className="badge ok pointer-events-none absolute top-2 left-2">{badge}</span>
+        <span className="pointer-events-none absolute top-2 left-2 inline-flex items-center rounded-[6px] bg-[#173f32] px-3 py-1.5 text-base font-extrabold tracking-wide text-[#f3efe6] shadow-lg">
+          {badge}
+        </span>
       ) : null}
       {pending ? (
         <div className="absolute inset-0 flex flex-col justify-end bg-foreground/40 p-2">
@@ -883,7 +885,7 @@ function GalleryCard({
   );
 }
 
-function AltField({
+export function AltField({
   image,
   productId,
   token,
@@ -936,7 +938,7 @@ function AltField({
         value={value}
         disabled={disabled || saving}
         placeholder={compact ? 'Алтернативен текст' : 'Описание за достъпност'}
-        className="min-h-12 w-full rounded-[6px] border border-input bg-card px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="min-h-12 w-full rounded-[6px] border border-input bg-field px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
         onChange={(event) => setValue(event.target.value)}
         onBlur={() => void save()}
         onKeyDown={(event) => {
@@ -950,7 +952,7 @@ function AltField({
   );
 }
 
-function ImageLightbox({
+export function ImageLightbox({
   images,
   index,
   onIndex,

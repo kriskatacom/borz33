@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Products;
 
 use App\Exceptions\ValidationException;
+use Illuminate\Support\Str;
 
 class ProductImageStorage
 {
@@ -34,7 +35,7 @@ class ProductImageStorage
      * @param array<string, mixed> $file
      * @return array{path: string, mime: string}
      */
-    public function store(int $productId, array $file, string $prefix): array
+    public function store(int $productId, array $file, string $stem): array
     {
         $mime = $this->detectMime($file);
         $extension = self::MIME_EXTENSIONS[$mime] ?? null;
@@ -50,7 +51,7 @@ class ProductImageStorage
             throw new ValidationException(['image' => ['Изображението не можа да се запише.']]);
         }
 
-        $filename = $prefix . '-' . bin2hex(random_bytes(8)) . '.' . $extension;
+        $filename = $this->uniqueFilename($absoluteDirectory, $this->safeStem($stem), $extension);
         $relative = $directory . '/' . $filename;
         $target = $this->absolutePath($relative);
         $tmp = (string) $file['tmp_name'];
@@ -104,6 +105,30 @@ class ProductImageStorage
         }
 
         @rmdir($directory);
+    }
+
+    private function safeStem(string $stem): string
+    {
+        $value = Str::slug($stem, '-', 'bg');
+
+        return $value !== '' ? substr($value, 0, 160) : 'image';
+    }
+
+    private function uniqueFilename(string $directory, string $stem, string $extension): string
+    {
+        $candidate = $stem . '.' . $extension;
+        $suffix = 2;
+
+        while (is_file($directory . '/' . $candidate)) {
+            $candidate = $stem . '-' . $suffix . '.' . $extension;
+            $suffix++;
+
+            if ($suffix > 9999) {
+                throw new ValidationException(['image' => ['Изображението не можа да се запише.']]);
+            }
+        }
+
+        return $candidate;
     }
 
     /** @param array<string, mixed> $file */

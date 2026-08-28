@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Images, Layers, List, Palette, Pencil, Shirt, Type } from 'lucide-react';
 import { ApiError } from '@/api/client';
-import { getProduct, type AdminProduct } from '@/api/products';
+import { getProduct, type AdminProduct, type ProductImage } from '@/api/products';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
@@ -12,7 +12,7 @@ import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatMoney } from '@/lib/format';
 import { toast } from '@/lib/toast';
-import { ProductImagesPreview } from '@/features/products/ProductImagesSection';
+import { ImageLightbox, ProductImagesPreview } from '@/features/products/ProductImagesSection';
 
 function DetailTable({ children, caption }: { children: ReactNode; caption: string }) {
   return (
@@ -60,6 +60,31 @@ function ColorDot({ hex }: { hex: string | null }) {
       style={{ backgroundColor: hex }}
       title={hex}
     />
+  );
+}
+
+function VariantImageThumb({ image, label }: { image: ProductImage | null; label: string }) {
+  const [open, setOpen] = useState(false);
+
+  if (!image?.url) {
+    return (
+      <div className="flex size-12 items-center justify-center overflow-hidden rounded-[6px] border border-border bg-muted">
+        <Shirt className="size-5 text-muted-foreground" aria-hidden />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="flex size-12 cursor-zoom-in items-center justify-center overflow-hidden rounded-[6px] border border-border bg-muted p-0 outline-none transition-opacity hover:opacity-90 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        onClick={() => setOpen(true)}
+      >
+        <img src={image.url} alt={label} className="size-full object-cover" />
+      </button>
+      {open ? <ImageLightbox images={[image]} index={0} onIndex={() => undefined} onClose={() => setOpen(false)} /> : null}
+    </>
   );
 }
 
@@ -152,10 +177,10 @@ export function ProductViewPage() {
 
       {product ? (
         <div className="flex min-w-0 max-w-full flex-col gap-3">
-          <CollapsibleSection title="Изображения" icon={Images}>
+          <CollapsibleSection title="Изображения" icon={Images} help="Предна снимка и галерия на продукта.">
             <ProductImagesPreview product={product} />
           </CollapsibleSection>
-          <CollapsibleSection title="Общи данни" icon={Shirt}>
+          <CollapsibleSection title="Общи данни" icon={Shirt} help="Име, цена, статус и описание в каталога.">
             <div className="min-w-0">
               <p className="m-0 flex flex-wrap items-center gap-2">
                 <span className={status?.className}>{status?.text}</span>
@@ -186,37 +211,27 @@ export function ProductViewPage() {
             </div>
           </CollapsibleSection>
 
-          <CollapsibleSection title="Параметри" icon={List}>
+          <CollapsibleSection title="Параметри" icon={List} help="Характеристики като материя и грамаж.">
             {product.parameters.length === 0 ? (
               <p className="mb-0 text-muted-foreground">Няма информационни параметри.</p>
             ) : (
-              <DetailTable caption="Параметри на продукта">
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <DetailHead>Име</DetailHead>
-                    <DetailHead>Стойност</DetailHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {product.parameters.map((row) => (
-                    <TableRow key={row.id}>
-                      <DetailCell>{row.name}</DetailCell>
-                      <DetailCell>{row.value}</DetailCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </DetailTable>
+              <div className="grid gap-3">
+                {product.parameters.map((row) => (
+                  <CollapsibleSection key={row.id} heading="h3" persistKey={`parameter:${row.id}`} title={row.name}>
+                    <p className="m-0">{row.value}</p>
+                  </CollapsibleSection>
+                ))}
+              </div>
             )}
           </CollapsibleSection>
 
-          <CollapsibleSection title="Опции" icon={Palette}>
+          <CollapsibleSection title="Опции" icon={Palette} help="Размер, цвят и други избори за вариантите.">
             {product.options.length === 0 ? (
               <p className="mb-0 text-muted-foreground">Няма опции за избор.</p>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-3">
                 {product.options.map((option) => (
-                  <div key={option.id}>
-                    <p className="mb-2 mt-0 font-bold">{option.name}</p>
+                  <CollapsibleSection key={option.id} heading="h3" persistKey={`option:${option.id}`} title={option.name}>
                     <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
                       {option.values.map((value) => (
                         <li key={value.id} className="badge idle gap-2">
@@ -225,13 +240,13 @@ export function ProductViewPage() {
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  </CollapsibleSection>
                 ))}
               </div>
             )}
           </CollapsibleSection>
 
-          <CollapsibleSection title="Варианти" icon={Layers}>
+          <CollapsibleSection title="Варианти" icon={Layers} help="Комбинации за покупка, всяка със своя цена и снимка.">
             {product.variants.length === 0 ? (
               <p className="mb-0 text-muted-foreground">Няма варианти.</p>
             ) : (
@@ -250,27 +265,20 @@ export function ProductViewPage() {
                   {product.variants.map((variant) => (
                     <TableRow key={variant.id}>
                       <DetailCell>
-                        <div className="flex size-12 items-center justify-center overflow-hidden rounded-[6px] border border-border bg-muted">
-                          {variant.image?.url ? (
-                            <img
-                              src={variant.image.url}
-                              alt={variant.image.alt || variant.sku || 'Вариант'}
-                              className="size-full object-cover"
-                            />
-                          ) : (
-                            <Shirt className="size-5 text-muted-foreground" aria-hidden />
-                          )}
-                        </div>
+                        <VariantImageThumb image={variant.image} label={variant.image?.alt || variant.name || variant.sku || 'Вариант'} />
                       </DetailCell>
                       <DetailCell>
-                        <span className="inline-flex items-center gap-2">
-                          {variant.option_values.map((value) => (
-                            <span key={`${variant.id}-${value.option}-${value.value}`} className="inline-flex items-center gap-1">
-                              <ColorDot hex={value.hex_color} />
-                              {value.value_name ?? value.value}
-                            </span>
-                          ))}
-                          {variant.is_default ? <span className="badge info">По подразбиране</span> : null}
+                        <span className="inline-flex flex-col items-start gap-1">
+                          <span className="inline-flex flex-wrap items-center gap-2">
+                            {variant.name ? <span>{variant.name}</span> : null}
+                            {variant.option_values.map((value) => (
+                              <span key={`${variant.id}-${value.option}-${value.value}`} className="inline-flex items-center gap-1">
+                                <ColorDot hex={value.hex_color} />
+                                {value.value_name ?? value.value}
+                              </span>
+                            ))}
+                            {variant.is_default ? <span className="badge info">По подразбиране</span> : null}
+                          </span>
                         </span>
                       </DetailCell>
                       <DetailCell>{variant.sku || '—'}</DetailCell>
@@ -289,7 +297,7 @@ export function ProductViewPage() {
           </CollapsibleSection>
 
           {product.personalization_enabled ? (
-            <CollapsibleSection title="Персонализация" icon={Type}>
+            <CollapsibleSection title="Персонализация" icon={Type} help="Текст, който клиентът въвежда преди добавяне в количката.">
               <p className="mt-0">{product.personalization_label || 'Текст за персонализация'}</p>
               {product.personalization_description ? (
                 <p className="text-muted-foreground">{product.personalization_description}</p>

@@ -1,10 +1,11 @@
 import { useEffect, useId, useRef, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ImagePlus, Trash2, Upload } from 'lucide-react';
+import { ImagePlus, Trash2, Upload, ZoomIn } from 'lucide-react';
 import { deleteVariantImage, uploadVariantImage, type AdminProduct, type ProductImage } from '@/api/products';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
+import { AltField, ImageLightbox } from '@/features/products/ProductImagesSection';
 import { toast, toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
@@ -54,6 +55,7 @@ export function VariantImageField({
   const [over, setOver] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [lightbox, setLightbox] = useState(false);
 
   const image = product.variants.find((variant) => variant.id === variantId)?.image ?? null;
 
@@ -184,15 +186,22 @@ export function VariantImageField({
         />,
         document.body
       )}
-      <div className="mt-2 flex flex-wrap items-center gap-3">
+      <div className="mt-2 flex flex-wrap items-start gap-3">
         <button
           type="button"
           className={cn(
-            'relative size-24 shrink-0 overflow-hidden rounded-[6px] border border-dashed border-border bg-muted/40 p-0 transition-colors',
-            over && 'border-primary bg-primary/6'
+            'relative size-32 shrink-0 overflow-hidden rounded-[6px] border border-dashed border-border bg-field p-0 transition-colors',
+            over && 'border-primary bg-primary/6',
+            shown && !busy && 'cursor-zoom-in'
           )}
           disabled={busy}
-          onClick={pickFile}
+          onClick={() => {
+            if (image && !busy) {
+              setLightbox(true);
+              return;
+            }
+            pickFile();
+          }}
           onDragOver={(event) => {
             event.preventDefault();
             setOver(true);
@@ -208,35 +217,57 @@ export function VariantImageField({
               <span className="px-1 text-center text-xs">Качи</span>
             </span>
           )}
+          {shown && !busy ? (
+            <span className="absolute inset-x-0 bottom-0 flex justify-end bg-gradient-to-t from-foreground/70 to-transparent p-1.5">
+              <span className="flex size-8 items-center justify-center rounded-[6px] bg-secondary text-secondary-foreground">
+                <ZoomIn className="size-4" aria-hidden />
+              </span>
+            </span>
+          ) : null}
           {busy ? (
             <span className="absolute inset-0 flex items-center justify-center bg-background/70 text-sm font-bold">
               {progress}%
             </span>
           ) : null}
         </button>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              pickFile();
-            }}
-          >
-            <Upload />
-            {shown ? 'Смени' : 'Избери'}
-          </Button>
-          {image && !busy ? (
-            <Button type="button" variant="outline" size="sm" onClick={() => setConfirm(true)}>
-              <Trash2 />
-              Премахни
-            </Button>
+        <div className="grid min-w-0 flex-1 gap-2">
+          {image ? (
+            <AltField
+              image={image}
+              productId={product.id}
+              token={token}
+              compact
+              onSaved={applyImage}
+              onError={(text) => toast.error(text)}
+            />
           ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                pickFile();
+              }}
+            >
+              <Upload />
+              {shown ? 'Смени' : 'Избери'}
+            </Button>
+            {image && !busy ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => setConfirm(true)}>
+                <Trash2 />
+                Премахни
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
+      {lightbox && image ? (
+        <ImageLightbox images={[image]} index={0} onIndex={() => {}} onClose={() => setLightbox(false)} />
+      ) : null}
       {confirm ? (
         <ConfirmDialog
           title="Премахване на снимка"

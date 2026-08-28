@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { dataTableFeatures, type DataTableFeatures } from '@/components/data-table/features';
 import { HelpHint } from '@/components/ui/HelpHint';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
@@ -161,25 +162,35 @@ export function DataTable<TData extends RowData>({
                           )}
                         >
                           {canSort ? (
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1.5 rounded-md px-1 py-1 font-[inherit] text-inherit uppercase hover:text-foreground"
-                              onClick={header.column.getToggleSortingHandler()}
+                            <Tooltip
+                              content={
+                                sorted === 'asc'
+                                  ? 'Сортирано възходящо. Кликни за низходящо.'
+                                  : sorted === 'desc'
+                                    ? 'Сортирано низходящо. Кликни, за да махнеш сортирането.'
+                                    : 'Сортирай тази колона.'
+                              }
                             >
-                              <table.FlexRender header={header} />
-                              {sorted === 'asc' ? (
-                                <ArrowUp className="size-3.5" aria-hidden />
-                              ) : sorted === 'desc' ? (
-                                <ArrowDown className="size-3.5" aria-hidden />
-                              ) : (
-                                <ArrowUpDown className="size-3.5 opacity-50" aria-hidden />
-                              )}
-                            </button>
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1.5 rounded-md px-1 py-1 font-[inherit] text-inherit uppercase hover:text-foreground"
+                                onClick={header.column.getToggleSortingHandler()}
+                              >
+                                <table.FlexRender header={header} />
+                                {sorted === 'asc' ? (
+                                  <ArrowUp className="size-3.5" aria-hidden />
+                                ) : sorted === 'desc' ? (
+                                  <ArrowDown className="size-3.5" aria-hidden />
+                                ) : (
+                                  <ArrowUpDown className="size-3.5 opacity-50" aria-hidden />
+                                )}
+                              </button>
+                            </Tooltip>
                           ) : (
                             <table.FlexRender header={header} />
                           )}
                           {meta?.help ? (
-                            <HelpHint label={String(header.column.columnDef.header ?? header.id)} className="normal-case tracking-normal">
+                            <HelpHint label={String(header.column.columnDef.header || header.id)} className="normal-case tracking-normal">
                               {meta.help}
                             </HelpHint>
                           ) : null}

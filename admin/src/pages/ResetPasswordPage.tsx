@@ -71,7 +71,7 @@ export function ResetPasswordPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               error={errors.password}
-              hint="Поне 8 символа."
+              help="Поне 8 символа. Използвайте я само за този админ профил."
               placeholder="Поне 8 символа"
               required
             />
@@ -83,6 +83,7 @@ export function ResetPasswordPage() {
               value={passwordConfirmation}
               onChange={(event) => setPasswordConfirmation(event.target.value)}
               error={errors.password_confirmation}
+              help="Трябва да съвпада с новата парола."
               placeholder="Повторете паролата"
               required
             />

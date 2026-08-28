@@ -61,6 +61,20 @@ class ProductsController extends Controller
         $this->ok(['product' => ProductResource::toAdminArray($product)], 'Продуктът е възстановен.');
     }
 
+    public function sharePersonalization(string $id): never
+    {
+        $product = $this->products->find($this->id($id));
+        $payload = $this->validator->validate(Request::input(), $product->id);
+        $result = $this->products->sharePersonalization($product, $payload);
+
+        $this->ok(
+            ['product' => ProductResource::toAdminArray($result['product']), 'updated_count' => $result['updated_count']],
+            $result['updated_count'] === 0
+                ? 'Няма други продукти, към които да се приложи персонализацията.'
+                : 'Персонализацията е приложена към всички продукти.'
+        );
+    }
+
     private function id(string $id): int
     {
         if (!ctype_digit($id) || (int) $id < 1) {

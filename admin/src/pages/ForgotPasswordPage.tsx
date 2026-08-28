@@ -54,6 +54,7 @@ export function ForgotPasswordPage() {
           label="Имейл"
           type="email"
           autoComplete="email"
+          help="Ще изпратим линк само ако имейлът е на администраторски профил."
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           error={error}

@@ -127,6 +127,14 @@ export function updateProduct(token: string, id: number, body: Record<string, un
   return apiRequest<{ product: AdminProduct }>(`/admin/products/${id}`, { method: 'PATCH', token, body });
 }
 
+export function shareProductPersonalization(token: string, id: number, body: Record<string, unknown>) {
+  return apiRequest<{ product: AdminProduct; updated_count: number }>(`/admin/products/${id}/personalization/share`, {
+    method: 'POST',
+    token,
+    body,
+  });
+}
+
 export function uploadProductFrontImage(
   token: string,
   productId: number,

@@ -117,6 +117,36 @@ class ProductAdminService
         return $this->fresh($product);
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array{product: Product, updated_count: int}
+     */
+    public function sharePersonalization(Product $product, array $data): array
+    {
+        return Capsule::connection()->transaction(function () use ($product, $data): array {
+            $attributes = $this->productAttributes($data, (int) $product->id, $product);
+
+            if ($attributes !== []) {
+                $product->forceFill($attributes)->save();
+            }
+
+            if (array_key_exists('personalization_fields', $data)) {
+                $this->syncPersonalizationFields(
+                    $product,
+                    is_array($data['personalization_fields']) ? $data['personalization_fields'] : []
+                );
+            }
+
+            $source = $this->fresh($product);
+            $source->loadMissing('personalizationFields');
+
+            return [
+                'product' => $source,
+                'updated_count' => $this->copyPersonalizationToOthers($source),
+            ];
+        });
+    }
+
     /** @param array<string, mixed> $filters */
     private function filteredQuery(array $filters): Builder
     {
@@ -389,7 +419,7 @@ class ProductAdminService
             $variant->forceFill([
                 'product_id' => $product->id,
                 'sku' => $sku,
-                'name' => ($row['name'] ?? '') === '' ? null : $row['name'],
+                'name' => trim((string) ($row['name'] ?? '')) === '' ? null : trim((string) $row['name']),
                 'price' => $row['price'],
                 'compare_at_price' => $row['compare_at_price'] ?? null,
                 'stock' => (int) $row['stock'],
@@ -613,6 +643,37 @@ class ProductAdminService
         if ($query->exists()) {
             throw new ValidationException(['variants' => ['SKU на вариант вече е заето.']]);
         }
+    }
+
+    private function copyPersonalizationToOthers(Product $source): int
+    {
+        $rows = $source->personalizationFields->values()->map(
+            static fn (ProductPersonalizationField $field, mixed $index): array => [
+                'name' => $field->name,
+                'description' => $field->description,
+                'field_type' => $field->field_type,
+                'is_required' => $field->is_required,
+                'max_length' => $field->max_length,
+                'sort_order' => (int) $index,
+            ]
+        )->all();
+
+        $targets = Product::query()->where('id', '!=', $source->id)->get();
+        $updated = 0;
+
+        foreach ($targets as $target) {
+            $target->forceFill([
+                'personalization_enabled' => $source->personalization_enabled,
+                'personalization_label' => $source->personalization_label,
+                'personalization_description' => $source->personalization_description,
+                'personalization_required' => $source->personalization_required,
+                'personalization_max_length' => $source->personalization_max_length,
+            ])->save();
+            $this->syncPersonalizationFields($target, $rows);
+            $updated++;
+        }
+
+        return $updated;
     }
 
     private function uniqueSlug(string $name, ?int $ignoreId): string

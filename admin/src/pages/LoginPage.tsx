@@ -133,6 +133,7 @@ export function LoginPage() {
               label="Имейл"
               type="email"
               autoComplete="username"
+              help="Администраторският имейл за вход в този панел."
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               error={errors.email}
@@ -144,6 +145,7 @@ export function LoginPage() {
               label="Парола"
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
+              help="Паролата на администраторския профил."
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               error={errors.password}

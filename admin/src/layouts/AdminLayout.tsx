@@ -5,6 +5,7 @@ import { routes } from '@/app/constants';
 import { navItems } from '@/app/nav';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/Button';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { logout } from '@/features/auth/authThunks';
 import { toast } from '@/lib/toast';
 
@@ -47,16 +48,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="admin-shell">
       <header className="admin-topbar">
-        <button
-          type="button"
-          className="icon-btn"
-          aria-expanded={menuOpen}
-          aria-controls={menuId}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          <span className="sr-only">{menuOpen ? 'Затвори менюто' : 'Отвори менюто'}</span>
-          {menuOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
-        </button>
+        <Tooltip content={menuOpen ? 'Затвори менюто' : 'Отвори менюто'}>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <span className="sr-only">{menuOpen ? 'Затвори менюто' : 'Отвори менюто'}</span>
+            {menuOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
+          </button>
+        </Tooltip>
         <p className="brand">Borz33</p>
         <Button
           type="button"

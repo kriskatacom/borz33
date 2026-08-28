@@ -25,9 +25,9 @@ export function getProductsColumns() {
   return helper.columns([
     helper.display({
       id: 'image',
-      header: '',
+      header: 'Снимка',
       enableSorting: false,
-      meta: { className: 'w-16' },
+      meta: { className: 'w-24', help: 'Предното изображение. Липсваща снимка показва икона.' },
       cell: ({ row }) => <ProductThumb product={row.original} />,
     }),
     helper.accessor('name', {

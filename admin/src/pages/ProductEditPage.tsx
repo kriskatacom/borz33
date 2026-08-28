@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Eye, Images, Layers, List, Palette, Plus, Save, Shirt, Trash2, Type } from 'lucide-react';
+import { ArrowLeft, Eye, Images, Layers, List, Palette, Plus, Save, Share2, Shirt, Trash2, Type } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import {
   getProduct,
+  shareProductPersonalization,
   updateProduct,
   type AdminProduct,
   type ProductOption,
@@ -17,6 +18,7 @@ import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/Button';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,6 +33,7 @@ type OptionDraft = { key: string; id?: number; name: string; slug: string; value
 type VariantDraft = {
   key: string;
   id?: number;
+  name: string;
   sku: string;
   price: string;
   stock: string;
@@ -216,15 +219,29 @@ function ParametersForm({ product, token, onSaved }: SectionFormProps) {
     <form className="grid gap-3" onSubmit={(event) => void onSubmit(event)} noValidate>
       {rows.length === 0 ? <p className="m-0 text-muted-foreground">Няма параметри. Добавете материя, грамаж или кройка.</p> : null}
       {rows.map((row, index) => (
-        <div key={row.key} className="grid gap-3 rounded-[6px] border border-border p-3 sm:grid-cols-[1fr_1fr_auto]">
-          <Field id={`${row.key}-name`} label="Име" value={row.name} onChange={(event) => patchRow(index, { name: event.target.value })} error={fieldError(errors, `parameters.${index}.name`)} />
-          <Field id={`${row.key}-value`} label="Стойност" value={row.value} onChange={(event) => patchRow(index, { value: event.target.value })} error={fieldError(errors, `parameters.${index}.value`)} />
-          <div className="flex items-end">
-            <Button type="button" variant="outline" size="icon" aria-label="Премахни параметър" onClick={() => setRows((current) => current.filter((_, item) => item !== index))}>
+        <CollapsibleSection
+          key={row.key}
+          heading="h3"
+          persistKey={row.id ? `parameter:${row.id}` : undefined}
+          title={<ParameterCardTitle row={row} />}
+          actions={
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-8"
+              aria-label="Премахни параметър"
+              onClick={() => setRows((current) => current.filter((_, item) => item !== index))}
+            >
               <Trash2 />
             </Button>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field id={`${row.key}-name`} label="Име" help="Напр. материя, грамаж или кройка." value={row.name} onChange={(event) => patchRow(index, { name: event.target.value })} error={fieldError(errors, `parameters.${index}.name`)} />
+            <Field id={`${row.key}-value`} label="Стойност" help="Какво се показва до името, напр. 180 г/м²." value={row.value} onChange={(event) => patchRow(index, { value: event.target.value })} error={fieldError(errors, `parameters.${index}.value`)} />
           </div>
-        </div>
+        </CollapsibleSection>
       ))}
       <Button type="button" variant="outline" onClick={() => setRows((current) => [...current, { key: nextKey(), name: '', value: '' }])}>
         <Plus />
@@ -237,6 +254,15 @@ function ParametersForm({ product, token, onSaved }: SectionFormProps) {
   function patchRow(index: number, patch: Partial<ParameterDraft>) {
     setRows((current) => current.map((row, item) => (item === index ? { ...row, ...patch } : row)));
   }
+}
+
+function ParameterCardTitle({ row }: { row: ParameterDraft }) {
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-2">
+      <span className="truncate">{row.name.trim() || 'Нов параметър'}</span>
+      {row.value.trim() ? <span className="truncate font-medium tracking-normal text-muted-foreground">{row.value.trim()}</span> : null}
+    </span>
+  );
 }
 
 function mapParameters(rows: ProductParameter[]): ParameterDraft[] {
@@ -286,33 +312,47 @@ function OptionsForm({ product, token, onSaved }: SectionFormProps) {
     <form className="grid gap-3" onSubmit={(event) => void onSubmit(event)} noValidate>
       <p className="m-0 text-muted-foreground">Размер, цвят и други избори. След промяна запишете и вариантите, ако комбинациите са се сменили.</p>
       {rows.map((option, optionIndex) => (
-        <div key={option.key} className="grid gap-3 rounded-[6px] border border-border p-3">
-          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-            <Field id={`${option.key}-name`} label="Опция" value={option.name} onChange={(event) => patchOption(optionIndex, { name: event.target.value })} error={fieldError(errors, `options.${optionIndex}.name`)} />
-            <Field id={`${option.key}-slug`} label="Адрес" help="Празно поле се попълва от името." value={option.slug} onChange={(event) => patchOption(optionIndex, { slug: event.target.value })} error={fieldError(errors, `options.${optionIndex}.slug`)} />
-            <div className="flex items-end">
-              <Button type="button" variant="outline" size="icon" aria-label="Премахни опция" onClick={() => setRows((current) => current.filter((_, item) => item !== optionIndex))}>
-                <Trash2 />
-              </Button>
+        <CollapsibleSection
+          key={option.key}
+          heading="h3"
+          persistKey={option.id ? `option:${option.id}` : undefined}
+          title={<OptionCardTitle option={option} />}
+          actions={
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-8"
+              aria-label="Премахни опция"
+              onClick={() => setRows((current) => current.filter((_, item) => item !== optionIndex))}
+            >
+              <Trash2 />
+            </Button>
+          }
+        >
+          <div className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field id={`${option.key}-name`} label="Опция" help="Името, което клиентът вижда, напр. Размер или Цвят." value={option.name} onChange={(event) => patchOption(optionIndex, { name: event.target.value })} error={fieldError(errors, `options.${optionIndex}.name`)} />
+              <Field id={`${option.key}-slug`} label="Адрес" help="Празно поле се попълва от името." value={option.slug} onChange={(event) => patchOption(optionIndex, { slug: event.target.value })} error={fieldError(errors, `options.${optionIndex}.slug`)} />
             </div>
-          </div>
-          {option.values.map((value, valueIndex) => (
-            <div key={value.key} className="grid gap-3 sm:grid-cols-[1fr_1fr_8rem_auto]">
-              <Field id={`${value.key}-name`} label="Стойност" value={value.name} onChange={(event) => patchValue(optionIndex, valueIndex, { name: event.target.value })} error={fieldError(errors, `options.${optionIndex}.values.${valueIndex}.name`)} />
-              <Field id={`${value.key}-slug`} label="Адрес" value={value.slug} onChange={(event) => patchValue(optionIndex, valueIndex, { slug: event.target.value })} error={fieldError(errors, `options.${optionIndex}.values.${valueIndex}.slug`)} />
-              <Field id={`${value.key}-hex`} label="Цвят" placeholder="#FFFFFF" value={value.hex_color} onChange={(event) => patchValue(optionIndex, valueIndex, { hex_color: event.target.value })} error={fieldError(errors, `options.${optionIndex}.values.${valueIndex}.hex_color`)} />
-              <div className="flex items-end">
-                <Button type="button" variant="outline" size="icon" aria-label="Премахни стойност" onClick={() => removeValue(optionIndex, valueIndex)}>
-                  <Trash2 />
-                </Button>
+            {option.values.map((value, valueIndex) => (
+              <div key={value.key} className="grid gap-3 sm:grid-cols-[1fr_1fr_8rem_auto]">
+                <Field id={`${value.key}-name`} label="Стойност" help="Една от възможностите, напр. M или Черно." value={value.name} onChange={(event) => patchValue(optionIndex, valueIndex, { name: event.target.value })} error={fieldError(errors, `options.${optionIndex}.values.${valueIndex}.name`)} />
+                <Field id={`${value.key}-slug`} label="Адрес" help="Празно поле се попълва от името." value={value.slug} onChange={(event) => patchValue(optionIndex, valueIndex, { slug: event.target.value })} error={fieldError(errors, `options.${optionIndex}.values.${valueIndex}.slug`)} />
+                <Field id={`${value.key}-hex`} label="Цвят" placeholder="#FFFFFF" help="HEX за цветни опции. Оставете празно, ако не е цвят." value={value.hex_color} onChange={(event) => patchValue(optionIndex, valueIndex, { hex_color: event.target.value })} error={fieldError(errors, `options.${optionIndex}.values.${valueIndex}.hex_color`)} />
+                <div className="flex items-end">
+                  <Button type="button" variant="outline" size="icon" aria-label="Премахни стойност" onClick={() => removeValue(optionIndex, valueIndex)}>
+                    <Trash2 />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-          <Button type="button" variant="outline" onClick={() => addValue(optionIndex)}>
-            <Plus />
-            Стойност
-          </Button>
-        </div>
+            ))}
+            <Button type="button" variant="outline" onClick={() => addValue(optionIndex)}>
+              <Plus />
+              Стойност
+            </Button>
+          </div>
+        </CollapsibleSection>
       ))}
       <Button type="button" variant="outline" onClick={() => setRows((current) => [...current, { key: nextKey(), name: '', slug: '', values: [] }])}>
         <Plus />
@@ -353,6 +393,20 @@ function OptionsForm({ product, token, onSaved }: SectionFormProps) {
   }
 }
 
+function OptionCardTitle({ option }: { option: OptionDraft }) {
+  const valueLabel = option.values
+    .map((value) => value.name.trim())
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-2">
+      <span className="truncate">{option.name.trim() || 'Нова опция'}</span>
+      {valueLabel ? <span className="truncate font-medium tracking-normal text-muted-foreground">{valueLabel}</span> : null}
+    </span>
+  );
+}
+
 function mapOptions(options: ProductOption[]): OptionDraft[] {
   return options.map((option) => ({
     key: `o-${option.id}`,
@@ -383,6 +437,7 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
       const response = await updateProduct(token, product.id, {
         variants: rows.map((row, index) => ({
           ...(row.id ? { id: row.id } : {}),
+          name: row.name.trim() === '' ? null : row.name.trim(),
           sku: row.sku.trim(),
           price: toNumber(row.price) ?? 0,
           stock: Math.max(0, Number.parseInt(row.stock, 10) || 0),
@@ -415,43 +470,53 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
         <CollapsibleSection
           key={row.key}
           heading="h3"
+          persistKey={row.id ? `variant:${row.id}` : undefined}
           title={<VariantCardTitle row={row} options={product.options} />}
+          actions={
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-8"
+              aria-label="Премахни вариант"
+              onClick={() => setRows((current) => current.filter((_, item) => item !== index))}
+            >
+              <Trash2 />
+            </Button>
+          }
         >
           <div className="grid gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field id={`${row.key}-sku`} label="SKU" value={row.sku} onChange={(event) => patchRow(index, { sku: event.target.value })} error={fieldError(errors, `variants.${index}.sku`)} />
-              <Field id={`${row.key}-price`} label="Цена" type="number" step="0.01" min="0" value={row.price} onChange={(event) => patchRow(index, { price: event.target.value })} error={fieldError(errors, `variants.${index}.price`)} />
-              <Field id={`${row.key}-stock`} label="Наличност" type="number" min="0" value={row.stock} onChange={(event) => patchRow(index, { stock: event.target.value })} error={fieldError(errors, `variants.${index}.stock`)} />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Field id={`${row.key}-name`} label="Име" help="Име на варианта. Използва се и за име на каченото изображение." value={row.name} onChange={(event) => patchRow(index, { name: event.target.value })} error={fieldError(errors, `variants.${index}.name`)} />
+              <Field id={`${row.key}-sku`} label="SKU" help="Уникален артикулен номер на тази комбинация." value={row.sku} onChange={(event) => patchRow(index, { sku: event.target.value })} error={fieldError(errors, `variants.${index}.sku`)} />
+              <Field id={`${row.key}-price`} label="Цена" type="number" step="0.01" min="0" help="Цена на този вариант. Може да е различна от базовата." value={row.price} onChange={(event) => patchRow(index, { price: event.target.value })} error={fieldError(errors, `variants.${index}.price`)} />
             </div>
-            <VariantImageField
-              product={product}
-              variantId={row.id}
-              token={token}
-              onProductChange={onSaved}
-            />
-            {product.options.map((option) => (
-              <div key={option.id} className="field">
-                <LabelWithHelp htmlFor={`${row.key}-${option.slug}`} label={option.name} help="Стойността на тази опция за варианта." />
-                <Select
-                  value={row.option_values[option.slug] || undefined}
-                  onValueChange={(value) =>
-                    patchRow(index, { option_values: { ...row.option_values, [option.slug]: value } })
-                  }
-                >
-                  <SelectTrigger id={`${row.key}-${option.slug}`} className="w-full min-h-12 font-sans">
-                    <SelectValue placeholder="Изберете" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {option.values.map((value) => (
-                      <SelectItem key={value.id} value={value.slug}>
-                        {value.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Field id={`${row.key}-stock`} label="Наличност" type="number" min="0" help="Бройки за продажба от този вариант." value={row.stock} onChange={(event) => patchRow(index, { stock: event.target.value })} error={fieldError(errors, `variants.${index}.stock`)} />
+              {product.options.map((option) => (
+                <div key={option.id} className="field">
+                  <LabelWithHelp htmlFor={`${row.key}-${option.slug}`} label={option.name} help="Стойността на тази опция за варианта." />
+                  <Select
+                    value={row.option_values[option.slug] || undefined}
+                    onValueChange={(value) =>
+                      patchRow(index, { option_values: { ...row.option_values, [option.slug]: value } })
+                    }
+                  >
+                    <SelectTrigger id={`${row.key}-${option.slug}`} className="w-full min-h-12 font-sans">
+                      <SelectValue placeholder="Изберете" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {option.values.map((value) => (
+                        <SelectItem key={value.id} value={value.slug}>
+                          {value.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
               <SwitchField
                 id={`${row.key}-active`}
                 label="Активен"
@@ -476,10 +541,13 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
                   }
                 }}
               />
-              <Button type="button" variant="outline" size="icon" aria-label="Премахни вариант" onClick={() => setRows((current) => current.filter((_, item) => item !== index))}>
-                <Trash2 />
-              </Button>
             </div>
+            <VariantImageField
+              product={product}
+              variantId={row.id}
+              token={token}
+              onProductChange={onSaved}
+            />
           </div>
         </CollapsibleSection>
       ))}
@@ -510,6 +578,7 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
       ...current,
       {
         key: nextKey(),
+        name: '',
         sku: '',
         price: moneyInput(product.price),
         stock: '0',
@@ -525,6 +594,7 @@ function mapVariants(variants: ProductVariant[]): VariantDraft[] {
   return variants.map((variant) => ({
     key: `v-${variant.id}`,
     id: variant.id,
+    name: variant.name ?? '',
     sku: variant.sku ?? '',
     price: moneyInput(variant.price),
     stock: String(variant.stock),
@@ -542,7 +612,7 @@ function VariantCardTitle({ row, options }: { row: VariantDraft; options: Produc
 
   return (
     <span className="flex min-w-0 flex-wrap items-center gap-2">
-      <span className="truncate">{row.sku.trim() || 'Нов вариант'}</span>
+      <span className="truncate">{row.name.trim() || row.sku.trim() || 'Нов вариант'}</span>
       {optionLabel ? <span className="truncate font-medium tracking-normal text-muted-foreground">{optionLabel}</span> : null}
       {row.is_default ? <span className="badge info">По подразбиране</span> : null}
       {!row.is_active ? <span className="badge idle">Неактивен</span> : null}
@@ -558,7 +628,28 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
   const [maxLength, setMaxLength] = useState(String(product.personalization_max_length ?? 80));
   const [fields, setFields] = useState<PersonalizationFieldDraft[]>(() => mapPersonalization(product.personalization_fields));
   const [busy, setBusy] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [confirmShare, setConfirmShare] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function payload() {
+    return {
+      personalization_enabled: enabled,
+      personalization_label: label.trim() === '' ? null : label.trim(),
+      personalization_description: description.trim() === '' ? null : description.trim(),
+      personalization_required: required,
+      personalization_max_length: Math.max(1, Number.parseInt(maxLength, 10) || 80),
+      personalization_fields: fields.map((field, index) => ({
+        ...(field.id ? { id: field.id } : {}),
+        name: field.name.trim(),
+        description: field.description.trim() === '' ? null : field.description.trim(),
+        field_type: field.field_type,
+        is_required: field.is_required,
+        max_length: Math.max(1, Number.parseInt(field.max_length, 10) || 80),
+        sort_order: index,
+      })),
+    };
+  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -566,22 +657,7 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
     setErrors({});
 
     try {
-      const response = await updateProduct(token, product.id, {
-        personalization_enabled: enabled,
-        personalization_label: label.trim() === '' ? null : label.trim(),
-        personalization_description: description.trim() === '' ? null : description.trim(),
-        personalization_required: required,
-        personalization_max_length: Math.max(1, Number.parseInt(maxLength, 10) || 80),
-        personalization_fields: fields.map((field, index) => ({
-          ...(field.id ? { id: field.id } : {}),
-          name: field.name.trim(),
-          description: field.description.trim() === '' ? null : field.description.trim(),
-          field_type: field.field_type,
-          is_required: field.is_required,
-          max_length: Math.max(1, Number.parseInt(field.max_length, 10) || 80),
-          sort_order: index,
-        })),
-      });
+      const response = await updateProduct(token, product.id, payload());
       onSaved(response.data.product);
       setFields(mapPersonalization(response.data.product.personalization_fields));
       toast.success(response.message || 'Записано.');
@@ -595,17 +671,37 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
     }
   }
 
+  async function onShare() {
+    setSharing(true);
+    setErrors({});
+
+    try {
+      const response = await shareProductPersonalization(token, product.id, payload());
+      onSaved(response.data.product);
+      setFields(mapPersonalization(response.data.product.personalization_fields));
+      setConfirmShare(false);
+      toast.success(response.message || 'Персонализацията е приложена към всички продукти.');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrors(error.fieldErrors());
+      }
+      toastError(error, 'Споделянето не беше успешно.');
+    } finally {
+      setSharing(false);
+    }
+  }
+
   return (
     <form className="grid gap-3" onSubmit={(event) => void onSubmit(event)} noValidate>
       <SwitchField id="personalization_enabled" label="Включена" help="Клиентът вижда полета за текст преди добавяне в количката." checked={enabled} onCheckedChange={setEnabled} />
-      <Field id="personalization_label" label="Етикет" value={label} onChange={(event) => setLabel(event.target.value)} error={errors.personalization_label} />
-      <Field id="personalization_description" label="Указания" multiline rows={3} value={description} onChange={(event) => setDescription(event.target.value)} error={errors.personalization_description} />
+      <Field id="personalization_label" label="Етикет" help="Заглавие над полето в магазина, ако няма отделни полета." value={label} onChange={(event) => setLabel(event.target.value)} error={errors.personalization_label} />
+      <Field id="personalization_description" label="Указания" multiline rows={3} help="Кратък текст какво да въведе клиентът." value={description} onChange={(event) => setDescription(event.target.value)} error={errors.personalization_description} />
       <SwitchField id="personalization_required" label="Задължителна" help="Ако няма отделни полета, това важи за единственото текстово поле." checked={required} onCheckedChange={setRequired} />
-      <Field id="personalization_max_length" label="Макс. дължина" type="number" min="1" value={maxLength} onChange={(event) => setMaxLength(event.target.value)} error={errors.personalization_max_length} />
+      <Field id="personalization_max_length" label="Макс. дължина" type="number" min="1" help="Лимит на символите, ако няма отделни полета." value={maxLength} onChange={(event) => setMaxLength(event.target.value)} error={errors.personalization_max_length} />
       {fields.map((field, index) => (
         <div key={field.key} className="grid gap-3 rounded-[6px] border border-border p-3">
-          <Field id={`${field.key}-name`} label="Поле" value={field.name} onChange={(event) => patchField(index, { name: event.target.value })} error={fieldError(errors, `personalization_fields.${index}.name`)} />
-          <Field id={`${field.key}-description`} label="Описание" value={field.description} onChange={(event) => patchField(index, { description: event.target.value })} error={fieldError(errors, `personalization_fields.${index}.description`)} />
+          <Field id={`${field.key}-name`} label="Поле" help="Името на полето, напр. Име върху тениската." value={field.name} onChange={(event) => patchField(index, { name: event.target.value })} error={fieldError(errors, `personalization_fields.${index}.name`)} />
+          <Field id={`${field.key}-description`} label="Описание" help="Подсказка под полето в магазина." value={field.description} onChange={(event) => patchField(index, { description: event.target.value })} error={fieldError(errors, `personalization_fields.${index}.description`)} />
           <div className="field">
             <LabelWithHelp htmlFor={`${field.key}-type`} label="Тип" help="Текст е един ред. Многоредов е за по-дълги надписи." />
             <Select value={field.field_type} onValueChange={(value) => patchField(index, { field_type: value })}>
@@ -618,7 +714,7 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
               </SelectContent>
             </Select>
           </div>
-          <Field id={`${field.key}-max`} label="Макс. дължина" type="number" min="1" value={field.max_length} onChange={(event) => patchField(index, { max_length: event.target.value })} error={fieldError(errors, `personalization_fields.${index}.max_length`)} />
+          <Field id={`${field.key}-max`} label="Макс. дължина" type="number" min="1" help="Лимит на символите за това поле." value={field.max_length} onChange={(event) => patchField(index, { max_length: event.target.value })} error={fieldError(errors, `personalization_fields.${index}.max_length`)} />
           <div className="flex flex-wrap items-center gap-4">
             <SwitchField id={`${field.key}-required`} label="Задължително" help="Клиентът трябва да попълни това поле." checked={field.is_required} onCheckedChange={(checked) => patchField(index, { is_required: checked })} />
             <Button type="button" variant="outline" size="icon" aria-label="Премахни поле" onClick={() => setFields((current) => current.filter((_, item) => item !== index))}>
@@ -631,7 +727,27 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
         <Plus />
         Поле
       </Button>
-      <SectionActions busy={busy} />
+      <div className="row-actions">
+        <Button type="submit" disabled={busy || sharing}>
+          <Save />
+          {busy ? 'Запис…' : 'Запази секцията'}
+        </Button>
+        <Button type="button" variant="outline" disabled={busy || sharing} onClick={() => setConfirmShare(true)}>
+          <Share2 />
+          Към всички продукти
+        </Button>
+      </div>
+      {confirmShare ? (
+        <ConfirmDialog
+          title="Споделяне на персонализация"
+          message="Тези настройки и полета ще заменят персонализацията на всички останали продукти. Действието не може да се отмени автоматично."
+          confirmLabel="Приложи към всички"
+          variant="default"
+          busy={sharing}
+          onConfirm={() => void onShare()}
+          onCancel={() => setConfirmShare(false)}
+        />
+      ) : null}
     </form>
   );
 
@@ -652,9 +768,19 @@ function mapPersonalization(fields: ProductPersonalizationField[]): Personalizat
   }));
 }
 
-function SectionShell({ title, icon, children }: { title: string; icon: typeof Shirt; children: ReactNode }) {
+function SectionShell({
+  title,
+  icon,
+  help,
+  children,
+}: {
+  title: string;
+  icon: typeof Shirt;
+  help: string;
+  children: ReactNode;
+}) {
   return (
-    <CollapsibleSection title={title} icon={icon}>
+    <CollapsibleSection title={title} icon={icon} help={help}>
       {children}
     </CollapsibleSection>
   );
@@ -754,22 +880,22 @@ export function ProductEditPage() {
 
       {canEdit && product ? (
         <div className="flex min-w-0 max-w-full flex-col gap-3">
-          <SectionShell title="Изображения" icon={Images}>
+          <SectionShell title="Изображения" icon={Images} help="Предна снимка и галерия. Качват се веднага, без запис на секцията.">
             <ProductImagesEditor product={product} token={token} onProductChange={setProduct} />
           </SectionShell>
-          <SectionShell title="Общи данни" icon={Shirt}>
+          <SectionShell title="Общи данни" icon={Shirt} help="Име, цена и статус в каталога. Записът важи само за тази секция.">
             <GeneralForm key={`general-${product.id}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>
-          <SectionShell title="Параметри" icon={List}>
+          <SectionShell title="Параметри" icon={List} help="Характеристики като материя и грамаж. Показват се в описанието на продукта.">
             <ParametersForm key={`parameters-${product.id}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>
-          <SectionShell title="Опции" icon={Palette}>
+          <SectionShell title="Опции" icon={Palette} help="Размер, цвят и други избори. След промяна запишете и вариантите, ако комбинациите са се сменили.">
             <OptionsForm key={`options-${product.id}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>
-          <SectionShell title="Варианти" icon={Layers}>
+          <SectionShell title="Варианти" icon={Layers} help="Комбинации за покупка. Всяка може да има своя цена, наличност и снимка.">
             <VariantsForm key={`variants-${product.id}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>
-          <SectionShell title="Персонализация" icon={Type}>
+          <SectionShell title="Персонализация" icon={Type} help="Текст, който клиентът въвежда преди добавяне в количката, например име върху тениска.">
             <PersonalizationForm key={`personalization-${product.id}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>
         </div>

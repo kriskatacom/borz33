@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { KeyRound, Save, Shield, UserRound, X } from 'lucide-react';
+import { ArrowLeft, KeyRound, Save, Shield, UserRound, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { createUser, getUser, updateUser } from '@/api/users';
 import { routes } from '@/app/constants';
@@ -8,12 +8,11 @@ import { useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/Button';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Field } from '@/components/ui/Field';
-import { FormSection } from '@/components/ui/form-section';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast, toastError } from '@/lib/toast';
 
 type FormState = {
@@ -27,7 +26,7 @@ type FormState = {
   password_confirmation: string;
 };
 
-type FormTab = 'profile' | 'access' | 'security';
+type FormSectionId = 'profile' | 'access' | 'security';
 
 const emptyForm: FormState = {
   first_name: '',
@@ -40,24 +39,24 @@ const emptyForm: FormState = {
   password_confirmation: '',
 };
 
-const tabFields: Record<FormTab, Array<keyof FormState>> = {
+const sectionFields: Record<FormSectionId, Array<keyof FormState>> = {
   profile: ['first_name', 'last_name', 'email', 'phone'],
   access: ['role'],
   security: ['password', 'password_confirmation'],
 };
 
-function tabForErrors(errors: Record<string, string>): FormTab | null {
-  const tabs: FormTab[] = ['profile', 'access', 'security'];
+function sectionForErrors(errors: Record<string, string>): FormSectionId | null {
+  const sections: FormSectionId[] = ['profile', 'access', 'security'];
 
-  return tabs.find((tab) => tabFields[tab].some((field) => errors[field])) ?? null;
+  return sections.find((section) => sectionFields[section].some((field) => errors[field])) ?? null;
 }
 
-function FormActions({ busy }: { busy: boolean }) {
+function SectionActions({ busy }: { busy: boolean }) {
   return (
     <div className="row-actions">
       <Button type="submit" disabled={busy}>
         <Save />
-        {busy ? 'Запис…' : 'Запази'}
+        {busy ? 'Запис…' : 'Запази секцията'}
       </Button>
       <Button asChild variant="outline">
         <Link to={routes.users}>
@@ -69,7 +68,7 @@ function FormActions({ busy }: { busy: boolean }) {
   );
 }
 
-function TabForm({
+function SectionForm({
   children,
   busy,
   onSubmit,
@@ -79,11 +78,9 @@ function TabForm({
   onSubmit: (event: FormEvent) => void;
 }) {
   return (
-    <form className="contents" onSubmit={(event) => void onSubmit(event)} noValidate>
-      <FormSection className="grid gap-3">
-        <div className="form-grid">{children}</div>
-        <FormActions busy={busy} />
-      </FormSection>
+    <form className="grid gap-3" onSubmit={(event) => void onSubmit(event)} noValidate>
+      <div className="form-grid">{children}</div>
+      <SectionActions busy={busy} />
     </form>
   );
 }
@@ -96,12 +93,12 @@ export function UserFormPage() {
   const currentId = useAppSelector((state) => state.auth.user?.id);
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [tab, setTab] = useState<FormTab>('profile');
   const [busy, setBusy] = useState(!isNew);
   const [message, setMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const isSelf = userId !== null && userId === currentId;
   const title = isNew ? 'Нов потребител' : 'Редакция';
+  const errorSection = sectionForErrors(errors);
   useGlobalLoading(busy);
 
   useEffect(() => {
@@ -183,12 +180,7 @@ export function UserFormPage() {
       navigate(routes.users, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
-        const fieldErrors = error.fieldErrors();
-        setErrors(fieldErrors);
-        const nextTab = tabForErrors(fieldErrors);
-        if (nextTab) {
-          setTab(nextTab);
-        }
+        setErrors(error.fieldErrors());
       }
       toastError(error, 'Записът не беше успешен.');
     } finally {
@@ -197,19 +189,27 @@ export function UserFormPage() {
   }
 
   return (
-    <div className="page">
+    <div className="page min-w-0">
       <PageHeader
         title={title}
         help={
           isNew
-            ? 'Профилът се създава потвърден и може да влиза веднага с паролата, която зададете.'
-            : 'Променете данните на профила. Паролата се сменя само ако попълните полетата в раздела Парола.'
+            ? 'Профилът се създава потвърден и може да влиза веднага с паролата, която зададете. Записът от която и да е секция праща всички полета.'
+            : 'Променете данните на профила. Паролата се сменя само ако попълните полетата в секцията Парола. Записът от която и да е секция праща всички полета.'
         }
         crumbs={[
           { label: 'Табло', to: routes.home },
           { label: 'Потребители', to: routes.users },
           { label: title },
         ]}
+        actions={
+          <Button asChild variant="outline">
+            <Link to={routes.users}>
+              <ArrowLeft />
+              Към списъка
+            </Link>
+          </Button>
+        }
       />
 
       {message ? (
@@ -218,24 +218,15 @@ export function UserFormPage() {
         </p>
       ) : null}
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as FormTab)}>
-        <TabsList>
-          <TabsTrigger value="profile">
-            <UserRound />
-            Профил
-          </TabsTrigger>
-          <TabsTrigger value="access">
-            <Shield />
-            Достъп
-          </TabsTrigger>
-          <TabsTrigger value="security">
-            <KeyRound />
-            Парола
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="profile" className="grid gap-3">
-          <TabForm busy={busy} onSubmit={onSubmit}>
+      <div className="flex min-w-0 max-w-full flex-col gap-3">
+        <CollapsibleSection
+          title="Профил"
+          icon={UserRound}
+          persistKey="user.profile"
+          forceOpen={errorSection === 'profile'}
+          help="Име, имейл и телефон. Имейлът е уникален и се използва за вход."
+        >
+          <SectionForm busy={busy} onSubmit={onSubmit}>
             <Field
               id="first_name"
               label="Име"
@@ -274,11 +265,17 @@ export function UserFormPage() {
               onChange={(event) => patch('phone', event.target.value)}
               error={errors.phone}
             />
-          </TabForm>
-        </TabsContent>
+          </SectionForm>
+        </CollapsibleSection>
 
-        <TabsContent value="access" className="grid gap-3">
-          <TabForm busy={busy} onSubmit={onSubmit}>
+        <CollapsibleSection
+          title="Достъп"
+          icon={Shield}
+          persistKey="user.access"
+          forceOpen={errorSection === 'access'}
+          help="Роля и дали профилът може да влиза. Администратор има достъп до панела."
+        >
+          <SectionForm busy={busy} onSubmit={onSubmit}>
             <div className="field">
               <LabelWithHelp
                 htmlFor="role"
@@ -323,11 +320,21 @@ export function UserFormPage() {
                 />
               </div>
             </div>
-          </TabForm>
-        </TabsContent>
+          </SectionForm>
+        </CollapsibleSection>
 
-        <TabsContent value="security" className="grid gap-3">
-          <TabForm busy={busy} onSubmit={onSubmit}>
+        <CollapsibleSection
+          title="Парола"
+          icon={KeyRound}
+          persistKey="user.security"
+          forceOpen={errorSection === 'security'}
+          help={
+            isNew
+              ? 'Задайте парола, с която потребителят влиза веднага след създаването.'
+              : 'Попълнете само ако искате да смените паролата. Празните полета оставят старата.'
+          }
+        >
+          <SectionForm busy={busy} onSubmit={onSubmit}>
             <Field
               id="password"
               label={isNew ? 'Парола' : 'Нова парола'}
@@ -354,9 +361,9 @@ export function UserFormPage() {
               onChange={(event) => patch('password_confirmation', event.target.value)}
               error={errors.password_confirmation}
             />
-          </TabForm>
-        </TabsContent>
-      </Tabs>
+          </SectionForm>
+        </CollapsibleSection>
+      </div>
     </div>
   );
 }

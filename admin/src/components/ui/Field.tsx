@@ -1,6 +1,7 @@
 import type { ChangeEvent, InputHTMLAttributes, ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { HelpHint } from '@/components/ui/HelpHint';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
   id: string;
@@ -15,6 +16,93 @@ type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
 };
 
 const UNCLEARABLE_TYPES = new Set(['password', 'hidden', 'checkbox', 'radio', 'file', 'submit', 'button', 'image']);
+
+function boundNumber(value: string | number | undefined): number | undefined {
+  if (value === undefined || value === '') {
+    return undefined;
+  }
+
+  const parsed = typeof value === 'number' ? value : Number(value);
+
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function stepAmount(value: string | number | undefined): number {
+  if (value === undefined || value === '' || value === 'any') {
+    return 1;
+  }
+
+  const parsed = typeof value === 'number' ? value : Number(value);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function stepDecimals(step: number): number {
+  const text = step.toString().toLowerCase();
+  const scientific = text.match(/e-(\d+)$/);
+
+  if (scientific) {
+    return Number(scientific[1]);
+  }
+
+  const dot = text.indexOf('.');
+
+  return dot === -1 ? 0 : text.length - dot - 1;
+}
+
+function formatStepped(value: number, step: number): string {
+  const places = stepDecimals(step);
+
+  return places > 0 ? value.toFixed(places) : String(Math.round(value));
+}
+
+function currentNumber(value: FieldProps['value']): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value !== 'string' || value.trim() === '') {
+    return undefined;
+  }
+
+  const parsed = Number.parseFloat(value);
+
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function nextNumber(
+  value: FieldProps['value'],
+  direction: 1 | -1,
+  step: number,
+  min?: number,
+  max?: number
+): string {
+  const current = currentNumber(value);
+  let next: number;
+
+  if (current === undefined) {
+    if (direction < 0) {
+      return min === undefined ? '' : formatStepped(min, step);
+    }
+
+    next = min ?? 0;
+  } else {
+    next = current + direction * step;
+  }
+
+  if (min !== undefined) {
+    next = Math.max(min, next);
+  }
+
+  if (max !== undefined) {
+    next = Math.min(max, next);
+  }
+
+  const places = stepDecimals(step);
+  next = Number(next.toFixed(places));
+
+  return formatStepped(next, step);
+}
 
 export function Field({
   id,
@@ -33,19 +121,31 @@ export function Field({
 }: FieldProps) {
   const describedBy = [hint ? `${id}-hint` : null, error ? `${id}-error` : null].filter(Boolean).join(' ') || undefined;
   const inputType = input.type ?? 'text';
+  const isNumber = !multiline && inputType === 'number';
   const canClear = !multiline && (clearable ?? !UNCLEARABLE_TYPES.has(inputType));
   const hasValue = typeof value === 'string' ? value.length > 0 : value != null && value !== '';
   const showClear = canClear && hasValue && !input.disabled && !input.readOnly;
-  const wrapped = !multiline && (Boolean(trailing) || showClear);
+  const wrapped = !multiline && (Boolean(trailing) || showClear || isNumber);
+  const step = stepAmount(input.step);
+  const min = boundNumber(input.min);
+  const max = boundNumber(input.max);
+  const upValue = nextNumber(value, 1, step, min, max);
+  const downValue = nextNumber(value, -1, step, min, max);
+  const current = value === undefined || value === null ? '' : String(value);
+  const stepperDisabled = Boolean(input.disabled || input.readOnly);
 
-  function clearField() {
+  function emit(next: string) {
     const event = {
-      target: { value: '', name: input.name ?? '', id },
-      currentTarget: { value: '', name: input.name ?? '', id },
+      target: { value: next, name: input.name ?? '', id },
+      currentTarget: { value: next, name: input.name ?? '', id },
     } as ChangeEvent<HTMLInputElement>;
 
     onChange?.(event);
     requestAnimationFrame(() => document.getElementById(id)?.focus());
+  }
+
+  function clearField() {
+    emit('');
   }
 
   return (
@@ -79,10 +179,42 @@ export function Field({
             onChange={onChange}
           />
         )}
-        {showClear ? (
-          <button type="button" className="field-action" aria-label={`Изчисти: ${label}`} onClick={clearField}>
-            <X className="size-4" aria-hidden />
-          </button>
+        {showClear || isNumber ? (
+          <div className="field-addons">
+            {showClear ? (
+              <Tooltip content={`Изчисти: ${label}`}>
+                <button type="button" className="field-action" aria-label={`Изчисти: ${label}`} onClick={clearField}>
+                  <X className="size-4" aria-hidden />
+                </button>
+              </Tooltip>
+            ) : null}
+            {isNumber ? (
+              <div className="field-stepper">
+                <Tooltip className="min-h-0" content={`Увеличи: ${label}`}>
+                  <button
+                    type="button"
+                    className="field-step"
+                    aria-label={`Увеличи: ${label}`}
+                    disabled={stepperDisabled || upValue === current}
+                    onClick={() => emit(upValue)}
+                  >
+                    <ChevronUp className="size-4" aria-hidden />
+                  </button>
+                </Tooltip>
+                <Tooltip className="min-h-0" content={`Намали: ${label}`}>
+                  <button
+                    type="button"
+                    className="field-step"
+                    aria-label={`Намали: ${label}`}
+                    disabled={stepperDisabled || downValue === current}
+                    onClick={() => emit(downValue)}
+                  >
+                    <ChevronDown className="size-4" aria-hidden />
+                  </button>
+                </Tooltip>
+              </div>
+            ) : null}
+          </div>
         ) : null}
         {trailing}
       </div>
