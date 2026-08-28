@@ -15,6 +15,7 @@ class ProductImage extends Model
     protected $fillable = [
         'product_id',
         'product_variant_id',
+        'media_file_id',
         'role',
         'path',
         'original_name',
@@ -30,6 +31,7 @@ class ProductImage extends Model
             'size' => 'integer',
             'sort_order' => 'integer',
             'product_variant_id' => 'integer',
+            'media_file_id' => 'integer',
         ];
     }
 

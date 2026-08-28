@@ -3,6 +3,7 @@ import { apiRequest, apiUpload } from '@/api/client';
 export type ProductImage = {
   id: number;
   product_variant_id?: number | null;
+  media_file_id?: number | null;
   role: string;
   url: string;
   original_name: string;
@@ -193,6 +194,30 @@ export function deleteProductImage(token: string, productId: number, imageId: nu
   return apiRequest<Record<string, never>>(`/admin/products/${productId}/images/${imageId}`, {
     method: 'DELETE',
     token,
+  });
+}
+
+export function attachProductFrontImage(token: string, productId: number, mediaId: number) {
+  return apiRequest<{ image: ProductImage }>(`/admin/products/${productId}/images/front`, {
+    method: 'POST',
+    token,
+    body: { media_id: mediaId },
+  });
+}
+
+export function attachProductGalleryImages(token: string, productId: number, mediaIds: number[]) {
+  return apiRequest<{ images: ProductImage[] }>(`/admin/products/${productId}/images`, {
+    method: 'POST',
+    token,
+    body: { media_ids: mediaIds },
+  });
+}
+
+export function attachVariantImage(token: string, productId: number, variantId: number, mediaId: number) {
+  return apiRequest<{ image: ProductImage }>(`/admin/products/${productId}/variants/${variantId}/image`, {
+    method: 'POST',
+    token,
+    body: { media_id: mediaId },
   });
 }
 

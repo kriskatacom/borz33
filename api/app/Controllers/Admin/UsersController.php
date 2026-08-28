@@ -8,6 +8,7 @@ use App\Controllers\Controller;
 use App\Core\Request;
 use App\Exceptions\ValidationException;
 use App\Resources\UserResource;
+use App\Services\Media\MediaService;
 use App\Services\Users\UserAdminService;
 use App\Services\Users\UserAvatarService;
 use App\Validation\StoreUserValidator;
@@ -19,7 +20,8 @@ class UsersController extends Controller
         private readonly UserAdminService $users = new UserAdminService(),
         private readonly StoreUserValidator $storeValidator = new StoreUserValidator(),
         private readonly UpdateUserValidator $updateValidator = new UpdateUserValidator(),
-        private readonly UserAvatarService $avatars = new UserAvatarService()
+        private readonly UserAvatarService $avatars = new UserAvatarService(),
+        private readonly MediaService $media = new MediaService()
     ) {
     }
 
@@ -68,13 +70,21 @@ class UsersController extends Controller
 
     public function storeAvatar(string $id): never
     {
+        $user = $this->users->find($this->id($id));
+        $mediaId = Request::input('media_id');
+
+        if (is_int($mediaId) || (is_string($mediaId) && ctype_digit($mediaId))) {
+            $user = $this->avatars->attach($user, $this->media->requireRasterImage((int) $mediaId));
+            $this->created(['user' => UserResource::toAdminArray($user)], 'Профилната снимка е записана.');
+        }
+
         $file = Request::file('image');
 
         if ($file === null) {
-            throw new ValidationException(['image' => ['Изберете изображение.']]);
+            throw new ValidationException(['image' => ['Изберете изображение или файл от медията.']]);
         }
 
-        $user = $this->avatars->store($this->users->find($this->id($id)), $file);
+        $user = $this->avatars->store($user, $file);
 
         $this->created(['user' => UserResource::toAdminArray($user)], 'Профилната снимка е записана.');
     }

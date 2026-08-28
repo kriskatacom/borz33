@@ -8,6 +8,7 @@ use App\Controllers\Controller;
 use App\Core\Request;
 use App\Exceptions\ValidationException;
 use App\Resources\ProductImageResource;
+use App\Services\Media\MediaService;
 use App\Services\Products\ProductAdminService;
 use App\Services\Products\ProductImageService;
 use App\Validation\ProductImageValidator;
@@ -17,17 +18,25 @@ class ProductImagesController extends Controller
     public function __construct(
         private readonly ProductAdminService $products = new ProductAdminService(),
         private readonly ProductImageService $images = new ProductImageService(),
-        private readonly ProductImageValidator $validator = new ProductImageValidator()
+        private readonly ProductImageValidator $validator = new ProductImageValidator(),
+        private readonly MediaService $media = new MediaService()
     ) {
     }
 
     public function storeFront(string $id): never
     {
         $product = $this->products->find($this->id($id));
+        $mediaId = $this->firstMediaId();
+
+        if ($mediaId !== null) {
+            $image = $this->images->attachFront($product, $this->media->requireRasterImage($mediaId), $this->alt());
+            $this->created(['image' => ProductImageResource::toArray($image)], 'Предното изображение е записано.');
+        }
+
         $file = Request::file('image');
 
         if ($file === null) {
-            throw new ValidationException(['image' => ['Изберете изображение.']]);
+            throw new ValidationException(['image' => ['Изберете изображение или файл от медията.']]);
         }
 
         $image = $this->images->storeFront($product, $file, $this->alt());
@@ -38,6 +47,7 @@ class ProductImagesController extends Controller
     public function storeGallery(string $id): never
     {
         $product = $this->products->find($this->id($id));
+        $mediaIds = $this->mediaIds();
         $files = Request::files('images');
 
         if ($files === []) {
@@ -45,11 +55,15 @@ class ProductImagesController extends Controller
             $files = $single === null ? [] : [$single];
         }
 
-        if ($files === []) {
-            throw new ValidationException(['image' => ['Изберете поне едно изображение.']]);
+        if ($mediaIds === [] && $files === []) {
+            throw new ValidationException(['image' => ['Изберете поне едно изображение или файл от медията.']]);
         }
 
         $stored = [];
+
+        foreach ($mediaIds as $mediaId) {
+            $stored[] = ProductImageResource::toArray($this->images->attachGallery($product, $this->media->requireRasterImage($mediaId), $this->alt()));
+        }
 
         foreach ($files as $file) {
             $stored[] = ProductImageResource::toArray($this->images->storeGallery($product, $file, $this->alt()));
@@ -62,10 +76,17 @@ class ProductImagesController extends Controller
     {
         $product = $this->products->find($this->id($id));
         $variant = $this->products->findVariant($product, $this->id($variantId));
+        $mediaId = $this->firstMediaId();
+
+        if ($mediaId !== null) {
+            $image = $this->images->attachVariant($product, $variant, $this->media->requireRasterImage($mediaId), $this->alt());
+            $this->created(['image' => ProductImageResource::toArray($image)], 'Изображението на варианта е записано.');
+        }
+
         $file = Request::file('image');
 
         if ($file === null) {
-            throw new ValidationException(['image' => ['Изберете изображение.']]);
+            throw new ValidationException(['image' => ['Изберете изображение или файл от медията.']]);
         }
 
         $image = $this->images->storeVariant($product, $variant, $file, $this->alt());
@@ -119,6 +140,33 @@ class ProductImagesController extends Controller
         $alt = Request::input('alt');
 
         return is_string($alt) ? $alt : null;
+    }
+
+    private function firstMediaId(): ?int
+    {
+        return $this->mediaIds()[0] ?? null;
+    }
+
+    /** @return list<int> */
+    private function mediaIds(): array
+    {
+        $raw = Request::input('media_ids', Request::input('media_id'));
+
+        if (!is_array($raw)) {
+            $raw = $raw === null || $raw === '' ? [] : [$raw];
+        }
+
+        $ids = [];
+
+        foreach ($raw as $value) {
+            if (is_int($value) && $value > 0) {
+                $ids[] = $value;
+            } elseif (is_string($value) && ctype_digit($value) && (int) $value > 0) {
+                $ids[] = (int) $value;
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 
     private function id(string $id): int

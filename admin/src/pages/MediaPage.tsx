@@ -623,7 +623,7 @@ export function MediaPage() {
       {confirm ? (
         <ConfirmDialog
           title="Изтриване на файл"
-          message={`Да изтрием ли „${confirm.original_name}“? Файлът се премахва от диска.`}
+          message={`Да изтрием ли „${confirm.original_name}“? Файлът се маха от диска и от продуктите или профилите, които го ползват.`}
           confirmLabel="Изтрий"
           busy={deleting}
           onConfirm={() => void onDelete()}

@@ -1,11 +1,12 @@
 import { useEffect, useId, useRef, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ImagePlus, Trash2, Upload, ZoomIn } from 'lucide-react';
-import { deleteUserAvatar, uploadUserAvatar, type ManagedUser } from '@/api/users';
+import { FolderOpen, ImagePlus, Trash2, Upload, ZoomIn } from 'lucide-react';
+import { attachUserAvatar, deleteUserAvatar, uploadUserAvatar, type ManagedUser } from '@/api/users';
 import type { ProductImage } from '@/api/products';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
+import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
 import { ImageLightbox } from '@/features/products/ProductImagesSection';
 import { toast, toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -70,6 +71,7 @@ export function UserAvatarField({
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [lightbox, setLightbox] = useState(false);
+  const [picker, setPicker] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -145,6 +147,21 @@ export function UserAvatarField({
     }
   }
 
+  async function attachFromMedia(mediaId: number) {
+    if (userId === null) {
+      return;
+    }
+
+    try {
+      const response = await attachUserAvatar(token, userId, mediaId);
+      onUserChange(response.data.user);
+      setPicker(false);
+      toast.success(response.message || 'Профилната снимка е записана.');
+    } catch (error) {
+      toastError(error, 'Изборът от медията не беше успешен.');
+    }
+  }
+
   function onDrop(event: DragEvent) {
     event.preventDefault();
     event.stopPropagation();
@@ -171,7 +188,7 @@ export function UserAvatarField({
     <div>
       <LabelWithHelp
         label="Профилна снимка"
-        help="JPEG, PNG или WebP, до 8 MB. Сменянето заменя предишния файл."
+        help="JPEG, PNG или WebP, до 8 MB. Качването записва файла и в медията."
       />
       {createPortal(
         <input
@@ -250,6 +267,10 @@ export function UserAvatarField({
             <Upload />
             {shown ? 'Смени' : 'Избери'}
           </Button>
+          <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => setPicker(true)}>
+            <FolderOpen />
+            От медията
+          </Button>
           {avatarUrl && !busy ? (
             <Button type="button" variant="outline" size="sm" onClick={() => setConfirm(true)}>
               <Trash2 />
@@ -266,10 +287,23 @@ export function UserAvatarField({
           onClose={() => setLightbox(false)}
         />
       ) : null}
+      {picker ? (
+        <MediaPickerDialog
+          token={token}
+          title="Профилна снимка от медията"
+          onSelect={(files) => {
+            const file = files[0];
+            if (file) {
+              void attachFromMedia(file.id);
+            }
+          }}
+          onClose={() => setPicker(false)}
+        />
+      ) : null}
       {confirm ? (
         <ConfirmDialog
           title="Премахване на снимка"
-          message="Профилната снимка ще бъде изтрита."
+          message="Снимката ще се махне от профила. Ако е в медията, файлът остава там."
           confirmLabel="Изтрий"
           busy={deleting}
           onConfirm={() => void onRemove()}

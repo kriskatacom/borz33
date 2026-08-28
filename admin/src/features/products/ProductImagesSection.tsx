@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type DragEvent } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
+  FolderOpen,
   ImagePlus,
   Images,
   Star,
@@ -11,7 +12,10 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { ApiError } from '@/api/client';
+import type { MediaFile } from '@/api/media';
 import {
+  attachProductFrontImage,
+  attachProductGalleryImages,
   deleteProductImage,
   getProduct,
   makeProductImageFront,
@@ -24,6 +28,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
+import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
 import { formatBytes } from '@/lib/format';
 import { toast, toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -110,6 +115,7 @@ export function ProductImagesEditor({
   const [deleting, setDeleting] = useState(false);
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
+  const [picker, setPicker] = useState<'front' | 'gallery' | null>(null);
 
   const pendingFront = pending.find((item) => item.target === 'front');
   const pendingGallery = pending.filter((item) => item.target === 'gallery');
@@ -124,6 +130,30 @@ export function ProductImagesEditor({
   async function refresh() {
     const response = await getProduct(token, product.id);
     onProductChange(response.data.product);
+  }
+
+  async function attachFromMedia(picked: MediaFile[]) {
+    if (picked.length === 0 || !picker) {
+      return;
+    }
+
+    try {
+      if (picker === 'front') {
+        const response = await attachProductFrontImage(token, product.id, picked[0].id);
+        toast.success(response.message || 'Предното изображение е записано.');
+      } else {
+        const response = await attachProductGalleryImages(
+          token,
+          product.id,
+          picked.map((file) => file.id)
+        );
+        toast.success(response.message || 'Изображенията са добавени.');
+      }
+      await refresh();
+      setPicker(null);
+    } catch (error) {
+      toastError(error, 'Изборът от медията не беше успешен.');
+    }
   }
 
   function enqueue(files: File[], target: 'front' | 'gallery') {
@@ -459,7 +489,7 @@ export function ProductImagesEditor({
       <div>
         <LabelWithHelp
           label="Предно изображение"
-          help="Показва се в списъка и като основна снимка. Пуснете файл тук, за да го смените. JPEG, PNG или WebP, до 8 MB."
+          help="Показва се в списъка и като основна снимка. Качването записва файла и в медията. JPEG, PNG или WebP, до 8 MB."
         />
         <div
           className={cn(
@@ -505,6 +535,10 @@ export function ProductImagesEditor({
                     <Upload />
                     Смени
                   </Button>
+                  <Button type="button" variant="outline" onClick={() => setPicker('front')}>
+                    <FolderOpen />
+                    От медията
+                  </Button>
                   {product.front_image ? (
                     <Button
                       type="button"
@@ -522,8 +556,9 @@ export function ProductImagesEditor({
           ) : (
             <DropEmpty
               title="Пуснете предното изображение"
-              hint="или кликнете, за да изберете файл. Може и да поставите снимка с Ctrl+V."
+              hint="или качете файл. Качването го записва и в медията. Може и Ctrl+V."
               onPick={() => frontInputRef.current?.click()}
+              onPickMedia={() => setPicker('front')}
             />
           )}
         </div>
@@ -532,7 +567,7 @@ export function ProductImagesEditor({
       <div>
         <LabelWithHelp
           label="Допълнителни изображения"
-          help="Галерия към продукта. Пуснете няколко файла наведнъж. Плъзгайте снимките, за да ги пренаредите, или ги пуснете върху предното, за да станат основни."
+          help="Галерия към продукта. Новите качвания отиват и в медията. Плъзгайте снимките, за да ги пренаредите."
         />
         <div
           className={cn(
@@ -549,8 +584,9 @@ export function ProductImagesEditor({
           {product.gallery_images.length === 0 && pendingGallery.length === 0 ? (
             <DropEmpty
               title="Пуснете допълнителни снимки"
-              hint="Може да изберете няколко файла наведнъж."
+              hint="Може да изберете няколко файла или да вземете готови от медията."
               onPick={() => galleryInputRef.current?.click()}
+              onPickMedia={() => setPicker('gallery')}
             />
           ) : (
             <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3">
@@ -615,7 +651,7 @@ export function ProductImagesEditor({
                   <ImageTile src={item.previewUrl} alt={item.name} pending={item} />
                 </li>
               ))}
-              <li>
+              <li className="grid gap-2">
                 <button
                   type="button"
                   className="flex min-h-40 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-[6px] border border-dashed border-border bg-field px-3 py-4 text-center text-base text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
@@ -624,6 +660,10 @@ export function ProductImagesEditor({
                   <ImagePlus className="size-6" aria-hidden />
                   Добави снимки
                 </button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setPicker('gallery')}>
+                  <FolderOpen />
+                  От медията
+                </Button>
               </li>
             </ul>
           )}
@@ -633,11 +673,21 @@ export function ProductImagesEditor({
       {confirm ? (
         <ConfirmDialog
           title="Изтриване на изображение"
-          message={`„${confirm.original_name}“ ще бъде премахнато безвъзвратно.`}
+          message={`„${confirm.original_name}“ ще се махне от продукта. Ако е в медията, файлът остава там.`}
           confirmLabel="Изтрий"
           busy={deleting}
           onCancel={() => setConfirm(null)}
           onConfirm={() => void onDelete(confirm)}
+        />
+      ) : null}
+
+      {picker ? (
+        <MediaPickerDialog
+          token={token}
+          title={picker === 'front' ? 'Предно изображение от медията' : 'Снимки от медията'}
+          multiple={picker === 'gallery'}
+          onSelect={(files) => void attachFromMedia(files)}
+          onClose={() => setPicker(null)}
         />
       ) : null}
 
@@ -702,19 +752,37 @@ export function ProductImagesPreview({ product }: { product: AdminProduct }) {
   );
 }
 
-function DropEmpty({ title, hint, onPick }: { title: string; hint: string; onPick: () => void }) {
+function DropEmpty({
+  title,
+  hint,
+  onPick,
+  onPickMedia,
+}: {
+  title: string;
+  hint: string;
+  onPick: () => void;
+  onPickMedia?: () => void;
+}) {
   return (
-    <button
-      type="button"
-      className="flex min-h-44 w-full cursor-pointer flex-col items-center justify-center gap-2 px-4 py-8 text-center outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset"
-      onClick={onPick}
-    >
-      <span className="flex size-12 items-center justify-center rounded-[6px] bg-primary/12 text-primary">
-        <Images className="size-6" aria-hidden />
-      </span>
-      <span className="font-sans text-base font-bold text-foreground">{title}</span>
-      <span className="max-w-md text-base text-muted-foreground">{hint}</span>
-    </button>
+    <div className="flex min-h-44 w-full flex-col items-center justify-center gap-3 px-4 py-8 text-center">
+      <button
+        type="button"
+        className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        onClick={onPick}
+      >
+        <span className="flex size-12 items-center justify-center rounded-[6px] bg-primary/12 text-primary">
+          <Images className="size-6" aria-hidden />
+        </span>
+        <span className="font-sans text-base font-bold text-foreground">{title}</span>
+        <span className="max-w-md text-base text-muted-foreground">{hint}</span>
+      </button>
+      {onPickMedia ? (
+        <Button type="button" variant="outline" onClick={onPickMedia}>
+          <FolderOpen />
+          От медията
+        </Button>
+      ) : null}
+    </div>
   );
 }
 

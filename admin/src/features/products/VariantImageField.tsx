@@ -1,10 +1,11 @@
 import { useEffect, useId, useRef, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ImagePlus, Trash2, Upload, ZoomIn } from 'lucide-react';
-import { deleteVariantImage, uploadVariantImage, type AdminProduct, type ProductImage } from '@/api/products';
+import { FolderOpen, ImagePlus, Trash2, Upload, ZoomIn } from 'lucide-react';
+import { attachVariantImage, deleteVariantImage, uploadVariantImage, type AdminProduct, type ProductImage } from '@/api/products';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
+import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
 import { AltField, ImageLightbox } from '@/features/products/ProductImagesSection';
 import { toast, toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -56,6 +57,7 @@ export function VariantImageField({
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [lightbox, setLightbox] = useState(false);
+  const [picker, setPicker] = useState(false);
 
   const image = product.variants.find((variant) => variant.id === variantId)?.image ?? null;
 
@@ -143,6 +145,21 @@ export function VariantImageField({
     }
   }
 
+  async function attachFromMedia(mediaId: number) {
+    if (variantId === undefined) {
+      return;
+    }
+
+    try {
+      const response = await attachVariantImage(token, product.id, variantId, mediaId);
+      applyImage(response.data.image);
+      setPicker(false);
+      toast.success(response.message || 'Изображението на варианта е записано.');
+    } catch (error) {
+      toastError(error, 'Изборът от медията не беше успешен.');
+    }
+  }
+
   function onDrop(event: DragEvent) {
     event.preventDefault();
     event.stopPropagation();
@@ -166,7 +183,7 @@ export function VariantImageField({
     <div>
       <LabelWithHelp
         label="Изображение"
-        help="По една снимка на вариант. JPEG, PNG или WebP, до 8 MB. Не се показва в галерията на продукта."
+        help="По една снимка на вариант. Качването я записва и в медията. JPEG, PNG или WebP, до 8 MB."
       />
       {createPortal(
         <input
@@ -253,9 +270,13 @@ export function VariantImageField({
                 pickFile();
               }}
             >
-              <Upload />
-              {shown ? 'Смени' : 'Избери'}
-            </Button>
+            <Upload />
+            {shown ? 'Смени' : 'Избери'}
+          </Button>
+          <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => setPicker(true)}>
+            <FolderOpen />
+            От медията
+          </Button>
             {image && !busy ? (
               <Button type="button" variant="outline" size="sm" onClick={() => setConfirm(true)}>
                 <Trash2 />
@@ -268,10 +289,23 @@ export function VariantImageField({
       {lightbox && image ? (
         <ImageLightbox images={[image]} index={0} onIndex={() => {}} onClose={() => setLightbox(false)} />
       ) : null}
+      {picker ? (
+        <MediaPickerDialog
+          token={token}
+          title="Снимка на варианта"
+          onSelect={(files) => {
+            const file = files[0];
+            if (file) {
+              void attachFromMedia(file.id);
+            }
+          }}
+          onClose={() => setPicker(false)}
+        />
+      ) : null}
       {confirm ? (
         <ConfirmDialog
           title="Премахване на снимка"
-          message="Изображението на този вариант ще бъде изтрито."
+          message="Снимката ще се махне от варианта. Ако е в медията, файлът остава там."
           confirmLabel="Изтрий"
           busy={deleting}
           onConfirm={() => void onRemove()}

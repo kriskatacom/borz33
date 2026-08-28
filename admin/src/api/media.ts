@@ -19,6 +19,7 @@ export type MediaFile = {
 export type MediaListFilters = {
   q?: string;
   kind?: string;
+  raster?: boolean;
   page?: number;
   per_page?: number;
 };

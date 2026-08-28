@@ -6,16 +6,19 @@ namespace App\Services\Products;
 
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
+use App\Models\MediaFile;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Services\Media\MediaService;
 use App\Validation\ProductImageValidator;
 
 class ProductImageService
 {
     public function __construct(
         private readonly ProductImageStorage $storage = new ProductImageStorage(),
-        private readonly ProductImageValidator $validator = new ProductImageValidator()
+        private readonly ProductImageValidator $validator = new ProductImageValidator(),
+        private readonly MediaService $media = new MediaService()
     ) {
     }
 
@@ -23,82 +26,66 @@ class ProductImageService
     public function storeFront(Product $product, array $file, ?string $alt = null): ProductImage
     {
         $this->validator->validateUpload($file);
-        $stored = $this->storage->store((int) $product->id, $file, $this->imageStem($product));
+
+        return $this->attachFront($product, $this->media->store($file), $alt);
+    }
+
+    public function attachFront(Product $product, MediaFile $media, ?string $alt = null): ProductImage
+    {
+        $this->assertRaster($media);
         $existing = $product->frontImage()->first();
 
         if ($existing !== null) {
-            $this->storage->deleteFile($existing->path);
+            $this->releaseFile($existing);
             $existing->forceFill([
+                ...$this->fromMedia($media, $alt, $existing->alt),
                 'product_variant_id' => null,
-                'path' => $stored['path'],
-                'original_name' => $this->originalName($file),
-                'mime' => $stored['mime'],
-                'size' => (int) ($file['size'] ?? 0),
-                'alt' => $alt !== null ? $this->nullableAlt($alt) : $existing->alt,
                 'sort_order' => 0,
             ])->save();
 
             return $existing->fresh() ?? $existing;
         }
 
-        $image = new ProductImage();
-        $image->forceFill([
-            'product_id' => $product->id,
-            'product_variant_id' => null,
-            'role' => ProductImage::ROLE_FRONT,
-            'path' => $stored['path'],
-            'original_name' => $this->originalName($file),
-            'mime' => $stored['mime'],
-            'size' => (int) ($file['size'] ?? 0),
-            'alt' => $this->nullableAlt($alt),
-            'sort_order' => 0,
-        ])->save();
-
-        return $image;
+        return $this->createImage($product, ProductImage::ROLE_FRONT, $media, $alt, 0);
     }
 
     /** @param array<string, mixed> $file */
     public function storeGallery(Product $product, array $file, ?string $alt = null): ProductImage
     {
         $this->validator->validateUpload($file);
-        $stored = $this->storage->store((int) $product->id, $file, $this->imageStem($product));
+
+        return $this->attachGallery($product, $this->media->store($file), $alt);
+    }
+
+    public function attachGallery(Product $product, MediaFile $media, ?string $alt = null): ProductImage
+    {
+        $this->assertRaster($media);
         $maxSort = (int) $product->galleryImages()->max('sort_order');
 
-        $image = new ProductImage();
-        $image->forceFill([
-            'product_id' => $product->id,
-            'product_variant_id' => null,
-            'role' => ProductImage::ROLE_GALLERY,
-            'path' => $stored['path'],
-            'original_name' => $this->originalName($file),
-            'mime' => $stored['mime'],
-            'size' => (int) ($file['size'] ?? 0),
-            'alt' => $this->nullableAlt($alt),
-            'sort_order' => $maxSort + 1,
-        ])->save();
-
-        return $image;
+        return $this->createImage($product, ProductImage::ROLE_GALLERY, $media, $alt, $maxSort + 1);
     }
 
     /** @param array<string, mixed> $file */
     public function storeVariant(Product $product, ProductVariant $variant, array $file, ?string $alt = null): ProductImage
     {
         $this->validator->validateUpload($file);
-        $stored = $this->storage->store((int) $product->id, $file, $this->imageStem($product, $variant));
+
+        return $this->attachVariant($product, $variant, $this->media->store($file), $alt);
+    }
+
+    public function attachVariant(Product $product, ProductVariant $variant, MediaFile $media, ?string $alt = null): ProductImage
+    {
+        $this->assertRaster($media);
         $existing = ProductImage::query()
             ->where('product_id', $product->id)
             ->where('product_variant_id', $variant->id)
             ->first();
 
         if ($existing !== null) {
-            $this->storage->deleteFile($existing->path);
+            $this->releaseFile($existing);
             $existing->forceFill([
+                ...$this->fromMedia($media, $alt, $existing->alt),
                 'role' => ProductImage::ROLE_VARIANT,
-                'path' => $stored['path'],
-                'original_name' => $this->originalName($file),
-                'mime' => $stored['mime'],
-                'size' => (int) ($file['size'] ?? 0),
-                'alt' => $alt !== null ? $this->nullableAlt($alt) : $existing->alt,
                 'sort_order' => 0,
             ])->save();
 
@@ -110,11 +97,7 @@ class ProductImageService
             'product_id' => $product->id,
             'product_variant_id' => $variant->id,
             'role' => ProductImage::ROLE_VARIANT,
-            'path' => $stored['path'],
-            'original_name' => $this->originalName($file),
-            'mime' => $stored['mime'],
-            'size' => (int) ($file['size'] ?? 0),
-            'alt' => $this->nullableAlt($alt),
+            ...$this->fromMedia($media, $alt, null),
             'sort_order' => 0,
         ])->save();
 
@@ -188,7 +171,7 @@ class ProductImageService
 
     public function deleteImage(ProductImage $image): void
     {
-        $this->storage->deleteFile($image->path);
+        $this->releaseFile($image);
         $image->delete();
     }
 
@@ -197,7 +180,7 @@ class ProductImageService
         $images = ProductImage::query()->where('product_id', $product->id)->get();
 
         foreach ($images as $image) {
-            $this->storage->deleteFile($image->path);
+            $this->releaseFile($image);
             $image->delete();
         }
 
@@ -218,27 +201,49 @@ class ProductImageService
         return $image;
     }
 
-    private function imageStem(Product $product, ?ProductVariant $variant = null): string
+    private function createImage(Product $product, string $role, MediaFile $media, ?string $alt, int $sortOrder): ProductImage
     {
-        if ($variant !== null) {
-            $name = trim((string) ($variant->name ?? ''));
+        $image = new ProductImage();
+        $image->forceFill([
+            'product_id' => $product->id,
+            'product_variant_id' => null,
+            'role' => $role,
+            ...$this->fromMedia($media, $alt, null),
+            'sort_order' => $sortOrder,
+        ])->save();
 
-            if ($name !== '') {
-                return $name;
-            }
-        }
-
-        $slug = trim((string) ($product->slug ?? ''));
-
-        return $slug !== '' ? $slug : 'image';
+        return $image;
     }
 
-    /** @param array<string, mixed> $file */
-    private function originalName(array $file): string
+    /** @return array<string, mixed> */
+    private function fromMedia(MediaFile $media, ?string $alt, mixed $fallbackAlt): array
     {
-        $name = basename((string) ($file['name'] ?? 'image'));
+        $resolvedAlt = $alt !== null ? $this->nullableAlt($alt) : (is_string($fallbackAlt) ? $this->nullableAlt($fallbackAlt) : $this->nullableAlt($media->alt));
 
-        return $name !== '' ? substr($name, 0, 255) : 'image';
+        return [
+            'media_file_id' => $media->id,
+            'path' => $media->path,
+            'original_name' => $media->original_name,
+            'mime' => $media->mime,
+            'size' => $media->size,
+            'alt' => $resolvedAlt,
+        ];
+    }
+
+    private function assertRaster(MediaFile $media): void
+    {
+        if (!isset(ProductImageStorage::MIME_EXTENSIONS[$media->mime])) {
+            throw new ValidationException(['image' => ['Разрешени са JPEG, PNG и WebP.']]);
+        }
+    }
+
+    private function releaseFile(ProductImage $image): void
+    {
+        if ($image->media_file_id) {
+            return;
+        }
+
+        $this->storage->deleteFile($image->path);
     }
 
     private function nullableAlt(?string $alt): ?string

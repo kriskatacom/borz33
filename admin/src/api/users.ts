@@ -90,3 +90,11 @@ export function uploadUserAvatar(
 export function deleteUserAvatar(token: string, id: number) {
   return apiRequest<{ user: ManagedUser }>(`/admin/users/${id}/avatar`, { method: 'DELETE', token });
 }
+
+export function attachUserAvatar(token: string, id: number, mediaId: number) {
+  return apiRequest<{ user: ManagedUser }>(`/admin/users/${id}/avatar`, {
+    method: 'POST',
+    token,
+    body: { media_id: mediaId },
+  });
+}

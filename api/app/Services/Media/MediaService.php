@@ -6,8 +6,12 @@ namespace App\Services\Media;
 
 use App\Core\Auth;
 use App\Exceptions\AuthException;
+use App\Exceptions\ValidationException;
 use App\Models\MediaFile;
+use App\Models\ProductImage;
+use App\Models\User;
 use App\Resources\MediaFileResource;
+use App\Services\Products\ProductImageStorage;
 use App\Validation\MediaFileValidator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -48,6 +52,17 @@ class MediaService
 
         if ($file === null) {
             throw new AuthException('Файлът не е намерен.', 404);
+        }
+
+        return $file;
+    }
+
+    public function requireRasterImage(int $id): MediaFile
+    {
+        $file = $this->find($id);
+
+        if (!isset(ProductImageStorage::MIME_EXTENSIONS[$file->mime])) {
+            throw new ValidationException(['image' => ['Разрешени са JPEG, PNG и WebP.']]);
         }
 
         return $file;
@@ -96,6 +111,12 @@ class MediaService
 
     public function delete(MediaFile $file): void
     {
+        ProductImage::query()->where('media_file_id', $file->id)->delete();
+        User::query()->where('avatar_media_id', $file->id)->update([
+            'avatar_path' => null,
+            'avatar_media_id' => null,
+        ]);
+
         $path = $file->path;
         $file->delete();
 
@@ -130,6 +151,12 @@ class MediaService
 
         if (in_array($kind, $kinds, true)) {
             $query->where('kind', $kind);
+        }
+
+        $raster = strtolower(trim((string) ($filters['raster'] ?? '')));
+
+        if (in_array($raster, ['1', 'true', 'yes', 'on'], true)) {
+            $query->whereIn('mime', array_keys(ProductImageStorage::MIME_EXTENSIONS));
         }
 
         return $query;

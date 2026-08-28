@@ -1021,11 +1021,10 @@ h1 {
   line-height: 1.5;
 }
 
-.dialog-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
+.dialog-wide {
+  width: min(800px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  overflow: auto;
 }
 
 :focus-visible {
