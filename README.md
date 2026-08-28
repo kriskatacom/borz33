@@ -7,7 +7,7 @@
 - **Сайт с плановете** — `plans/`. Това е представянето на проекта (етапи, страници, подготовка), не магазинът за клиенти. PHP страниците са в `plans/public/`, изгледите в `plans/views/`.
 - **Магазин за клиенти** — `web/`. Тук ще бъде истинският PHP SSR сайт (MVC + services). Папката е отделена нарочно, за да не се смесва с плановете.
 - **API** — `api/`. MVC + services, отговорите са JSON. Рутерът е в `api/app/Core/Router.php`, маршрутите в `api/routes/api.php`. Готов endpoint за проверка: `GET /health`.
-- **Docker** — `docker-compose.yml` в корена. Оттам се пускат всички услуги в една мрежа: MySQL, phpMyAdmin, PHP-FPM, Nginx (планове + API). React админът е предвиден, но още не се стартира по подразбиране.
+- **Docker** — `docker-compose.yml` в корена. Оттам се пускат всички услуги в една мрежа: MySQL, phpMyAdmin, Mailpit (локални имейли), PHP-FPM, Nginx (планове + API). React админът е предвиден, но още не се стартира по подразбиране.
 
 Планирано разделение:
 
@@ -18,6 +18,7 @@
 | API | PHP, MVC + services, JSON | `api/` | Начална структура |
 | Админ панел | React / Redux | `admin/` | Предстои |
 | База данни | MySQL 8.4 + phpMyAdmin + Phinx | `database/` | Работи през Docker |
+| Имейли (локално) | Mailpit + Symfony Mailer | — | Работи през Docker |
 
 ## Docker
 
@@ -31,6 +32,7 @@
 | API | http://localhost:8080 |
 | API health (Postman) | http://localhost:8080/health |
 | phpMyAdmin | http://localhost:8081 |
+| Mailpit (имейли) | http://localhost:8026 |
 | MySQL от хоста | `localhost:3307` |
 | MySQL между контейнерите | хост `mysql`, порт `3306` |
 
@@ -80,6 +82,19 @@ mysql -h 127.0.0.1 -P 3307 -u borz33 -p borz33
 ```
 
 **От PHP / API контейнера** ползвай хост `mysql` и порт `3306` (вътрешната Docker мрежа), не `localhost:3307`.
+
+### Имейли (Mailpit)
+
+Локално писмата не излизат в интернет. API-то ги праща по SMTP към Mailpit (`mailpit:1025`), а ги четеш в браузъра: http://localhost:8026
+
+Изпращане от PHP:
+
+```php
+$mailer = new \App\Services\Mail\MailService();
+$mailer->send('user@example.com', 'Заглавие', '<p>HTML съдържание</p>', 'Текстово съдържание');
+```
+
+Настройките са в `.env` (`MAIL_DSN`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`). Потвърждение с код още не е вързано — само транспортът.
 
 ### Миграции (Phinx)
 
@@ -141,7 +156,7 @@ docker compose exec php composer migrate
 docker compose up -d
 ```
 
-Първото пускане билдва PHP образа и при нужда инсталира Composer зависимостите. След това сайтът с плановете е на `:8000`, API-то на `:8080`, phpMyAdmin на `:8081`.
+Първото пускане билдва PHP образа и при нужда инсталира Composer зависимостите. След това сайтът с плановете е на `:8000`, API-то на `:8080`, phpMyAdmin на `:8081`, Mailpit на `:8026`.
 
 Статус:
 
@@ -192,4 +207,4 @@ docker compose --profile admin up -d
 
 По подразбиране ще е на http://localhost:5173.
 
-Портовете се сменят в `.env` (`PLANS_PORT`, `API_PORT`, `PHPMYADMIN_PORT`, `MYSQL_PORT`, `ADMIN_PORT`).
+Портовете се сменят в `.env` (`PLANS_PORT`, `API_PORT`, `PHPMYADMIN_PORT`, `MAILPIT_UI_PORT`, `MYSQL_PORT`, `ADMIN_PORT`).

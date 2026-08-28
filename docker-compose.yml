@@ -33,11 +33,22 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ADMIN_FIRST_NAME: ${ADMIN_FIRST_NAME}
       ADMIN_LAST_NAME: ${ADMIN_LAST_NAME}
+      MAIL_DSN: ${MAIL_DSN}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
     volumes:
       - .:/var/www
     depends_on:
       mysql:
         condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_UI_PORT:-8026}:8025"
 
   phpmyadmin:
     image: phpmyadmin:5.2
