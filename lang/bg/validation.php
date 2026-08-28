@@ -23,6 +23,9 @@ return [
     'unique' => 'Стойността на полето :attribute вече е заета.',
     'uuid' => 'Полето :attribute трябва да бъде валиден UUID.',
     'regex' => 'Полето :attribute е в невалиден формат.',
+    'in' => 'Избраната стойност за :attribute е невалидна.',
+    'boolean' => 'Полето :attribute трябва да бъде да или не.',
+    'integer' => 'Полето :attribute трябва да бъде цяло число.',
     'size' => [
         'string' => 'Полето :attribute трябва да бъде :size символа.',
     ],
@@ -33,5 +36,7 @@ return [
         'password' => 'парола',
         'password_confirmation' => 'потвърждение на паролата',
         'phone' => 'телефон',
+        'role' => 'роля',
+        'is_active' => 'активен',
     ],
 ];

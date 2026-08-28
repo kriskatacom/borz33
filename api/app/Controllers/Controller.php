@@ -54,4 +54,13 @@ abstract class Controller
 
         $this->json($payload, $status);
     }
+
+    protected function created(mixed $data = [], string $message = 'Created'): never
+    {
+        $this->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $data,
+        ], 201);
+    }
 }

@@ -100,7 +100,7 @@ services:
       - php
 
   admin:
-    image: node:22-alpine
+    image: node:22-bookworm-slim
     working_dir: /app
     environment:
       VITE_PROXY_TARGET: http://nginx:8080

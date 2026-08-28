@@ -43,6 +43,7 @@ type RequestOptions = {
   method?: HttpMethod;
   body?: unknown;
   token?: string | null;
+  query?: Record<string, string | number | boolean | undefined>;
 };
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<ApiEnvelope<T>> {
@@ -58,7 +59,17 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers.Authorization = `Bearer ${options.token}`;
   }
 
-  const response = await fetch(path, {
+  const url = new URL(path, window.location.origin);
+
+  if (options.query) {
+    for (const [key, value] of Object.entries(options.query)) {
+      if (value !== undefined && value !== '') {
+        url.searchParams.set(key, String(value));
+      }
+    }
+  }
+
+  const response = await fetch(`${url.pathname}${url.search}`, {
     method: options.method ?? 'GET',
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,

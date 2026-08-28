@@ -1,6 +1,33 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+}
+
 :root {
   --ink: #1c1917;
-  --muted: #6b645b;
+  --muted-foreground: #6b645b;
   --paper: #f3efe6;
   --cream: #fffdf8;
   --forest: #173f32;
@@ -16,6 +43,23 @@
   --topbar: 56px;
   --bottom: 64px;
   --sidebar: 280px;
+  --background: #fffdf8;
+  --foreground: #1c1917;
+  --card: #fffdf8;
+  --card-foreground: #1c1917;
+  --popover: #fffdf8;
+  --popover-foreground: #1c1917;
+  --primary: #173f32;
+  --primary-foreground: #fffdf8;
+  --secondary: #f3efe6;
+  --secondary-foreground: #173f32;
+  --muted: #f3efe6;
+  --accent: #f3efe6;
+  --accent-foreground: #173f32;
+  --destructive: #c94f3c;
+  --border: #e4ddd0;
+  --input: #e4ddd0;
+  --ring: #e7c56a;
 }
 
 * {
@@ -81,7 +125,7 @@ h1 {
 
 .muted {
   margin: 0 0 20px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   line-height: 1.6;
 }
 
@@ -89,7 +133,7 @@ h1 {
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  color: var(--muted);
+  color: var(--muted-foreground);
 }
 
 .auth-screen {
@@ -148,8 +192,9 @@ h1 {
   font-weight: 700;
 }
 
-.field input,
-.field-control input {
+    .field input,
+.field-control input,
+.field select {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--line);
@@ -198,7 +243,7 @@ h1 {
 }
 
 .field-hint {
-  color: var(--muted);
+  color: var(--muted-foreground);
 }
 
 .field-error,
@@ -330,7 +375,7 @@ h1 {
 }
 
 .nav-link small {
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-family: var(--font-sans);
   font-size: 12px;
 }
@@ -356,7 +401,7 @@ h1 {
 }
 
 .muted-line {
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-family: var(--font-sans);
   font-size: 13px;
 }
@@ -427,7 +472,7 @@ h1 {
 .dash-card p,
 .placeholder-card p {
   margin: 0;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.5;
@@ -482,6 +527,19 @@ h1 {
   .link-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .filters {
+    grid-template-columns: 1.4fr 1fr 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .page-head.split {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+  }
 }
 
 @media (min-width: 960px) {
@@ -522,12 +580,184 @@ h1 {
   .link-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
   .admin-sidebar {
     transition: none;
   }
+}
+
+.btn-danger {
+  background: var(--coral);
+  color: #fff;
+}
+
+.page-head.split {
+  display: grid;
+  gap: 16px;
+}
+
+.filters {
+  display: grid;
+  gap: 12px;
+}
+
+.panel {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: clamp(16px, 3vw, 28px);
+}
+
+.form-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.user-list {
+  display: grid;
+  gap: 12px;
+}
+
+.user-card {
+  display: grid;
+  gap: 12px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 16px;
+}
+
+.user-name {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 1.2rem;
+}
+
+.user-meta,
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--paper);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.badge.ok {
+  background: rgb(23 63 50 / 12%);
+  color: var(--forest);
+}
+
+.badge.warn {
+  background: rgb(201 79 60 / 12%);
+  color: var(--coral);
+}
+
+.table-wrap {
+  display: none;
+  overflow: auto;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.data-table th {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dialog-root {
+  position: relative;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  border: 0;
+  background: rgb(28 25 23 / 40%);
+}
+
+.dialog {
+  position: fixed;
+  z-index: 50;
+  top: 50%;
+  left: 50%;
+  width: min(420px, calc(100% - 32px));
+  transform: translate(-50%, -50%);
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.dialog h2 {
+  margin-bottom: 8px;
+}
+
+.dialog p {
+  margin: 0 0 20px;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 :focus-visible {

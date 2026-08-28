@@ -9,6 +9,8 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { UserFormPage } from '@/pages/UserFormPage';
+import { UsersPage } from '@/pages/UsersPage';
 
 export function App() {
   const dispatch = useAppDispatch();
@@ -27,9 +29,12 @@ export function App() {
         </Route>
         <Route element={<RequireAuth />}>
           <Route path={routes.home} element={<DashboardPage />} />
+          <Route path={routes.usersNew} element={<UserFormPage />} />
+          <Route path={routes.usersEdit} element={<UserFormPage />} />
+          <Route path={routes.users} element={<UsersPage />} />
+          <Route path={routes.customers} element={<Navigate to={routes.users} replace />} />
           <Route path={routes.orders} element={<ComingSoonPage />} />
           <Route path={routes.products} element={<ComingSoonPage />} />
-          <Route path={routes.customers} element={<ComingSoonPage />} />
           <Route path={routes.content} element={<ComingSoonPage />} />
           <Route path={routes.campaigns} element={<ComingSoonPage />} />
           <Route path={routes.shipments} element={<ComingSoonPage />} />

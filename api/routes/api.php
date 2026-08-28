@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\Admin\UsersController;
 use App\Controllers\Auth\EmailVerificationController;
 use App\Controllers\Auth\LoginController;
 use App\Controllers\Auth\PasswordResetController;
@@ -9,6 +10,7 @@ use App\Controllers\Auth\RegisterController;
 use App\Controllers\Auth\SessionController;
 use App\Controllers\HealthController;
 use App\Middlewares\Authenticate;
+use App\Middlewares\RequireAdmin;
 
 /** @var \App\Core\Router $router */
 
@@ -30,3 +32,12 @@ $router->post('/auth/admin/password/reset', [PasswordResetController::class, 're
 
 $router->get('/auth/me', [SessionController::class, 'show'], [Authenticate::class]);
 $router->post('/auth/logout', [SessionController::class, 'destroy'], [Authenticate::class]);
+
+$admin = [Authenticate::class, RequireAdmin::class];
+$router->get('/admin/users', [UsersController::class, 'index'], $admin);
+$router->post('/admin/users', [UsersController::class, 'store'], $admin);
+$router->get('/admin/users/{id}', [UsersController::class, 'show'], $admin);
+$router->put('/admin/users/{id}', [UsersController::class, 'update'], $admin);
+$router->patch('/admin/users/{id}', [UsersController::class, 'update'], $admin);
+$router->delete('/admin/users/{id}', [UsersController::class, 'destroy'], $admin);
+$router->post('/admin/users/{id}/restore', [UsersController::class, 'restore'], $admin);
