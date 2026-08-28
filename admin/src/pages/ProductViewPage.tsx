@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Layers, List, Palette, Shirt, Type } from 'lucide-react';
+import { ArrowLeft, Layers, List, Palette, Pencil, Shirt, Type } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { getProduct, type AdminProduct } from '@/api/products';
 import { routes } from '@/app/constants';
@@ -121,12 +121,22 @@ export function ProductViewPage() {
           { label: product?.name ?? 'Преглед' },
         ]}
         actions={
-          <Button asChild variant="outline">
-            <Link to={routes.products}>
-              <ArrowLeft />
-              Към списъка
-            </Link>
-          </Button>
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            {product && !product.deleted_at ? (
+              <Button asChild>
+                <Link to={`/products/${product.id}/edit`}>
+                  <Pencil />
+                  Редакция
+                </Link>
+              </Button>
+            ) : null}
+            <Button asChild variant="outline">
+              <Link to={routes.products}>
+                <ArrowLeft />
+                Към списъка
+              </Link>
+            </Button>
+          </div>
         }
       />
 
@@ -137,7 +147,7 @@ export function ProductViewPage() {
       ) : null}
 
       {product ? (
-        <div className="min-w-0 max-w-full columns-1 gap-3 min-[960px]:columns-2">
+        <div className="flex min-w-0 max-w-full flex-col gap-3">
           <CollapsibleSection title="Общи данни" icon={Shirt}>
             <div className="flex flex-wrap gap-4">
               <div className="flex size-24 items-center justify-center overflow-hidden rounded-[6px] border border-border bg-muted">

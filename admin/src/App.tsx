@@ -9,6 +9,7 @@ import { LoadingProvider } from '@/components/loading-provider';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ProductsPage } from '@/pages/ProductsPage';
+import { ProductEditPage } from '@/pages/ProductEditPage';
 import { ProductViewPage } from '@/pages/ProductViewPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
@@ -41,6 +42,7 @@ export function App() {
               <Route path={routes.users} element={<UsersPage />} />
               <Route path={routes.customers} element={<Navigate to={routes.users} replace />} />
               <Route path={routes.orders} element={<ComingSoonPage />} />
+              <Route path={routes.productsEdit} element={<ProductEditPage />} />
               <Route path={routes.productsShow} element={<ProductViewPage />} />
               <Route path={routes.products} element={<ProductsPage />} />
               <Route path={routes.content} element={<ComingSoonPage />} />

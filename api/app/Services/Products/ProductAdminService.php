@@ -51,7 +51,7 @@ class ProductAdminService
     {
         return Capsule::connection()->transaction(function () use ($data): Product {
             $product = new Product();
-            $product->forceFill($this->productAttributes($data, null))->save();
+            $product->forceFill($this->productAttributes($data, null, null))->save();
             $this->syncNested($product, $data);
 
             return $this->fresh($product);
@@ -62,7 +62,12 @@ class ProductAdminService
     public function update(Product $product, array $data): Product
     {
         return Capsule::connection()->transaction(function () use ($product, $data): Product {
-            $product->forceFill($this->productAttributes($data, (int) $product->id))->save();
+            $attributes = $this->productAttributes($data, (int) $product->id, $product);
+
+            if ($attributes !== []) {
+                $product->forceFill($attributes)->save();
+            }
+
             $this->syncNested($product, $data);
 
             return $this->fresh($product);
@@ -135,7 +140,62 @@ class ProductAdminService
     }
 
     /** @param array<string, mixed> $data */
-    private function productAttributes(array $data, ?int $productId): array
+    private function productAttributes(array $data, ?int $productId, ?Product $existing): array
+    {
+        if ($existing === null) {
+            return $this->fullProductAttributes($data, $productId);
+        }
+
+        $attributes = [];
+
+        if (array_key_exists('name', $data)) {
+            $attributes['name'] = $data['name'];
+        }
+
+        if (array_key_exists('slug', $data) || array_key_exists('name', $data)) {
+            $slug = trim((string) ($data['slug'] ?? $existing->slug ?? ''));
+
+            if ($slug === '') {
+                $slug = $this->uniqueSlug((string) ($data['name'] ?? $existing->name), $productId);
+            }
+
+            $attributes['slug'] = $slug;
+        }
+
+        if (array_key_exists('sku', $data)) {
+            $sku = trim((string) ($data['sku'] ?? ''));
+            $attributes['sku'] = $sku === '' ? null : $sku;
+        }
+
+        foreach (['short_description', 'description', 'compare_at_price', 'personalization_label', 'personalization_description'] as $nullable) {
+            if (array_key_exists($nullable, $data)) {
+                $attributes[$nullable] = $data[$nullable];
+            }
+        }
+
+        if (array_key_exists('price', $data)) {
+            $attributes['price'] = $data['price'];
+        }
+
+        foreach (['is_active', 'personalization_enabled', 'personalization_required'] as $flag) {
+            if (array_key_exists($flag, $data)) {
+                $attributes[$flag] = (bool) $data[$flag];
+            }
+        }
+
+        if (array_key_exists('personalization_max_length', $data)) {
+            $attributes['personalization_max_length'] = (int) $data['personalization_max_length'];
+        }
+
+        if (array_key_exists('sort_order', $data)) {
+            $attributes['sort_order'] = (int) $data['sort_order'];
+        }
+
+        return $attributes;
+    }
+
+    /** @param array<string, mixed> $data */
+    private function fullProductAttributes(array $data, ?int $productId): array
     {
         $slug = trim((string) ($data['slug'] ?? ''));
 

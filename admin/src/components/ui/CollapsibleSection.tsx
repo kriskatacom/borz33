@@ -23,7 +23,7 @@ export function CollapsibleSection({
   return (
     <section
       className={cn(
-        'mb-3 inline-block w-full max-w-full min-w-0 break-inside-avoid overflow-hidden rounded-[6px] border border-border bg-card',
+        'h-fit w-full min-w-0 overflow-hidden rounded-[6px] border border-border bg-card',
         className
       )}
     >
@@ -31,7 +31,7 @@ export function CollapsibleSection({
         <button
           type="button"
           className={cn(
-            'flex min-h-12 w-full items-center gap-3 border-b border-border bg-background px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset',
+            'flex min-h-12 w-full cursor-pointer items-center gap-3 border-b border-border bg-background px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset',
             !open && 'border-b-transparent'
           )}
           aria-expanded={open}
@@ -39,14 +39,14 @@ export function CollapsibleSection({
           onClick={() => setOpen((value) => !value)}
         >
           {Icon ? (
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-[6px] bg-primary/12 text-primary">
+            <span className="pointer-events-none flex size-8 shrink-0 items-center justify-center rounded-[6px] bg-primary/12 text-primary">
               <Icon className="size-4" aria-hidden />
             </span>
           ) : null}
-          <span className="min-w-0 flex-1 font-sans text-sm font-extrabold tracking-wide text-foreground uppercase">
+          <span className="pointer-events-none min-w-0 flex-1 font-sans text-sm font-extrabold tracking-wide text-foreground uppercase">
             {title}
           </span>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-[6px] border border-border bg-background text-muted-foreground">
+          <span className="pointer-events-none flex size-8 shrink-0 items-center justify-center rounded-[6px] border border-border bg-background text-muted-foreground">
             <ChevronDown
               className={cn('size-4 transition-transform duration-200', open && 'rotate-180')}
               aria-hidden
@@ -54,7 +54,12 @@ export function CollapsibleSection({
           </span>
         </button>
       </h2>
-      <div id={panelId} hidden={!open} className="min-w-0 px-3 py-3">
+      <div
+        id={panelId}
+        hidden={!open}
+        inert={open ? undefined : true}
+        className={cn('min-w-0 px-3 py-3', !open && 'pointer-events-none')}
+      >
         {children}
       </div>
     </section>

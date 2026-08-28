@@ -120,3 +120,7 @@ export function listProducts(token: string, filters: ProductListFilters) {
 export function getProduct(token: string, id: number) {
   return apiRequest<{ product: AdminProduct }>(`/admin/products/${id}`, { token });
 }
+
+export function updateProduct(token: string, id: number, body: Record<string, unknown>) {
+  return apiRequest<{ product: AdminProduct }>(`/admin/products/${id}`, { method: 'PATCH', token, body });
+}

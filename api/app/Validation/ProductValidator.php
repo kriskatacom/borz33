@@ -24,7 +24,13 @@ class ProductValidator
             'personalization_description',
         ]);
 
-        $validator = ValidatorFactory::make()->make($data, $this->rules($productId), [], $this->attributes());
+        $rules = $this->rules($productId);
+
+        if ($productId !== null) {
+            $rules = $this->rulesForPresentKeys($rules, $data);
+        }
+
+        $validator = ValidatorFactory::make()->make($data, $rules, [], $this->attributes());
 
         if ($validator->fails()) {
             throw new ValidationException($validator->errors()->toArray());
@@ -115,6 +121,26 @@ class ProductValidator
         }
 
         return $data;
+    }
+
+    /**
+     * @param array<string, mixed> $rules
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function rulesForPresentKeys(array $rules, array $data): array
+    {
+        $filtered = [];
+
+        foreach ($rules as $key => $rule) {
+            $root = explode('.', $key, 2)[0];
+
+            if (array_key_exists($root, $data)) {
+                $filtered[$key] = $rule;
+            }
+        }
+
+        return $filtered;
     }
 
     /** @return array<string, string> */

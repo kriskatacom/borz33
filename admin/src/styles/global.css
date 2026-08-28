@@ -235,7 +235,8 @@ h1 {
 
     .field input,
 .field-control input,
-.field select {
+.field select,
+.field textarea {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--line);
@@ -246,8 +247,14 @@ h1 {
   font: inherit;
 }
 
+.field textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
 .field input::placeholder,
-.field-control input::placeholder {
+.field-control input::placeholder,
+.field textarea::placeholder {
   color: var(--muted-foreground);
   opacity: 0.8;
 }
@@ -290,7 +297,8 @@ h1 {
 }
 
 .field input[aria-invalid='true'],
-.field select[aria-invalid='true'] {
+.field select[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
   border-color: var(--coral);
 }
 
