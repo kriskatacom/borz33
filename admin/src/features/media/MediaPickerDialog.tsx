@@ -1,22 +1,43 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Images, X } from 'lucide-react';
+import { File, FileText, Film, Images, Music, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { listMedia, type MediaFile } from '@/api/media';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
+import { mediaKindLabel } from '@/features/media/mediaFile';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
+
+function KindIcon({ kind }: { kind: string }) {
+  const className = 'size-8 text-muted-foreground';
+
+  if (kind === 'video') {
+    return <Film className={className} aria-hidden />;
+  }
+
+  if (kind === 'audio') {
+    return <Music className={className} aria-hidden />;
+  }
+
+  if (kind === 'document') {
+    return <FileText className={className} aria-hidden />;
+  }
+
+  return <File className={className} aria-hidden />;
+}
 
 export function MediaPickerDialog({
   token,
   title = 'Избор от медията',
   multiple = false,
+  allFiles = false,
   onSelect,
   onClose,
 }: {
   token: string;
   title?: string;
   multiple?: boolean;
+  allFiles?: boolean;
   onSelect: (files: MediaFile[]) => void;
   onClose: () => void;
 }) {
@@ -47,8 +68,7 @@ export function MediaPickerDialog({
       try {
         const response = await listMedia(token, {
           q,
-          kind: 'image',
-          raster: true,
+          ...(allFiles ? {} : { kind: 'image', raster: true }),
           page,
           per_page: 24,
         });
@@ -74,7 +94,7 @@ export function MediaPickerDialog({
     return () => {
       cancelled = true;
     };
-  }, [page, q, token]);
+  }, [allFiles, page, q, token]);
 
   function toggle(file: MediaFile) {
     if (!multiple) {
@@ -106,13 +126,17 @@ export function MediaPickerDialog({
         <Field
           id="media-picker-q"
           label="Търсене"
-          help="JPEG, PNG и WebP от библиотеката. Качените от продукти и профили също са тук."
+          help={
+            allFiles
+              ? 'Всички файлове от библиотеката. Изображения, документи, видео и аудио.'
+              : 'JPEG, PNG и WebP от библиотеката. Качените от продукти и профили също са тук.'
+          }
           value={search}
           placeholder="Име на файл"
           onChange={(event) => setSearch(event.target.value)}
         />
         {files.length === 0 && !busy ? (
-          <p className="muted-line">Няма изображения в медията.</p>
+          <p className="muted-line">{allFiles ? 'Няма файлове в медията.' : 'Няма изображения в медията.'}</p>
         ) : (
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
             {files.map((file) => (
@@ -125,7 +149,15 @@ export function MediaPickerDialog({
                 )}
                 onClick={() => toggle(file)}
               >
-                <img src={file.url} alt={file.alt || file.original_name} className="aspect-square size-full object-cover" />
+                {file.kind === 'image' ? (
+                  <img src={file.url} alt={file.alt || file.original_name} className="aspect-square size-full object-cover" />
+                ) : (
+                  <span className="flex aspect-square size-full flex-col items-center justify-center gap-1 p-2">
+                    <KindIcon kind={file.kind} />
+                    <span className="line-clamp-2 w-full text-center text-xs text-foreground">{file.original_name}</span>
+                    <span className="text-xs text-muted-foreground">{mediaKindLabel(file.kind)}</span>
+                  </span>
+                )}
               </button>
             ))}
           </div>

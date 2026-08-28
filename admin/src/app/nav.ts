@@ -14,7 +14,7 @@ export const navItems: NavItem[] = [
   { to: routes.media, label: 'Медия', hint: 'Файлове и изображения' },
   { to: routes.users, label: 'Потребители', hint: 'Екип и клиентски профили' },
   { to: routes.shipments, label: 'Доставки', hint: 'Econt, товарителници и куриер' },
-  { to: routes.content, label: 'Съдържание', hint: 'Страници, менюта и банери' },
+  { to: routes.pages, label: 'Страници', hint: 'CMS страници и персонални полета' },
   { to: routes.campaigns, label: 'Кампании', hint: 'Промоции и купони' },
   { to: routes.messages, label: 'Съобщения', hint: 'Писма и известия' },
   { to: routes.reports, label: 'Отчети', hint: 'Продажби и счетоводни данни' },
@@ -32,6 +32,10 @@ export function navItemByPath(path: string): NavItem | undefined {
 
   if (path === routes.media) {
     return navItems.find((item) => item.to === routes.media);
+  }
+
+  if (path.startsWith(`${routes.pages}/`) || path === routes.pages || path === routes.content) {
+    return navItems.find((item) => item.to === routes.pages);
   }
 
   return navItems.find((item) => item.to === path);

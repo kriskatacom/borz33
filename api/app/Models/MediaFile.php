@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MediaFile extends Model
 {
@@ -36,6 +37,11 @@ class MediaFile extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    public function pageFields(): HasMany
+    {
+        return $this->hasMany(PageField::class);
     }
 
     public function isImage(): bool

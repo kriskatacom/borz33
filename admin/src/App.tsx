@@ -10,6 +10,8 @@ import { Toaster } from '@/components/ui/Toaster';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { MediaPage } from '@/pages/MediaPage';
+import { PageFormPage } from '@/pages/PageFormPage';
+import { PagesPage } from '@/pages/PagesPage';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { ProductEditPage } from '@/pages/ProductEditPage';
 import { ProductViewPage } from '@/pages/ProductViewPage';
@@ -49,7 +51,10 @@ export function App() {
               <Route path={routes.productsShow} element={<ProductViewPage />} />
               <Route path={routes.products} element={<ProductsPage />} />
               <Route path={routes.media} element={<MediaPage />} />
-              <Route path={routes.content} element={<ComingSoonPage />} />
+              <Route path={routes.pagesNew} element={<PageFormPage />} />
+              <Route path={routes.pagesEdit} element={<PageFormPage />} />
+              <Route path={routes.pages} element={<PagesPage />} />
+              <Route path={routes.content} element={<Navigate to={routes.pages} replace />} />
               <Route path={routes.campaigns} element={<ComingSoonPage />} />
               <Route path={routes.shipments} element={<ComingSoonPage />} />
               <Route path={routes.messages} element={<ComingSoonPage />} />
