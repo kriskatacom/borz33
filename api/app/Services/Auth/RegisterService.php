@@ -4,22 +4,23 @@ declare(strict_types=1);
 
 namespace App\Services\Auth;
 
-use App\Models\EmailVerificationToken;
 use App\Models\User;
 use Illuminate\Database\Capsule\Manager as Capsule;
-use Illuminate\Support\Carbon;
 
 class RegisterService
 {
     public function __construct(
         private readonly PasswordHasher $passwordHasher = new PasswordHasher(),
-        private readonly AdminBootstrapService $adminBootstrapService = new AdminBootstrapService()
+        private readonly AdminBootstrapService $adminBootstrapService = new AdminBootstrapService(),
+        private readonly EmailVerificationService $emailVerificationService = new EmailVerificationService()
     ) {
     }
 
     public function register(array $data): User
     {
-        return Capsule::connection()->transaction(function () use ($data): User {
+        $code = '';
+
+        $user = Capsule::connection()->transaction(function () use ($data, &$code): User {
             $this->adminBootstrapService->ensureExists();
 
             $user = User::query()->create([
@@ -32,15 +33,13 @@ class RegisterService
                 'is_active' => true,
             ]);
 
-            EmailVerificationToken::query()->updateOrCreate(
-                ['email' => $user->email],
-                [
-                    'token' => hash('sha256', bin2hex(random_bytes(32))),
-                    'created_at' => Carbon::now(),
-                ]
-            );
+            $code = $this->emailVerificationService->storeCode($user);
 
             return $user;
         });
+
+        $this->emailVerificationService->send($user, $code);
+
+        return $user;
     }
 }

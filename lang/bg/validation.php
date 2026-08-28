@@ -21,6 +21,10 @@ return [
     'required' => 'Полето :attribute е задължително.',
     'string' => 'Полето :attribute трябва да бъде текст.',
     'unique' => 'Стойността на полето :attribute вече е заета.',
+    'regex' => 'Полето :attribute е в невалиден формат.',
+    'size' => [
+        'string' => 'Полето :attribute трябва да бъде :size символа.',
+    ],
     'attributes' => [
         'first_name' => 'име',
         'last_name' => 'фамилия',

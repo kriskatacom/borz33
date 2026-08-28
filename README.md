@@ -91,10 +91,14 @@ mysql -h 127.0.0.1 -P 3307 -u borz33 -p borz33
 
 ```php
 $mailer = new \App\Services\Mail\MailService();
-$mailer->send('user@example.com', 'Заглавие', '<p>HTML съдържание</p>', 'Текстово съдържание');
+$mailer->sendTemplate('user@example.com', 'Заглавие', 'verify-registration', $data, 'текстов вариант');
 ```
 
-Настройките са в `.env` (`MAIL_DSN`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`). Потвърждение с код още не е вързано — само транспортът.
+Всички писма минават през `resources/emails/layout.php` (фирма, ЕИК, адрес, GDPR текстове, линкове към поверителност и условия). Съдържанието е отделен шаблон в същата папка.
+
+Потвърждение на регистрация: след `POST /auth/register` клиентът получава 6-цифрен код. Въвежда се с `POST /auth/verify-email` (`email` + `code`). Нов код: `POST /auth/verify-email/resend`. Админският потребител от `.env` не получава писмо. Кодът е валиден `MAIL_VERIFICATION_TTL_MINUTES` минути (по подразбиране 15).
+
+Фирмените данни в писмата се настройват с `COMPANY_*` в `.env`.
 
 ### Миграции (Phinx)
 

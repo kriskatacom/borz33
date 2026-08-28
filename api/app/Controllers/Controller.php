@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 
 abstract class Controller
@@ -14,6 +15,8 @@ abstract class Controller
             return $this->{$method}(...$parameters);
         } catch (ValidationException $exception) {
             $this->error($exception->getMessage(), 422, $exception->errors());
+        } catch (AuthException $exception) {
+            $this->error($exception->getMessage(), $exception->status());
         }
     }
 

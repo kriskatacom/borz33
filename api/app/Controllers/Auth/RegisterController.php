@@ -25,7 +25,7 @@ class RegisterController extends Controller
 
         $this->json([
             'success' => true,
-            'message' => 'Регистрацията е успешна.',
+            'message' => 'Регистрацията е успешна. Изпратихме код за потвърждение на имейла Ви.',
             'data' => UserResource::toArray($user),
         ], 201);
     }

@@ -17,8 +17,12 @@ class MailService implements MailerInterface
 
     private string $fromName;
 
-    public function __construct(?string $dsn = null, ?string $fromAddress = null, ?string $fromName = null)
-    {
+    public function __construct(
+        ?string $dsn = null,
+        ?string $fromAddress = null,
+        ?string $fromName = null,
+        private readonly EmailRenderer $renderer = new EmailRenderer()
+    ) {
         $config = require dirname(__DIR__, 4) . '/config/mail.php';
 
         $this->fromAddress = $fromAddress ?? $config['from_address'];
@@ -39,5 +43,10 @@ class MailService implements MailerInterface
         }
 
         $this->mailer->send($email);
+    }
+
+    public function sendTemplate(string $to, string $subject, string $template, array $data, ?string $text = null): void
+    {
+        $this->send($to, $subject, $this->renderer->render($template, $data), $text);
     }
 }

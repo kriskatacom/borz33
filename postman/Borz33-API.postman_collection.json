@@ -133,7 +133,7 @@
               "raw": "{\n  \"first_name\": \"Иван\",\n  \"last_name\": \"Петров\",\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"secret123\",\n  \"password_confirmation\": \"secret123\",\n  \"phone\": \"0888123456\"\n}"
             },
             "url": "{{baseUrl}}/auth/register",
-            "description": "Регистрация на клиент. `phone` е по избор. Паролата е минимум 8 символа и трябва да съвпада с `password_confirmation`. Имейлът трябва да е уникален. Успех: 201. Грешка във валидацията: 422 с `errors`."
+            "description": "Регистрация на клиент. Изпраща 6-цифрен код към имейла (Mailpit). Админският потребител не получава писмо. Успех: 201. Валидация: 422."
           },
           "response": []
         },
@@ -175,6 +175,78 @@
             },
             "url": "{{baseUrl}}/auth/register",
             "description": "Пример за невалидни данни. Очакван отговор: 422 и поле `errors`."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 when code is valid', function () {",
+                  "    pm.expect([200, 400, 422]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/verify-email",
+            "description": "Потвърждение с 6-цифрения код от писмото. Кодът се вижда в Mailpit (http://localhost:8026). Смени `code` преди изпращане. Успех: 200."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend verification code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/verify-email/resend",
+            "description": "Изпраща нов код, ако имейлът още не е потвърден. Админският имейл не получава писмо."
           },
           "response": []
         }
