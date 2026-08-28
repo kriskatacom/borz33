@@ -17,7 +17,7 @@
 | Магазин (клиенти) | PHP SSR, MVC + services | `web/` | Предстои |
 | API | PHP, MVC + services, JSON | `api/` | Начална структура |
 | Админ панел | React / Redux | `admin/` | Предстои |
-| База данни | MySQL 8.4 + phpMyAdmin | — | Работи през Docker |
+| База данни | MySQL 8.4 + phpMyAdmin + Phinx | `database/` | Работи през Docker |
 
 ## Docker
 
@@ -81,13 +81,67 @@ mysql -h 127.0.0.1 -P 3307 -u borz33 -p borz33
 
 **От PHP / API контейнера** ползвай хост `mysql` и порт `3306` (вътрешната Docker мрежа), не `localhost:3307`.
 
+### Миграции (Phinx)
+
+Миграциите са общи за API и сайта. Файловете са в `database/migrations/`, конфигурацията в `phinx.php`. Командите се пускат **вътре в PHP контейнера** (там има PDO и връзка към `mysql`).
+
+Първо стекът трябва да е вдигнат. При липса на `vendor/` контейнерът сам прави `composer install` при старт.
+
+```bash
+docker compose up -d --build
+```
+
+**Създаване на миграция:**
+
+```bash
+./bin/phinx create CreateUsersTable
+```
+
+Името е PascalCase, без интервали. Phinx ще създаде файл в `database/migrations/`. В `up()` пишеш промените, в `down()` — връщането им.
+
+**Прилагане:**
+
+```bash
+./bin/phinx migrate
+```
+
+**Статус:**
+
+```bash
+./bin/phinx status
+```
+
+**Връщане на последната миграция:**
+
+```bash
+./bin/phinx rollback
+```
+
+Връщане с няколко стъпки: `./bin/phinx rollback -t 0` (всички) или `./bin/phinx rollback -t YYYYMMDDHHMMSS` до конкретна версия.
+
+**Seeds** (тестови данни): файлове в `database/seeds/`.
+
+```bash
+./bin/phinx seed:create UserSeeder
+./bin/phinx seed:run
+```
+
+Еквивалент без `./bin/phinx`:
+
+```bash
+docker compose exec php vendor/bin/phinx migrate
+docker compose exec php composer migrate
+```
+
+Таблицата `phinxlog` държи кои миграции са приложени. Вижда се в phpMyAdmin.
+
 ### Стартиране
 
 ```bash
 docker compose up -d
 ```
 
-Първото пускане билдва PHP образа. След това сайтът с плановете е на `:8000`, API-то на `:8080`, phpMyAdmin на `:8081`.
+Първото пускане билдва PHP образа и при нужда инсталира Composer зависимостите. След това сайтът с плановете е на `:8000`, API-то на `:8080`, phpMyAdmin на `:8081`.
 
 Статус:
 
@@ -121,6 +175,12 @@ docker compose down
 ```bash
 docker compose down -v
 ```
+
+### Postman
+
+Импорт: **File → Import** и избери `postman/Borz33-API.postman_collection.json`.
+
+Колекцията ползва `baseUrl` = `http://localhost:8080`. Docker стекът трябва да е пуснат. Първата заявка за тест е **Health → Health check** (`GET /health`).
 
 ### React админ (още не е готов)
 

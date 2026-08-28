@@ -22,11 +22,15 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+    environment:
+      COMPOSER_ALLOW_SUPERUSER: "1"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: ${MYSQL_DATABASE}
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      - ./api:/var/www/api
-      - ./plans/public:/var/www/plans/public
-      - ./plans/views:/var/www/plans/views
-      - ./web:/var/www/web
+      - .:/var/www
     depends_on:
       mysql:
         condition: service_healthy

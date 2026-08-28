@@ -1,0 +1,17 @@
+{
+    "name": "borz33/app",
+    "description": "Borz33 — споделени PHP зависимости и миграции",
+    "type": "project",
+    "require": {
+        "php": ">=8.4",
+        "robmorgan/phinx": "^0.16"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "scripts": {
+        "migrate": "phinx migrate",
+        "migrate:rollback": "phinx rollback",
+        "migrate:status": "phinx status"
+    }
+}
