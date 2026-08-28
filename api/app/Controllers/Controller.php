@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Exceptions\ValidationException;
+
 abstract class Controller
 {
     public function callAction(string $method, array $parameters = []): mixed
     {
-        return $this->{$method}(...$parameters);
+        try {
+            return $this->{$method}(...$parameters);
+        } catch (ValidationException $exception) {
+            $this->error($exception->getMessage(), 422, $exception->errors());
+        }
     }
 
     protected function json(mixed $data, int $status = 200): never

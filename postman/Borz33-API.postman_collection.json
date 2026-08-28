@@ -80,6 +80,105 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('registerEmail', 'user' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('JSON success and user payload', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.expect(body.data).to.have.property('id');",
+                  "    pm.expect(body.data.email).to.eql(pm.collectionVariables.get('registerEmail'));",
+                  "    pm.expect(body.data.role).to.eql('customer');",
+                  "    pm.expect(body.data).to.not.have.property('password');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Иван\",\n  \"last_name\": \"Петров\",\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"secret123\",\n  \"password_confirmation\": \"secret123\",\n  \"phone\": \"0888123456\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register",
+            "description": "Регистрация на клиент. `phone` е по избор. Паролата е минимум 8 символа и трябва да съвпада с `password_confirmation`. Имейлът трябва да е уникален. Успех: 201. Грешка във валидацията: 422 с `errors`."
+          },
+          "response": []
+        },
+        {
+          "name": "Register (validation error)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('JSON errors object', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.eql(false);",
+                  "    pm.expect(body.errors).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"\",\n  \"email\": \"not-an-email\",\n  \"password\": \"short\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register",
+            "description": "Пример за невалидни данни. Очакван отговор: 422 и поле `errors`."
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
