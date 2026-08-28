@@ -4,6 +4,8 @@
     "type": "project",
     "require": {
         "php": ">=8.4",
+        "illuminate/database": "^12.0",
+        "illuminate/events": "^12.0",
         "robmorgan/phinx": "^0.16"
     },
     "config": {

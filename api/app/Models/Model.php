@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-abstract class Model
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+
+abstract class Model extends EloquentModel
 {
 }

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap/eloquent.php';
 require_once dirname(__DIR__) . '/app/Core/Autoloader.php';
 
 use App\Core\Router;
