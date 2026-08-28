@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\Admin\ProductsController;
 use App\Controllers\Admin\UsersController;
 use App\Controllers\Auth\EmailVerificationController;
 use App\Controllers\Auth\LoginController;
@@ -41,3 +42,11 @@ $router->put('/admin/users/{id}', [UsersController::class, 'update'], $admin);
 $router->patch('/admin/users/{id}', [UsersController::class, 'update'], $admin);
 $router->delete('/admin/users/{id}', [UsersController::class, 'destroy'], $admin);
 $router->post('/admin/users/{id}/restore', [UsersController::class, 'restore'], $admin);
+
+$router->post('/admin/products', [ProductsController::class, 'store'], $admin);
+$router->get('/admin/products', [ProductsController::class, 'index'], $admin);
+$router->get('/admin/products/{id}', [ProductsController::class, 'show'], $admin);
+$router->put('/admin/products/{id}', [ProductsController::class, 'update'], $admin);
+$router->patch('/admin/products/{id}', [ProductsController::class, 'update'], $admin);
+$router->delete('/admin/products/{id}', [ProductsController::class, 'destroy'], $admin);
+$router->post('/admin/products/{id}/restore', [ProductsController::class, 'restore'], $admin);

@@ -9,6 +9,10 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:8080"
+    },
+    {
+      "key": "productId",
+      "value": "1"
     }
   ],
   "item": [
@@ -524,6 +528,113 @@
               { "key": "Authorization", "value": "Bearer {{adminToken}}" }
             ],
             "url": "{{baseUrl}}/admin/users/1/restore"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin products",
+      "item": [
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/admin/products?page=1&per_page=20&status=all",
+            "description": "Списък. Query: q, status (all/active/inactive/deleted), page, per_page."
+          },
+          "response": []
+        },
+        {
+          "name": "Create product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const product = pm.response.json().data.product;",
+                  "    pm.collectionVariables.set('productId', String(product.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Класическа тениска\",\n  \"sku\": \"TS-CLASSIC\",\n  \"short_description\": \"Памучна тениска с кръгло деколте.\",\n  \"description\": \"Удобна тениска за ежедневно носене.\",\n  \"price\": 29.9,\n  \"compare_at_price\": 39.9,\n  \"is_active\": true,\n  \"sort_order\": 0,\n  \"personalization_enabled\": true,\n  \"personalization_label\": \"Текст за печат\",\n  \"personalization_description\": \"Име или кратък надпис, който отпечатваме на гърба.\",\n  \"personalization_required\": false,\n  \"personalization_max_length\": 16,\n  \"parameters\": [\n    { \"name\": \"Материя\", \"value\": \"100% памук\", \"sort_order\": 0 },\n    { \"name\": \"Грамаж\", \"value\": \"180 g/m²\", \"sort_order\": 1 }\n  ],\n  \"options\": [\n    {\n      \"name\": \"Размер\",\n      \"slug\": \"size\",\n      \"sort_order\": 0,\n      \"values\": [\n        { \"name\": \"S\", \"slug\": \"s\", \"sort_order\": 0 },\n        { \"name\": \"M\", \"slug\": \"m\", \"sort_order\": 1 },\n        { \"name\": \"L\", \"slug\": \"l\", \"sort_order\": 2 }\n      ]\n    },\n    {\n      \"name\": \"Цвят\",\n      \"slug\": \"color\",\n      \"sort_order\": 1,\n      \"values\": [\n        { \"name\": \"Черно\", \"slug\": \"black\", \"hex_color\": \"#111111\", \"sort_order\": 0 },\n        { \"name\": \"Бяло\", \"slug\": \"white\", \"hex_color\": \"#F5F5F5\", \"sort_order\": 1 }\n      ]\n    }\n  ],\n  \"variants\": [\n    {\n      \"sku\": \"TS-CLASSIC-BLK-M\",\n      \"name\": \"Черно / M\",\n      \"price\": 29.9,\n      \"stock\": 12,\n      \"is_default\": true,\n      \"is_active\": true,\n      \"sort_order\": 0,\n      \"option_values\": [\n        { \"option\": \"size\", \"value\": \"m\" },\n        { \"option\": \"color\", \"value\": \"black\" }\n      ]\n    },\n    {\n      \"sku\": \"TS-CLASSIC-WHT-L\",\n      \"name\": \"Бяло / L\",\n      \"price\": 29.9,\n      \"stock\": 8,\n      \"is_default\": false,\n      \"is_active\": true,\n      \"sort_order\": 1,\n      \"option_values\": [\n        { \"option\": \"size\", \"value\": \"l\" },\n        { \"option\": \"color\", \"value\": \"white\" }\n      ]\n    }\n  ],\n  \"personalization_fields\": [\n    {\n      \"name\": \"Надпис\",\n      \"description\": \"До 16 символа. Без емоджи.\",\n      \"field_type\": \"text\",\n      \"is_required\": false,\n      \"max_length\": 16,\n      \"sort_order\": 0\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/admin/products",
+            "description": "Нов продукт с параметри, размер/цвят, варианти и поле за персонализация преди количката. Записва productId."
+          },
+          "response": []
+        },
+        {
+          "name": "Show product",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/admin/products/{{productId}}",
+            "description": "Детайли за редакция. Използва productId от Create product."
+          },
+          "response": []
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Класическа тениска\",\n  \"sku\": \"TS-CLASSIC\",\n  \"short_description\": \"Памучна тениска с кръгло деколте.\",\n  \"description\": \"Обновено описание.\",\n  \"price\": 32.9,\n  \"compare_at_price\": 39.9,\n  \"is_active\": true,\n  \"sort_order\": 0,\n  \"personalization_enabled\": true,\n  \"personalization_label\": \"Текст за печат\",\n  \"personalization_description\": \"Име или кратък надпис, който отпечатваме на гърба.\",\n  \"personalization_required\": false,\n  \"personalization_max_length\": 16\n}"
+            },
+            "url": "{{baseUrl}}/admin/products/{{productId}}",
+            "description": "Редакция. Без parameters/options/variants/personalization_fields съществуващите колекции остават. Ако ги подадеш (дори []), се заменят."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/admin/products/{{productId}}",
+            "description": "Меко изтриване."
+          },
+          "response": []
+        },
+        {
+          "name": "Restore product",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/admin/products/{{productId}}/restore",
+            "description": "Възстановяване след меко изтриване."
           },
           "response": []
         }

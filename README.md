@@ -133,6 +133,30 @@ $mailer->sendTemplate('user@example.com', 'Заглавие', 'verify-registrati
 
 Не може да изтриете, деактивирате или свалите ролята на собствения си профил. Винаги остава поне един активен администратор.
 
+### Продукти (схема)
+
+Магазинът е за тениски и подобни артикули. Таблиците са в `database/migrations/20260828170600_create_product_tables.php`, моделите в `api/app/Models/Product*.php`.
+
+- **products** — име, slug, базов SKU, описание, цена „от“, активност.
+- **product_parameters** — информационни характеристики (материя, грамаж), не се купуват отделно.
+- **product_options** / **product_option_values** — избор като размер и цвят (`hex_color` за мостри).
+- **product_variants** — конкретна комбинация с SKU, цена и наличност.
+- **product_variant_values** — връзка вариант ↔ опция (по една стойност на опция).
+- **Персонализация** — `personalization_enabled` плюс етикет и описание върху продукта; допълнителни полета в `product_personalization_fields` (текст/textarea, задължително, макс. дължина). Ако няма полета, `Product::personalizationInputs()` връща едно поле от етикета и описанието на продукта. Текстът на клиента ще се пази по-късно върху реда в количката.
+
+Админ (Bearer, роля `admin`):
+
+| Метод | Път | Действие |
+|---|---|---|
+| GET | `/admin/products` | Списък. Query: `q`, `status` (`all`/`active`/`inactive`/`deleted`), `page`, `per_page` (до 100) |
+| POST | `/admin/products` | Нов продукт с параметри, опции, варианти и персонализация |
+| GET | `/admin/products/{id}` | Детайли, включително изтрит продукт |
+| PATCH / PUT | `/admin/products/{id}` | Редакция |
+| DELETE | `/admin/products/{id}` | Меко изтриване |
+| POST | `/admin/products/{id}/restore` | Възстановяване |
+
+Ако в PATCH се подадат `parameters`, `options`, `variants` или `personalization_fields` (дори празен масив), колекцията се заменя. Ако ключът липсва, съществуващите записи остават. `slug` се генерира от името, ако не е подаден.
+
 ### Миграции (Phinx)
 
 Миграциите са общи за API и сайта. Файловете са в `database/migrations/`, конфигурацията в `phinx.php`. Командите се пускат **вътре в PHP контейнера** (там има PDO и връзка към `mysql`).
