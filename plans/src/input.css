@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@source "../public/**/*.php";
+@source "../views/**/*.php";
+
+@theme {
+  --font-sans: "Manrope", "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --color-ink: #162620;
+  --color-forest: #173f32;
+  --color-moss: #4d725e;
+  --color-sage: #dce7de;
+  --color-cream: #f7f3e9;
+  --color-paper: #fffdf7;
+  --color-coral: #e46f4c;
+  --color-sun: #f2c66d;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { background: var(--color-cream); color: var(--color-ink); }
+  ::selection { background: var(--color-sun); color: var(--color-ink); }
+}
+
+@layer components {
+  .page-shell { @apply mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-10; }
+  .eyebrow { @apply mb-5 inline-flex items-center gap-2 rounded-full border border-forest/15 bg-white/65 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-forest; }
+  .display-title { @apply font-display text-[clamp(2.7rem,7vw,6.6rem)] leading-[0.92] tracking-[-0.045em] text-ink; }
+  .section-title { @apply font-display text-4xl leading-[1.05] tracking-[-0.035em] text-ink sm:text-5xl lg:text-6xl; }
+  .body-large { @apply text-lg leading-8 text-ink/70 sm:text-xl; }
+  .btn-primary { @apply inline-flex min-h-12 items-center justify-center rounded-full bg-coral px-6 py-3 text-sm font-extrabold text-white shadow-[0_12px_30px_rgba(228,111,76,0.24)] transition hover:-translate-y-0.5 hover:bg-[#cf5d3d] focus:outline-none focus:ring-4 focus:ring-coral/25; }
+  .btn-secondary { @apply inline-flex min-h-12 items-center justify-center rounded-full border border-forest/20 bg-white/70 px-6 py-3 text-sm font-extrabold text-forest transition hover:-translate-y-0.5 hover:bg-white focus:outline-none focus:ring-4 focus:ring-forest/10; }
+  .soft-card { @apply rounded-[2rem] border border-forest/10 bg-paper shadow-[0_18px_60px_rgba(23,63,50,0.08)]; }
+  .number-chip { @apply flex size-11 shrink-0 items-center justify-center rounded-full bg-forest font-display text-lg font-bold text-white; }
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-2deg); }
+  50% { transform: translate3d(0, -10px, 0) rotate(1deg); }
+}
+
+.gentle-drift { animation: drift 7s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
