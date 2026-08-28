@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { LogIn, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loginAdmin, resendAdminDeviceCode, verifyAdminDevice } from '@/api/auth';
 import { ApiError } from '@/api/client';
@@ -6,6 +7,7 @@ import { routes } from '@/app/constants';
 import { useAppDispatch } from '@/app/hooks';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
+import { useGlobalLoading } from '@/components/loading-provider';
 import { OtpInputs } from '@/components/ui/OtpInputs';
 import { setCredentials, type AdminUser } from '@/features/auth/authSlice';
 import { AuthLayout } from '@/layouts/AuthLayout';
@@ -23,6 +25,7 @@ export function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  useGlobalLoading(busy);
 
   function deviceFields() {
     return {
@@ -155,11 +158,13 @@ export function LoginPage() {
         ) : null}
 
         <Button type="submit" disabled={busy || (step === 'device' && code.length !== 6)}>
+          {step === 'credentials' ? <LogIn /> : <ShieldCheck />}
           {busy ? 'Моля, изчакайте…' : step === 'credentials' ? 'Вход' : 'Потвърди'}
         </Button>
 
         {step === 'device' ? (
           <Button type="button" variant="ghost" disabled={busy} onClick={() => void onResend()}>
+            <RefreshCw />
             Изпрати нов код
           </Button>
         ) : null}

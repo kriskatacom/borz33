@@ -9,6 +9,7 @@ import {
 export type DataTableColumnMeta = {
   sticky?: boolean;
   className?: string;
+  help?: string;
 };
 
 export const dataTableFeatures = tableFeatures({

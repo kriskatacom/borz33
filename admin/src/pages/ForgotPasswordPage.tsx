@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react';
+import { Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { forgotAdminPassword } from '@/api/auth';
 import { ApiError } from '@/api/client';
 import { routes } from '@/app/constants';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
+import { useGlobalLoading } from '@/components/loading-provider';
 import { AuthLayout } from '@/layouts/AuthLayout';
 
 export function ForgotPasswordPage() {
@@ -12,6 +14,7 @@ export function ForgotPasswordPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
+  useGlobalLoading(busy);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -58,6 +61,7 @@ export function ForgotPasswordPage() {
           </p>
         ) : null}
         <Button type="submit" disabled={busy}>
+          <Mail />
           {busy ? 'Изпращане…' : 'Изпрати линк'}
         </Button>
       </form>

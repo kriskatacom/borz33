@@ -5,6 +5,7 @@ import { GuestOnly, RequireAuth } from '@/app/guards';
 import { useAppDispatch } from '@/app/hooks';
 import { hydrateSession } from '@/features/auth/authThunks';
 import { ThemeProvider } from '@/components/theme-provider';
+import { LoadingProvider } from '@/components/loading-provider';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { SettingsPage } from '@/pages/SettingsPage';
@@ -23,31 +24,33 @@ export function App() {
 
   return (
     <ThemeProvider defaultTheme="system">
-      <BrowserRouter>
-        <Routes>
-          <Route element={<GuestOnly />}>
-            <Route path={routes.login} element={<LoginPage />} />
-            <Route path={routes.forgotPassword} element={<ForgotPasswordPage />} />
-            <Route path={routes.resetPassword} element={<ResetPasswordPage />} />
-          </Route>
-          <Route element={<RequireAuth />}>
-            <Route path={routes.home} element={<DashboardPage />} />
-            <Route path={routes.usersNew} element={<UserFormPage />} />
-            <Route path={routes.usersEdit} element={<UserFormPage />} />
-            <Route path={routes.users} element={<UsersPage />} />
-            <Route path={routes.customers} element={<Navigate to={routes.users} replace />} />
-            <Route path={routes.orders} element={<ComingSoonPage />} />
-            <Route path={routes.products} element={<ComingSoonPage />} />
-            <Route path={routes.content} element={<ComingSoonPage />} />
-            <Route path={routes.campaigns} element={<ComingSoonPage />} />
-            <Route path={routes.shipments} element={<ComingSoonPage />} />
-            <Route path={routes.messages} element={<ComingSoonPage />} />
-            <Route path={routes.reports} element={<ComingSoonPage />} />
-            <Route path={routes.settings} element={<SettingsPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to={routes.login} replace />} />
-        </Routes>
-      </BrowserRouter>
+      <LoadingProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<GuestOnly />}>
+              <Route path={routes.login} element={<LoginPage />} />
+              <Route path={routes.forgotPassword} element={<ForgotPasswordPage />} />
+              <Route path={routes.resetPassword} element={<ResetPasswordPage />} />
+            </Route>
+            <Route element={<RequireAuth />}>
+              <Route path={routes.home} element={<DashboardPage />} />
+              <Route path={routes.usersNew} element={<UserFormPage />} />
+              <Route path={routes.usersEdit} element={<UserFormPage />} />
+              <Route path={routes.users} element={<UsersPage />} />
+              <Route path={routes.customers} element={<Navigate to={routes.users} replace />} />
+              <Route path={routes.orders} element={<ComingSoonPage />} />
+              <Route path={routes.products} element={<ComingSoonPage />} />
+              <Route path={routes.content} element={<ComingSoonPage />} />
+              <Route path={routes.campaigns} element={<ComingSoonPage />} />
+              <Route path={routes.shipments} element={<ComingSoonPage />} />
+              <Route path={routes.messages} element={<ComingSoonPage />} />
+              <Route path={routes.reports} element={<ComingSoonPage />} />
+              <Route path={routes.settings} element={<SettingsPage />} />
+            </Route>
+            <Route path="*" element={<Navigate to={routes.login} replace />} />
+          </Routes>
+        </BrowserRouter>
+      </LoadingProvider>
     </ThemeProvider>
   );
 }

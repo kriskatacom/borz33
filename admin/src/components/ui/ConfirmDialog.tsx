@@ -1,3 +1,6 @@
+import { RotateCcw, Trash2, X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+
 type ConfirmDialogProps = {
   title: string;
   message: string;
@@ -22,12 +25,14 @@ export function ConfirmDialog({
         <h2 id="dialog-title">{title}</h2>
         <p id="dialog-body">{message}</p>
         <div className="dialog-actions">
-          <button type="button" className="btn btn-ghost" disabled={busy} onClick={onCancel}>
+          <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>
+            <X />
             Отказ
-          </button>
-          <button type="button" className="btn btn-danger" disabled={busy} onClick={onConfirm}>
+          </Button>
+          <Button type="button" variant="destructive" disabled={busy} onClick={onConfirm}>
+            {confirmLabel === 'Възстанови' ? <RotateCcw /> : <Trash2 />}
             {busy ? 'Моля, изчакайте…' : confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

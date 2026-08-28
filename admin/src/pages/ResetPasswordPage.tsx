@@ -1,10 +1,12 @@
 import { useMemo, useState, type FormEvent } from 'react';
+import { Save } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resetAdminPassword } from '@/api/auth';
 import { ApiError } from '@/api/client';
 import { routes } from '@/app/constants';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
+import { useGlobalLoading } from '@/components/loading-provider';
 import { AuthLayout } from '@/layouts/AuthLayout';
 
 export function ResetPasswordPage() {
@@ -17,6 +19,7 @@ export function ResetPasswordPage() {
   const [done, setDone] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  useGlobalLoading(busy);
   const invalidLink = useMemo(() => email === '' || token.length < 32, [email, token]);
 
   async function onSubmit(event: FormEvent) {
@@ -87,6 +90,7 @@ export function ResetPasswordPage() {
               </p>
             ) : null}
             <Button type="submit" disabled={busy}>
+              <Save />
               {busy ? 'Запис…' : 'Запази паролата'}
             </Button>
           </form>

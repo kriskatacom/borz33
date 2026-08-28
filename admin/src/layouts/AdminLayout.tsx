@@ -1,7 +1,9 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { LogOut, Menu, X } from 'lucide-react';
 import { navItems } from '@/app/nav';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { Button } from '@/components/ui/Button';
 import { logout } from '@/features/auth/authThunks';
 
 type AdminLayoutProps = {
@@ -51,12 +53,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           onClick={() => setMenuOpen((open) => !open)}
         >
           <span className="sr-only">{menuOpen ? 'Затвори менюто' : 'Отвори менюто'}</span>
-          <span aria-hidden="true">{menuOpen ? '✕' : '☰'}</span>
+          {menuOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
         </button>
         <p className="brand">Borz33</p>
-        <button type="button" className="text-btn" onClick={() => void dispatch(logout())}>
+        <Button type="button" variant="ghost" size="sm" onClick={() => void dispatch(logout())}>
+          <LogOut />
           Изход
-        </button>
+        </Button>
       </header>
 
       {menuOpen ? (
@@ -79,9 +82,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <div className="sidebar-user">
           <p>{displayName}</p>
           <p className="muted-line">{user?.email}</p>
-          <button type="button" className="btn btn-ghost" onClick={() => void dispatch(logout())}>
+          <Button type="button" variant="outline" onClick={() => void dispatch(logout())}>
+            <LogOut />
             Изход
-          </button>
+          </Button>
         </div>
       </aside>
 
@@ -96,6 +100,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </NavLink>
           ))}
         <button type="button" className="bottom-link" onClick={() => setMenuOpen(true)}>
+          <Menu className="size-4" aria-hidden />
           Още
         </button>
       </nav>

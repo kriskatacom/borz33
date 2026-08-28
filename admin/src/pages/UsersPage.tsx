@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { UserPlus } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { deleteUser, listUsers, restoreUser, type ManagedUser } from '@/api/users';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { DataTable } from '@/components/data-table/DataTable';
+import { useGlobalLoading } from '@/components/loading-provider';
+import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Field } from '@/components/ui/Field';
-import { SelectField } from '@/components/ui/SelectField';
+import { HelpHint, LabelWithHelp } from '@/components/ui/HelpHint';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getUsersColumns } from '@/features/users/usersColumns';
 
 export function UsersPage() {
@@ -22,6 +26,7 @@ export function UsersPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState<ManagedUser | null>(null);
   const [acting, setActing] = useState(false);
+  useGlobalLoading(busy);
 
   const filters = useMemo(
     () => ({
@@ -133,46 +138,69 @@ export function UsersPage() {
 
   return (
     <div className="page">
-      <header className="page-head split">
-        <div>
-          <p className="eyebrow">Потребители</p>
-          <h1>Управление на профили</h1>
-          <p className="muted">Създавате, редактирате и деактивирате администратори и клиенти от едно място.</p>
-        </div>
-        <Link className="btn btn-primary" to={routes.usersNew}>
-          Нов потребител
-        </Link>
+      <header className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="m-0 flex items-center gap-1.5 text-xl! font-normal">
+          Потребители
+          <HelpHint label="Потребители">
+            Списък с администратори и клиенти. От тук търсите, филтрирате, редактирате, изтривате или възстановявате
+            профили.
+          </HelpHint>
+        </h1>
+        <Button asChild>
+          <Link to={routes.usersNew}>
+            <UserPlus />
+            Нов потребител
+          </Link>
+        </Button>
       </header>
 
       <form className="filters" onSubmit={(event) => event.preventDefault()}>
         <Field
           id="q"
           label="Търсене"
+          help="Търси по име, имейл или телефон. Резултатите се обновяват докато пишете."
           value={search}
           placeholder="Име, имейл или телефон"
           onChange={(event) => setSearch(event.target.value)}
         />
-        <SelectField
-          id="role"
-          label="Роля"
-          value={filters.role}
-          onChange={(event) => updateParams({ role: event.target.value })}
-        >
-          <option value="">Всички роли</option>
-          <option value="admin">Администратор</option>
-          <option value="customer">Клиент</option>
-        </SelectField>
-        <SelectField
-          id="status"
-          label="Статус"
-          value={filters.status}
-          onChange={(event) => updateParams({ status: event.target.value })}
-        >
-          <option value="all">Всички (без изтрити)</option>
-          <option value="active">Активни</option>
-          <option value="inactive">Неактивни</option>
-          <option value="deleted">Изтрити</option>
-        </SelectField>
+        <div className="field">
+          <LabelWithHelp
+            htmlFor="role"
+            label="Роля"
+            help="Показва само потребители с избраната роля. „Всички роли“ включва и администратори, и клиенти."
+          />
+          <Select
+            value={filters.role || 'all'}
+            onValueChange={(value) => updateParams({ role: value === 'all' ? '' : value })}
+          >
+            <SelectTrigger id="role" className="w-full min-h-12 font-sans">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Всички роли</SelectItem>
+              <SelectItem value="admin">Администратор</SelectItem>
+              <SelectItem value="customer">Клиент</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="field">
+          <LabelWithHelp
+            htmlFor="status"
+            label="Статус"
+            help="По подразбиране изтритите са скрити. Активен може да влиза, неактивен е блокиран, изтрит може да се възстанови."
+          />
+          <Select value={filters.status} onValueChange={(value) => updateParams({ status: value })}>
+            <SelectTrigger id="status" className="w-full min-h-12 font-sans">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Всички (без изтрити)</SelectItem>
+              <SelectItem value="active">Активни</SelectItem>
+              <SelectItem value="inactive">Неактивни</SelectItem>
+              <SelectItem value="deleted">Изтрити</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </form>
 
       {message ? (

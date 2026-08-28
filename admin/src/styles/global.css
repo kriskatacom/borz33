@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource-variable/sofia-sans";
+@import "@fontsource-variable/sofia-sans/wght-italic.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -25,6 +27,8 @@
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
+  --font-sans: "Sofia Sans Variable", "Sofia Sans", Arial, Helvetica, sans-serif;
+  --font-serif: "Sofia Sans Variable", "Sofia Sans", Arial, Helvetica, sans-serif;
 }
 
 :root {
@@ -39,8 +43,8 @@
   --line: #e4ddd0;
   --shadow: 0 16px 40px rgb(28 25 23 / 8%);
   --radius: 20px;
-  --font-serif: Georgia, "Times New Roman", serif;
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-serif: "Sofia Sans Variable", "Sofia Sans", Arial, Helvetica, sans-serif;
+  --font-sans: "Sofia Sans Variable", "Sofia Sans", Arial, Helvetica, sans-serif;
   --space: clamp(16px, 3vw, 32px);
   --topbar: 56px;
   --bottom: 64px;
@@ -112,7 +116,8 @@ body {
   margin: 0;
   color: var(--ink);
   background: var(--paper);
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
+  font-feature-settings: "locl" 1;
 }
 
 body.menu-open {
@@ -123,7 +128,7 @@ body.menu-open {
   min-height: 100dvh;
 }
 
-a {
+a:not([data-slot='button']) {
   color: var(--forest);
 }
 
@@ -224,7 +229,7 @@ h1 {
 
 .field label {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -234,7 +239,7 @@ h1 {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 6px;
   padding: 12px 14px;
   background: var(--field);
   color: var(--ink);
@@ -246,7 +251,7 @@ h1 {
   grid-template-columns: 1fr auto;
   align-items: center;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 6px;
   background: var(--field);
 }
 
@@ -303,7 +308,7 @@ h1 {
   text-align: center;
   font-size: 1.4rem;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--field);
 }
 
@@ -361,6 +366,8 @@ h1 {
 .icon-btn {
   width: 44px;
   height: 44px;
+  display: grid;
+  place-items: center;
   border: 0;
   border-radius: 12px;
   background: var(--paper);
@@ -406,7 +413,7 @@ h1 {
   gap: 2px;
   text-decoration: none;
   color: inherit;
-  border-radius: 14px;
+  border-radius: 6px;
   padding: 10px 12px;
 }
 
@@ -701,8 +708,8 @@ h1 {
   border-radius: 999px;
   background: var(--paper);
   font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 400;
 }
 
 .badge.ok {
@@ -710,9 +717,44 @@ h1 {
   color: var(--forest);
 }
 
+.badge.info {
+  background: rgb(95 122 112 / 16%);
+  color: var(--forest);
+}
+
+.badge.idle {
+  background: rgb(107 100 91 / 14%);
+  color: var(--muted-foreground);
+}
+
 .badge.warn {
   background: rgb(201 79 60 / 12%);
   color: var(--coral);
+}
+
+.dark .badge {
+  background: rgb(243 239 230 / 12%);
+  color: var(--ink);
+}
+
+.dark .badge.ok {
+  background: rgb(157 206 186 / 32%);
+  color: #d4f3e4;
+}
+
+.dark .badge.info {
+  background: rgb(155 176 166 / 30%);
+  color: #dce8e2;
+}
+
+.dark .badge.idle {
+  background: rgb(183 176 166 / 28%);
+  color: #efe8dc;
+}
+
+.dark .badge.warn {
+  background: rgb(224 122 108 / 32%);
+  color: #ffd0c8;
 }
 
 .table-wrap {

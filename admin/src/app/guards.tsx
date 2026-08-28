@@ -1,21 +1,19 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
+import { useGlobalLoading } from '@/components/loading-provider';
 import { AdminLayout } from '@/layouts/AdminLayout';
 
-function Splash() {
-  return (
-    <div className="splash" role="status">
-      Зареждане…
-    </div>
-  );
+function HydrateGate() {
+  useGlobalLoading(true);
+  return null;
 }
 
 export function GuestOnly() {
   const { status, token } = useAppSelector((state) => state.auth);
 
   if (status === 'hydrating') {
-    return <Splash />;
+    return <HydrateGate />;
   }
 
   if (token) {
@@ -29,7 +27,7 @@ export function RequireAuth() {
   const { status, token } = useAppSelector((state) => state.auth);
 
   if (status === 'hydrating') {
-    return <Splash />;
+    return <HydrateGate />;
   }
 
   if (!token) {

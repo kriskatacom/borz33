@@ -1,12 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Save } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { createUser, getUser, updateUser } from '@/api/users';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
+import { useGlobalLoading } from '@/components/loading-provider';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
-import { SelectField } from '@/components/ui/SelectField';
+import { HelpHint, LabelWithHelp } from '@/components/ui/HelpHint';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type FormState = {
   first_name: string;
@@ -42,6 +45,7 @@ export function UserFormPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const isSelf = userId !== null && userId === currentId;
+  useGlobalLoading(busy);
 
   useEffect(() => {
     if (isNew || userId === null) {
@@ -134,12 +138,14 @@ export function UserFormPage() {
     <div className="page">
       <header className="page-head">
         <p className="eyebrow">Потребители</p>
-        <h1>{isNew ? 'Нов потребител' : 'Редакция на потребител'}</h1>
-        <p className="muted">
-          {isNew
-            ? 'Профилът се създава потвърден и може да влиза веднага с паролата, която зададете.'
-            : 'Оставете паролата празна, ако не искате да я сменяте.'}
-        </p>
+        <h1 className="flex items-center gap-1.5">
+          {isNew ? 'Нов потребител' : 'Редакция на потребител'}
+          <HelpHint label={isNew ? 'Нов потребител' : 'Редакция на потребител'}>
+            {isNew
+              ? 'Профилът се създава потвърден и може да влиза веднага с паролата, която зададете.'
+              : 'Променете данните на профила. Оставете паролата празна, ако не искате да я сменяте.'}
+          </HelpHint>
+        </h1>
       </header>
 
       <form className="form panel" onSubmit={(event) => void onSubmit(event)} noValidate>
@@ -147,6 +153,7 @@ export function UserFormPage() {
           <Field
             id="first_name"
             label="Име"
+            help="Собствено име, с което потребителят се показва в панела."
             value={form.first_name}
             onChange={(event) => patch('first_name', event.target.value)}
             error={errors.first_name}
@@ -155,6 +162,7 @@ export function UserFormPage() {
           <Field
             id="last_name"
             label="Фамилия"
+            help="Фамилия, с която потребителят се показва в панела."
             value={form.last_name}
             onChange={(event) => patch('last_name', event.target.value)}
             error={errors.last_name}
@@ -165,6 +173,7 @@ export function UserFormPage() {
             label="Имейл"
             type="email"
             autoComplete="off"
+            help="Уникален адрес. С него потребителят влиза и получава съобщения."
             value={form.email}
             onChange={(event) => patch('email', event.target.value)}
             error={errors.email}
@@ -173,39 +182,64 @@ export function UserFormPage() {
           <Field
             id="phone"
             label="Телефон"
+            help="По желание. Използва се за връзка и за търсене в списъка."
             value={form.phone}
             onChange={(event) => patch('phone', event.target.value)}
             error={errors.phone}
           />
-          <SelectField
-            id="role"
-            label="Роля"
-            value={form.role}
-            disabled={isSelf}
-            onChange={(event) => patch('role', event.target.value)}
-            error={errors.role}
-          >
-            <option value="customer">Клиент</option>
-            <option value="admin">Администратор</option>
-          </SelectField>
-          <label className="check">
+          <div className="field">
+            <LabelWithHelp
+              htmlFor="role"
+              label="Роля"
+              help={
+                isSelf
+                  ? 'Собствената роля не може да се смени от тук. Администратор има достъп до панела, клиент е профил за магазина.'
+                  : 'Администратор има достъп до този панел. Клиент е профил за магазина.'
+              }
+            />
+            <Select value={form.role} onValueChange={(value) => patch('role', value)} disabled={isSelf}>
+              <SelectTrigger id="role" className="w-full min-h-12 font-sans" aria-invalid={errors.role ? true : undefined}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="customer">Клиент</SelectItem>
+                <SelectItem value="admin">Администратор</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.role ? (
+              <p id="role-error" className="field-error" role="alert">
+                {errors.role}
+              </p>
+            ) : null}
+          </div>
+          <div className="check">
             <input
+              id="is_active"
               type="checkbox"
               checked={form.is_active}
               disabled={isSelf}
               onChange={(event) => patch('is_active', event.target.checked)}
             />
-            Активен профил
-          </label>
+            <label htmlFor="is_active">Активен профил</label>
+            <HelpHint label="Активен профил">
+              {isSelf
+                ? 'Не можете да деактивирате собствения си профил. Неактивен потребител не може да влиза.'
+                : 'Изключен профил не може да влиза, докато не го активирате отново.'}
+            </HelpHint>
+          </div>
           <Field
             id="password"
             label={isNew ? 'Парола' : 'Нова парола'}
             type="password"
             autoComplete="new-password"
+            help={
+              isNew
+                ? 'Поне 8 символа. С тази парола потребителят влиза веднага след създаването.'
+                : 'По желание. Поне 8 символа, ако сменяте паролата. Празно поле оставя старата парола.'
+            }
             value={form.password}
             onChange={(event) => patch('password', event.target.value)}
             error={errors.password}
-            hint={isNew ? 'Поне 8 символа.' : 'По желание. Поне 8 символа, ако сменяте паролата.'}
             required={isNew}
           />
           <Field
@@ -213,6 +247,7 @@ export function UserFormPage() {
             label="Потвърждение на паролата"
             type="password"
             autoComplete="new-password"
+            help="Трябва да съвпада с паролата. При редакция се попълва само ако сменяте паролата."
             value={form.password_confirmation}
             onChange={(event) => patch('password_confirmation', event.target.value)}
             error={errors.password_confirmation}
@@ -228,11 +263,15 @@ export function UserFormPage() {
 
         <div className="row-actions">
           <Button type="submit" disabled={busy}>
+            <Save />
             {busy ? 'Запис…' : 'Запази'}
           </Button>
-          <Link className="btn btn-ghost" to={routes.users}>
-            Назад
-          </Link>
+          <Button asChild variant="outline">
+            <Link to={routes.users}>
+              <ArrowLeft />
+              Назад
+            </Link>
+          </Button>
         </div>
       </form>
     </div>
