@@ -49,12 +49,18 @@ class UserResource
         return $items;
     }
 
-    private static function avatarUrl(User $user): ?string
+    public static function avatarUrl(User $user): ?string
     {
         if (!is_string($user->avatar_path) || $user->avatar_path === '') {
             return null;
         }
 
-        return '/' . ltrim($user->avatar_path, '/');
+        $path = ltrim($user->avatar_path, '/');
+
+        if (str_starts_with($path, 'assets/')) {
+            return '/assets/' . rawurlencode(substr($path, strlen('assets/')));
+        }
+
+        return '/' . $path;
     }
 }

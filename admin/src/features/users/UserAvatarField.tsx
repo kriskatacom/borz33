@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { FolderOpen, ImagePlus, Trash2, Upload, ZoomIn } from 'lucide-react';
-import { attachUserAvatar, deleteUserAvatar, uploadUserAvatar, type ManagedUser } from '@/api/users';
+import { attachUserAvatar, applyAvatarPreset, deleteUserAvatar, listAvatarPresets, uploadUserAvatar, type AvatarPreset, type ManagedUser } from '@/api/users';
 import type { ProductImage } from '@/api/products';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -72,6 +72,8 @@ export function UserAvatarField({
   const [deleting, setDeleting] = useState(false);
   const [lightbox, setLightbox] = useState(false);
   const [picker, setPicker] = useState(false);
+  const [presets, setPresets] = useState<AvatarPreset[]>([]);
+  const [presetBusy, setPresetBusy] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -81,6 +83,29 @@ export function UserAvatarField({
       }
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPresets() {
+      try {
+        const response = await listAvatarPresets(token);
+        if (!cancelled) {
+          setPresets(response.data.presets);
+        }
+      } catch {
+        if (!cancelled) {
+          setPresets([]);
+        }
+      }
+    }
+
+    void loadPresets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   function pickFile() {
     inputRef.current?.click();
@@ -162,6 +187,23 @@ export function UserAvatarField({
     }
   }
 
+  async function applyPreset(preset: AvatarPreset) {
+    if (userId === null || presetBusy !== null) {
+      return;
+    }
+
+    setPresetBusy(preset.id);
+    try {
+      const response = await applyAvatarPreset(token, userId, preset.id);
+      onUserChange(response.data.user);
+      toast.success(response.message || 'Профилната снимка е записана.');
+    } catch (error) {
+      toastError(error, 'Аватарът не можа да се приложи.');
+    } finally {
+      setPresetBusy(null);
+    }
+  }
+
   function onDrop(event: DragEvent) {
     event.preventDefault();
     event.stopPropagation();
@@ -181,14 +223,14 @@ export function UserAvatarField({
   }
 
   const shown = previewUrl ?? avatarUrl ?? null;
-  const busy = progress !== null;
+  const busy = progress !== null || presetBusy !== null;
   const alt = displayName.trim() || 'Профилна снимка';
 
   return (
     <div>
       <LabelWithHelp
         label="Профилна снимка"
-        help="JPEG, PNG или WebP, до 8 MB. Качването записва файла и в медията."
+        help="JPEG, PNG или WebP, до 8 MB. Можете да качите файл, да вземете от медията или да изберете готов аватар."
       />
       {createPortal(
         <input
@@ -246,7 +288,7 @@ export function UserAvatarField({
               </span>
             </span>
           ) : null}
-          {busy ? (
+          {busy && progress !== null ? (
             <span className="absolute inset-0 flex items-center justify-center bg-background/70 text-sm font-bold">
               {progress}%
             </span>
@@ -279,6 +321,34 @@ export function UserAvatarField({
           ) : null}
         </div>
       </div>
+      {presets.length > 0 ? (
+        <div className="mt-4">
+          <p className="m-0 mb-2 text-sm font-medium">Готови аватари</p>
+          <div className="flex flex-wrap gap-2">
+            {presets.map((preset) => {
+              const selected = avatarUrl === preset.url;
+
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  disabled={busy}
+                  aria-pressed={selected}
+                  aria-label={preset.label}
+                  title={preset.label}
+                  className={cn(
+                    'size-16 overflow-hidden rounded-[6px] border p-0 transition-shadow',
+                    selected ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:border-primary/50'
+                  )}
+                  onClick={() => void applyPreset(preset)}
+                >
+                  <img src={preset.url} alt="" className="size-full object-cover" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       {lightbox && avatarUrl ? (
         <ImageLightbox
           images={[lightboxImage(avatarUrl, alt)]}

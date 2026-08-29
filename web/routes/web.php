@@ -12,6 +12,7 @@ use Store\Controllers\ShopController;
 $router->get('/', [HomeController::class, 'index']);
 $router->get('/catalog', [ShopController::class, 'catalog']);
 $router->get('/catalog/{slug}', [ShopController::class, 'catalog']);
+$router->get('/search/products', [ShopController::class, 'search']);
 $router->get('/favorites', [ShopController::class, 'favorites']);
 $router->get('/cart', [ShopController::class, 'cart']);
 
@@ -27,3 +28,9 @@ $router->get('/account/{section}', [AccountController::class, 'show']);
 $router->post('/account/profile', [AccountController::class, 'updateProfile']);
 $router->post('/account/password', [AccountController::class, 'updatePassword']);
 $router->post('/account/theme', [AccountController::class, 'updateTheme']);
+$router->post('/account/avatar', [AccountController::class, 'updateAvatar']);
+$router->post('/account/avatar/delete', [AccountController::class, 'destroyAvatar']);
+$router->post('/account/addresses/{id}/delete', [AccountController::class, 'destroyAddress']);
+$router->post('/account/addresses/{id}/default', [AccountController::class, 'makeDefaultAddress']);
+$router->post('/account/addresses/{id}', [AccountController::class, 'updateAddress']);
+$router->post('/account/addresses', [AccountController::class, 'storeAddress']);

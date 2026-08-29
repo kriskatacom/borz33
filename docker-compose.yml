@@ -59,6 +59,7 @@ services:
       AUTH_PASSWORD_RESET_TTL_MINUTES: ${AUTH_PASSWORD_RESET_TTL_MINUTES}
       ADMIN_PUBLIC_URL: ${ADMIN_PUBLIC_URL}
       WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:8082}
+      STORE_VITE_DEV_URL: ${STORE_VITE_DEV_URL:-http://localhost:5174}
       HOST_UID: ${HOST_UID:-1000}
     volumes:
       - .:/var/www
@@ -121,7 +122,9 @@ services:
     working_dir: /app
     volumes:
       - ./web:/app
-    command: sh -c "npm install && npm run dev"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5174"
+    ports:
+      - "${STORE_VITE_PORT:-5174}:5174"
 
 volumes:
   mysql_data:

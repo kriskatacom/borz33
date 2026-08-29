@@ -8,7 +8,12 @@ export type ToastItem = {
   kind: ToastKind;
 };
 
+export type ToastOptions = {
+  duration?: number;
+};
+
 const MAX_TOASTS = 4;
+const DEFAULT_DURATION = 5000;
 const listeners = new Set<(items: ToastItem[]) => void>();
 const timers = new Map<string, number>();
 let items: ToastItem[] = [];
@@ -31,7 +36,7 @@ export function dismissToast(id: string) {
   emit();
 }
 
-function show(message: string, kind: ToastKind) {
+function show(message: string, kind: ToastKind, options: ToastOptions = {}) {
   const text = message.trim();
 
   if (text === '') {
@@ -39,7 +44,7 @@ function show(message: string, kind: ToastKind) {
   }
 
   const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const duration = kind === 'error' ? 6500 : 4200;
+  const duration = options.duration ?? DEFAULT_DURATION;
 
   items = [...items, { id, message: text, kind }].slice(-MAX_TOASTS);
   emit();
@@ -52,14 +57,14 @@ function show(message: string, kind: ToastKind) {
 }
 
 export const toast = {
-  success(message: string) {
-    show(message, 'success');
+  success(message: string, options?: ToastOptions) {
+    show(message, 'success', options);
   },
-  error(message: string) {
-    show(message, 'error');
+  error(message: string, options?: ToastOptions) {
+    show(message, 'error', options);
   },
-  info(message: string) {
-    show(message, 'info');
+  info(message: string, options?: ToastOptions) {
+    show(message, 'info', options);
   },
 };
 

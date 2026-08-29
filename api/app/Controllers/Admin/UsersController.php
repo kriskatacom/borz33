@@ -68,9 +68,21 @@ class UsersController extends Controller
         $this->ok(['user' => UserResource::toAdminArray($user)], 'Потребителят е възстановен.');
     }
 
+    public function avatarPresets(): never
+    {
+        $this->ok(['presets' => $this->avatars->presets()]);
+    }
+
     public function storeAvatar(string $id): never
     {
         $user = $this->users->find($this->id($id));
+        $preset = Request::input('preset');
+
+        if (is_string($preset) && trim($preset) !== '') {
+            $user = $this->avatars->attachPreset($user, $preset);
+            $this->created(['user' => UserResource::toAdminArray($user)], 'Профилната снимка е записана.');
+        }
+
         $mediaId = Request::input('media_id');
 
         if (is_int($mediaId) || (is_string($mediaId) && ctype_digit($mediaId))) {

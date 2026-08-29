@@ -19,20 +19,11 @@ class AccountService
     /** @param array<string, mixed> $data */
     public function updateProfile(User $user, array $data): User
     {
-        $email = strtolower(trim((string) $data['email']));
-        $emailChanged = $email !== $user->email;
-        $currentPassword = (string) ($data['current_password'] ?? '');
-
-        if ($emailChanged) {
-            $this->assertCurrentPassword($user, $currentPassword, 'Въведете текущата парола, за да смените имейла.');
-        }
-
         $phone = trim((string) ($data['phone'] ?? ''));
 
         $user->forceFill([
             'first_name' => trim((string) $data['first_name']),
             'last_name' => trim((string) $data['last_name']),
-            'email' => $email,
             'phone' => $phone !== '' ? $phone : null,
         ])->save();
 

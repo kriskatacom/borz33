@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Eye, Images, Layers, List, Palette, Plus, Save, Share2, Shirt, Trash2, Type } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { listCategoryTree, type CategoryTreeNode } from '@/api/categories';
 import {
+  createProduct,
   getProduct,
   shareProductPersonalization,
   updateProduct,
@@ -129,17 +130,25 @@ type SectionFormProps = {
   onSaved: (product: AdminProduct) => void;
 };
 
-function GeneralForm({ product, token, onSaved }: SectionFormProps) {
-  const [name, setName] = useState(product.name);
-  const [slug, setSlug] = useState(product.slug);
-  const [sku, setSku] = useState(product.sku ?? '');
-  const [categoryId, setCategoryId] = useState(product.category_id ? String(product.category_id) : 'none');
+type GeneralFormProps = {
+  product: AdminProduct | null;
+  token: string;
+  onSaved: (product: AdminProduct) => void;
+  onCreated?: (product: AdminProduct) => void;
+};
+
+function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
+  const isNew = product === null;
+  const [name, setName] = useState(product?.name ?? '');
+  const [slug, setSlug] = useState(product?.slug ?? '');
+  const [sku, setSku] = useState(product?.sku ?? '');
+  const [categoryId, setCategoryId] = useState(product?.category_id ? String(product.category_id) : 'none');
   const [tree, setTree] = useState<CategoryTreeNode[]>([]);
-  const [price, setPrice] = useState(moneyInput(product.price));
-  const [compareAt, setCompareAt] = useState(moneyInput(product.compare_at_price));
-  const [shortDescription, setShortDescription] = useState(product.short_description ?? '');
-  const [description, setDescription] = useState(product.description ?? '');
-  const [isActive, setIsActive] = useState(product.is_active);
+  const [price, setPrice] = useState(moneyInput(product?.price));
+  const [compareAt, setCompareAt] = useState(moneyInput(product?.compare_at_price));
+  const [shortDescription, setShortDescription] = useState(product?.short_description ?? '');
+  const [description, setDescription] = useState(product?.description ?? '');
+  const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -172,7 +181,7 @@ function GeneralForm({ product, token, onSaved }: SectionFormProps) {
     setErrors({});
 
     try {
-      const response = await updateProduct(token, product.id, {
+      const payload = {
         name: name.trim(),
         slug: slug.trim() === '' ? null : slug.trim(),
         sku: sku.trim() === '' ? null : sku.trim(),
@@ -182,7 +191,21 @@ function GeneralForm({ product, token, onSaved }: SectionFormProps) {
         short_description: shortDescription.trim() === '' ? null : shortDescription.trim(),
         description: description.trim() === '' ? null : description.trim(),
         is_active: isActive,
-      });
+      };
+
+      if (isNew) {
+        const response = await createProduct(token, {
+          ...payload,
+          personalization_enabled: false,
+          personalization_required: false,
+          personalization_max_length: 80,
+        });
+        toast.success(response.message || 'Продуктът е създаден.');
+        onCreated?.(response.data.product);
+        return;
+      }
+
+      const response = await updateProduct(token, product.id, payload);
       onSaved(response.data.product);
       toast.success(response.message || 'Записано.');
     } catch (error) {
@@ -827,10 +850,12 @@ function SectionShell({
 
 export function ProductEditPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
+  const navigate = useNavigate();
   const { id } = useParams();
+  const isNew = id === undefined;
   const productId = Number(id);
   const [product, setProduct] = useState<AdminProduct | null>(null);
-  const [busy, setBusy] = useState(true);
+  const [busy, setBusy] = useState(!isNew);
   const [message, setMessage] = useState<string | null>(null);
   useGlobalLoading(busy);
 
@@ -838,6 +863,11 @@ export function ProductEditPage() {
     let cancelled = false;
 
     async function load() {
+      if (isNew) {
+        setBusy(false);
+        return;
+      }
+
       if (!Number.isInteger(productId) || productId < 1) {
         setMessage('Продуктът не е намерен.');
         toast.error('Продуктът не е намерен.');
@@ -872,29 +902,39 @@ export function ProductEditPage() {
     return () => {
       cancelled = true;
     };
-  }, [productId, token]);
+  }, [isNew, productId, token]);
 
-  const canEdit = product !== null && !product.deleted_at;
+  const canEdit = isNew || (product !== null && !product.deleted_at);
 
   return (
     <div className="page min-w-0">
       <PageHeader
-        title={product ? `Редакция · ${product.name}` : 'Редакция'}
-        help="Всяка секция се записва отделно. Изображенията се качват веднага. Незапазените промени в другите секции не се пращат."
+        title={isNew ? 'Нов продукт' : product ? `Редакция · ${product.name}` : 'Редакция'}
+        help={
+          isNew
+            ? 'Попълнете име и цена. След запис ще можете да добавите снимки, варианти и персонализация.'
+            : 'Всяка секция се записва отделно. Изображенията се качват веднага. Незапазените промени в другите секции не се пращат.'
+        }
         crumbs={[
           { label: 'Табло', to: routes.home },
           { label: 'Продукти', to: routes.products },
-          { label: product?.name ?? 'Продукт', to: `/products/${productId}` },
-          { label: 'Редакция' },
+          ...(isNew
+            ? [{ label: 'Нов продукт' }]
+            : [
+                { label: product?.name ?? 'Продукт', to: `/products/${productId}` },
+                { label: 'Редакция' },
+              ]),
         ]}
         actions={
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-            <Button asChild variant="outline">
-              <Link to={`/products/${productId}`}>
-                <Eye />
-                Преглед
-              </Link>
-            </Button>
+            {!isNew ? (
+              <Button asChild variant="outline">
+                <Link to={`/products/${productId}`}>
+                  <Eye />
+                  Преглед
+                </Link>
+              </Button>
+            ) : null}
             <Button asChild variant="outline">
               <Link to={routes.products}>
                 <ArrowLeft />
@@ -915,6 +955,19 @@ export function ProductEditPage() {
         <p className="form-message is-error" role="alert">
           Изтрит продукт не се редактира. Възстановете го от списъка.
         </p>
+      ) : null}
+
+      {canEdit && isNew ? (
+        <div className="flex min-w-0 max-w-full flex-col gap-3">
+          <SectionShell title="Общи данни" icon={Shirt} help="Име, цена и статус. След запис се отваря пълната редакция.">
+            <GeneralForm
+              product={null}
+              token={token}
+              onSaved={setProduct}
+              onCreated={(created) => navigate(`/products/${created.id}/edit`, { replace: true })}
+            />
+          </SectionShell>
+        </div>
       ) : null}
 
       {canEdit && product ? (

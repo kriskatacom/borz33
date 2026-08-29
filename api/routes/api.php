@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Controllers\Admin\BannersController;
+use App\Controllers\Admin\DashboardController;
 use App\Controllers\Admin\CategoriesController;
 use App\Controllers\Admin\MediaController;
 use App\Controllers\Admin\PagesController;
@@ -40,8 +41,10 @@ $router->get('/auth/me', [SessionController::class, 'show'], [Authenticate::clas
 $router->post('/auth/logout', [SessionController::class, 'destroy'], [Authenticate::class]);
 
 $admin = [Authenticate::class, RequireAdmin::class];
+$router->get('/admin/dashboard', [DashboardController::class, 'show'], $admin);
 $router->get('/admin/users', [UsersController::class, 'index'], $admin);
 $router->post('/admin/users', [UsersController::class, 'store'], $admin);
+$router->get('/admin/users/avatar-presets', [UsersController::class, 'avatarPresets'], $admin);
 $router->get('/admin/users/{id}', [UsersController::class, 'show'], $admin);
 $router->put('/admin/users/{id}', [UsersController::class, 'update'], $admin);
 $router->patch('/admin/users/{id}', [UsersController::class, 'update'], $admin);

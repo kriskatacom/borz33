@@ -19,6 +19,7 @@ return [
         'string' => 'Полето :attribute трябва да бъде поне :min символа.',
     ],
     'required' => 'Полето :attribute е задължително.',
+    'required_if' => 'Полето :attribute е задължително.',
     'string' => 'Полето :attribute трябва да бъде текст.',
     'unique' => 'Стойността на полето :attribute вече е заета.',
     'uuid' => 'Полето :attribute трябва да бъде валиден UUID.',

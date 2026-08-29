@@ -101,12 +101,21 @@ export function getUsersColumns({ currentId, onRestore, onDelete }: UsersColumns
 
         return (
           <div className="min-w-40">
-            <p className="m-0 text-foreground">
-              {user.first_name} {user.last_name}
-              {user.id === currentId ? (
-                <span className="badge ml-2 align-middle">Вие</span>
-              ) : null}
-            </p>
+            {user.deleted_at ? (
+              <p className="m-0 font-bold text-foreground">
+                {user.first_name} {user.last_name}
+                {user.id === currentId ? (
+                  <span className="badge ml-2 align-middle">Вие</span>
+                ) : null}
+              </p>
+            ) : (
+              <Link to={`/users/${user.id}`} className="font-bold text-foreground no-underline hover:underline">
+                {user.first_name} {user.last_name}
+                {user.id === currentId ? (
+                  <span className="badge ml-2 align-middle">Вие</span>
+                ) : null}
+              </Link>
+            )}
           </div>
         );
       },

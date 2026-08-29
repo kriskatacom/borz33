@@ -129,6 +129,10 @@ export function listProducts(token: string, filters: ProductListFilters) {
   return apiRequest<ProductListData>('/admin/products', { token, query: filters });
 }
 
+export function createProduct(token: string, body: Record<string, unknown>) {
+  return apiRequest<{ product: AdminProduct }>('/admin/products', { method: 'POST', token, body });
+}
+
 export function getProduct(token: string, id: number) {
   return apiRequest<{ product: AdminProduct }>(`/admin/products/${id}`, { token });
 }

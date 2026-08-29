@@ -91,16 +91,29 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           ))}
         </nav>
         <div className="sidebar-user">
-          <div className="sidebar-user-row">
-            <div className="sidebar-user-avatar" aria-hidden={!user?.avatar_url}>
-              {user?.avatar_url ? (
-                <img src={user.avatar_url} alt="" className="size-full object-cover" />
-              ) : (
+          {user ? (
+            <Link
+              to={`/users/${user.id}`}
+              className="sidebar-user-row"
+              aria-label={`Профил · ${displayName}`}
+            >
+              <div className="sidebar-user-avatar">
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt="" className="size-full object-cover" />
+                ) : (
+                  <span className="sidebar-user-avatar-fallback">{displayName.slice(0, 1)}</span>
+                )}
+              </div>
+              <p className="sidebar-user-name">{displayName}</p>
+            </Link>
+          ) : (
+            <div className="sidebar-user-row">
+              <div className="sidebar-user-avatar">
                 <span className="sidebar-user-avatar-fallback">{displayName.slice(0, 1)}</span>
-              )}
+              </div>
+              <p className="sidebar-user-name">{displayName}</p>
             </div>
-            <p className="sidebar-user-name">{displayName}</p>
-          </div>
+          )}
           <Button
             type="button"
             variant="ghost"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { listCategoryTree } from '@/api/categories';
 import { listProducts, type ProductListItem } from '@/api/products';
@@ -8,6 +9,7 @@ import { useAppSelector } from '@/app/hooks';
 import { DataTable, DATA_TABLE_PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/components/data-table/DataTable';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
+import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -146,6 +148,14 @@ export function ProductsPage() {
           { label: 'Табло', to: routes.home },
           { label: 'Продукти' },
         ]}
+        actions={
+          <Button asChild>
+            <Link to={routes.productsNew}>
+              <Plus />
+              Нов продукт
+            </Link>
+          </Button>
+        }
       />
 
       <form className="filters" onSubmit={(event) => event.preventDefault()}>

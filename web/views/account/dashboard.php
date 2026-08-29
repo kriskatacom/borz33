@@ -12,6 +12,8 @@ $firstName = trim((string) $user->first_name);
 $greeting = DateFormat::greeting();
 $lead = $firstName !== '' ? $greeting . ', ' . $firstName . '.' : $greeting . '.';
 $emailVerified = $user->hasVerifiedEmail();
+/** @var \Illuminate\Support\Collection<int, \App\Models\UserAddress> $billingAddresses */
+$addressCount = isset($billingAddresses) ? $billingAddresses->count() : 0;
 
 $stats = [
     [
@@ -93,7 +95,15 @@ $stats = [
                 <span class="store-shortcut-icon"><?= Html::iconSvg('user') ?></span>
                 <span class="min-w-0 flex-1">
                     <strong>Данни на акаунта</strong>
-                    <span><?= $phone === '' ? 'Добавете телефон и проверете имейла' : 'Име, имейл и телефон' ?></span>
+                    <span><?= $phone === '' ? 'Добавете телефон' : 'Име и телефон' ?></span>
+                </span>
+                <?= Html::iconSvg('chevron-right') ?>
+            </a>
+            <a class="store-shortcut" href="/account/addresses">
+                <span class="store-shortcut-icon"><?= Html::iconSvg('map-pin') ?></span>
+                <span class="min-w-0 flex-1">
+                    <strong>Адреси за фактуриране</strong>
+                    <span><?= $addressCount === 0 ? 'Добавете адрес' : $addressCount . ($addressCount === 1 ? ' записан адрес' : ' записани адреса') ?></span>
                 </span>
                 <?= Html::iconSvg('chevron-right') ?>
             </a>

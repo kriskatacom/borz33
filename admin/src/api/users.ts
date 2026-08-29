@@ -98,3 +98,21 @@ export function attachUserAvatar(token: string, id: number, mediaId: number) {
     body: { media_id: mediaId },
   });
 }
+
+export type AvatarPreset = {
+  id: string;
+  url: string;
+  label: string;
+};
+
+export function listAvatarPresets(token: string) {
+  return apiRequest<{ presets: AvatarPreset[] }>('/admin/users/avatar-presets', { token });
+}
+
+export function applyAvatarPreset(token: string, id: number, preset: string) {
+  return apiRequest<{ user: ManagedUser }>(`/admin/users/${id}/avatar`, {
+    method: 'POST',
+    token,
+    body: { preset },
+  });
+}

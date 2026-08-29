@@ -15,43 +15,12 @@ import { HelpHint } from '@/components/ui/HelpHint';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { scrollPageToTop } from '@/lib/scroll';
 
 export const DATA_TABLE_PAGE_SIZES = [10, 20, 50, 100] as const;
 export const DEFAULT_PAGE_SIZE = 20;
 
-export function scrollPageToTop() {
-  const active = document.activeElement;
-  const keepFocus =
-    active instanceof HTMLElement && active.matches('input, textarea, select, [contenteditable="true"]');
-
-  if (!keepFocus && active instanceof HTMLElement) {
-    active.blur();
-  }
-
-  const jump = () => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  };
-
-  const settle = () => {
-    if (!keepFocus) {
-      const heading = document.querySelector('.admin-main h1');
-
-      if (heading instanceof HTMLElement) {
-        heading.focus({ preventScroll: true });
-      }
-    }
-
-    jump();
-  };
-
-  jump();
-  requestAnimationFrame(() => {
-    settle();
-    requestAnimationFrame(settle);
-  });
-}
+export { scrollPageToTop };
 
 function goToPage(pagination: DataTablePagination, page: number) {
   if (page === pagination.page) {

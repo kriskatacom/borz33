@@ -29,6 +29,10 @@ export default defineConfig({
         target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
+      '/assets': {
+        target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
     },
   },
 });

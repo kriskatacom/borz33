@@ -65,10 +65,12 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
         </div>
 
         <form
-            class="col-span-2 flex h-12 min-w-0 w-full items-center border border-line bg-canvas pr-1 pl-3 md:col-span-1 md:col-start-2 md:row-start-1"
+            class="store-search col-span-2 flex h-12 min-w-0 w-full items-center border border-line bg-canvas pr-1 pl-3 md:col-span-1 md:col-start-2 md:row-start-1"
             action="/catalog"
             method="get"
             role="search"
+            @click.outside="closeSearch()"
+            @focusin="openSearch()"
         >
             <label class="sr-only" for="q">Търсене в каталога</label>
             <input
@@ -77,9 +79,52 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
                 type="search"
                 class="min-w-0 flex-1 border-0 bg-transparent py-2 text-[0.95rem] text-ink outline-none"
                 placeholder="Търсене"
-                value="<?= htmlspecialchars((string) (\App\Core\Request::query('q') ?? ''), ENT_QUOTES, 'UTF-8') ?>"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="store-search-results"
+                :aria-expanded="searchOpen"
+                x-ref="searchInput"
+                x-model="searchQuery"
+                @focus="openSearch()"
+                @click="openSearch()"
+                @input.debounce.200ms="onSearchInput()"
             >
             <?php Html::iconButton('search', 'Търси', ['type' => 'submit', 'class' => 'store-icon-btn--sm']); ?>
+            <div
+                id="store-search-results"
+                class="store-search-panel"
+                x-cloak
+                x-show="searchOpen"
+                x-transition.opacity.duration.120ms
+                role="listbox"
+                aria-label="Продукти"
+            >
+                <p class="store-search-label" x-show="searchFeatured && searchItems.length > 0">Избрани продукти</p>
+                <p class="store-search-label" x-show="!searchFeatured && searchItems.length > 0">Резултати</p>
+                <p class="store-search-status" x-show="searchLoading && searchItems.length === 0">Търсене…</p>
+                <p class="store-search-empty" x-show="!searchLoading && searchItems.length === 0">Няма намерени продукти</p>
+                <template x-for="item in searchItems" :key="item.id">
+                    <a class="store-search-item" :href="item.url" role="option">
+                        <div class="store-search-thumb">
+                            <img x-show="item.image" :src="item.image" :alt="item.image_alt" width="56" height="56">
+                        </div>
+                        <div class="min-w-0">
+                            <p class="store-search-name" x-text="item.name"></p>
+                            <p class="store-search-meta" x-show="item.sku" x-text="item.sku"></p>
+                            <p class="store-search-save" x-show="item.on_sale" x-text="'Спестявате ' + formatPrice(item.savings)"></p>
+                        </div>
+                        <div class="store-search-prices">
+                            <span class="store-search-compare" x-show="item.on_sale" x-text="formatPrice(item.compare_at_price)"></span>
+                            <span class="store-search-price" x-text="formatPrice(item.price)"></span>
+                            <span class="store-search-badge" x-show="item.on_sale">Промоция</span>
+                        </div>
+                    </a>
+                </template>
+            </div>
         </form>
     </div>
 

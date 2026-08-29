@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { routes } from '@/app/constants';
 import { GuestOnly, RequireAuth } from '@/app/guards';
 import { useAppDispatch } from '@/app/hooks';
+import { useFormSaveShortcut } from '@/hooks/useFormSaveShortcut';
 import { hydrateSession } from '@/features/auth/authThunks';
 import { ThemeProvider } from '@/components/theme-provider';
 import { LoadingProvider } from '@/components/loading-provider';
@@ -28,6 +29,7 @@ import { UsersPage } from '@/pages/UsersPage';
 
 export function App() {
   const dispatch = useAppDispatch();
+  useFormSaveShortcut();
 
   useEffect(() => {
     void dispatch(hydrateSession());
@@ -51,6 +53,7 @@ export function App() {
               <Route path={routes.users} element={<UsersPage />} />
               <Route path={routes.customers} element={<Navigate to={routes.users} replace />} />
               <Route path={routes.orders} element={<ComingSoonPage />} />
+              <Route path={routes.productsNew} element={<ProductEditPage />} />
               <Route path={routes.productsEdit} element={<ProductEditPage />} />
               <Route path={routes.productsShow} element={<ProductViewPage />} />
               <Route path={routes.products} element={<ProductsPage />} />

@@ -21,7 +21,15 @@ $themes = [
 ?>
 <p class="mt-0 mb-5 text-muted">Изборът се пази в профила и важи само за магазина, не за админ панела.</p>
 
-<form method="post" action="/account/theme">
+<form
+    class="store-form store-card"
+    method="post"
+    action="/account/theme"
+    x-data='storeAccountForm({ kind: "theme" })'
+    :class="busy && 'is-saving'"
+    :aria-busy="busy"
+    @submit="onSubmit"
+>
     <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
     <div class="store-theme-grid" role="radiogroup" aria-label="Тема на сайта">
         <?php foreach ($themes as $value => $option): ?>

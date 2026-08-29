@@ -463,7 +463,7 @@ export function MediaPage() {
               <div className="grid gap-1 p-2">
                 <button
                   type="button"
-                  className="m-0 truncate text-left font-sans text-sm font-bold text-foreground"
+                  className="m-0 truncate text-left font-sans text-sm font-bold text-foreground hover:underline"
                   title={file.original_name}
                   onClick={() => openDetails(file)}
                 >

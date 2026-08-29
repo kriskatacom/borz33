@@ -6,6 +6,7 @@ namespace Store\Controllers;
 
 use App\Models\Category;
 use Store\Core\View;
+use Store\Services\ProductSearch;
 
 class ShopController extends Controller
 {
@@ -37,6 +38,15 @@ class ShopController extends Controller
             'title' => $title,
             'query' => $query,
             'category' => $category,
+        ]);
+    }
+
+    public function search(): never
+    {
+        $query = trim((string) (\App\Core\Request::query('q') ?? ''));
+
+        $this->json([
+            'data' => ProductSearch::suggest($query),
         ]);
     }
 

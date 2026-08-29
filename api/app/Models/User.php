@@ -109,4 +109,12 @@ class User extends Model
     {
         return $this->hasMany(DeviceLoginCode::class);
     }
+
+    public function billingAddresses(): HasMany
+    {
+        return $this->hasMany(UserAddress::class)
+            ->where('type', UserAddress::TYPE_BILLING)
+            ->orderByDesc('is_default')
+            ->orderByDesc('id');
+    }
 }
