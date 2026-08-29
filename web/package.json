@@ -1,0 +1,17 @@
+{
+  "name": "borz33-store",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.3.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "alpinejs": "^3.16.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.2"
+  }
+}

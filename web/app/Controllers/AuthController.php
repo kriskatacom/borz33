@@ -1,0 +1,337 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Store\Controllers;
+
+use App\Core\Auth;
+use App\Core\Request;
+use App\Exceptions\AuthException;
+use App\Exceptions\ValidationException;
+use App\Models\User;
+use App\Services\Auth\EmailVerificationService;
+use App\Services\Auth\LoginService;
+use App\Services\Auth\RegisterService;
+use App\Services\Auth\TokenService;
+use App\Validation\DeviceLoginResendValidator;
+use App\Validation\DeviceLoginValidator;
+use App\Validation\LoginValidator;
+use App\Validation\RegisterValidator;
+use App\Validation\ResendVerificationValidator;
+use App\Validation\VerifyEmailValidator;
+use Store\Core\StoreAuth;
+
+class AuthController extends Controller
+{
+    public function __construct(
+        private readonly LoginService $login = new LoginService(),
+        private readonly LoginValidator $loginValidator = new LoginValidator(),
+        private readonly DeviceLoginValidator $deviceValidator = new DeviceLoginValidator(),
+        private readonly DeviceLoginResendValidator $resendValidator = new DeviceLoginResendValidator(),
+        private readonly RegisterService $register = new RegisterService(),
+        private readonly RegisterValidator $registerValidator = new RegisterValidator(),
+        private readonly EmailVerificationService $emailVerification = new EmailVerificationService(),
+        private readonly VerifyEmailValidator $verifyEmailValidator = new VerifyEmailValidator(),
+        private readonly ResendVerificationValidator $resendVerificationValidator = new ResendVerificationValidator(),
+        private readonly TokenService $tokens = new TokenService()
+    ) {
+    }
+
+    public function showLogin(): never
+    {
+        if (Auth::user() !== null) {
+            $this->redirect('/account');
+        }
+
+        $this->authPage();
+    }
+
+    public function login(): never
+    {
+        if (Auth::user() !== null) {
+            $this->redirect('/account');
+        }
+
+        $this->assertCsrf();
+        $step = (string) Request::input('step', 'credentials');
+
+        try {
+            if ($step === 'device') {
+                $payload = $this->deviceValidator->validate($this->loginInput());
+                $result = $this->login->verifyDevice($payload);
+            } else {
+                $payload = $this->loginValidator->validate($this->loginInput());
+                $result = $this->login->login($payload);
+            }
+        } catch (ValidationException $exception) {
+            $this->authPage([
+                'step' => $step === 'device' ? 'device' : 'credentials',
+                'email' => (string) Request::input('email', ''),
+                'errors' => $exception->errors(),
+                'message' => $exception->getMessage(),
+                'isError' => true,
+            ]);
+        } catch (AuthException $exception) {
+            $this->authPage([
+                'step' => $step === 'device' ? 'device' : 'credentials',
+                'email' => (string) Request::input('email', ''),
+                'message' => $exception->getMessage(),
+                'isError' => true,
+            ]);
+        }
+
+        if ($result->requiresDeviceVerification) {
+            $this->authPage([
+                'step' => 'device',
+                'email' => (string) ($payload['email'] ?? Request::input('email', '')),
+                'message' => 'Вход от ново устройство. Изпратихме код на имейла Ви.',
+                'isError' => false,
+            ]);
+        }
+
+        if ($result->token === null) {
+            $this->authPage([
+                'email' => (string) Request::input('email', ''),
+                'message' => 'Входът не беше успешен.',
+                'isError' => true,
+            ]);
+        }
+
+        StoreAuth::persistToken($result->token, $result->expiresAt);
+        $this->redirect('/account');
+    }
+
+    public function resendCode(): never
+    {
+        if (Auth::user() !== null) {
+            $this->redirect('/account');
+        }
+
+        $this->assertCsrf();
+
+        try {
+            $payload = $this->resendValidator->validate($this->loginInput());
+            $this->login->resendDeviceCode($payload);
+        } catch (ValidationException $exception) {
+            $this->authPage([
+                'step' => 'device',
+                'email' => (string) Request::input('email', ''),
+                'errors' => $exception->errors(),
+                'message' => $exception->getMessage(),
+                'isError' => true,
+            ]);
+        }
+
+        $this->authPage([
+            'step' => 'device',
+            'email' => (string) Request::input('email', ''),
+            'message' => 'Ако е нужен код за това устройство, изпратихме нов.',
+            'isError' => false,
+        ]);
+    }
+
+    public function register(): never
+    {
+        if (Auth::user() !== null) {
+            $this->redirect('/account');
+        }
+
+        $this->assertCsrf();
+
+        try {
+            $payload = $this->registerValidator->validate($this->registerInput());
+            $this->register->register($payload);
+        } catch (ValidationException $exception) {
+            $this->authPage([
+                'register' => $this->registerFields(),
+                'registerErrors' => $exception->errors(),
+                'registerMessage' => $exception->getMessage(),
+                'registerIsError' => true,
+            ]);
+        } catch (AuthException $exception) {
+            $this->authPage([
+                'register' => $this->registerFields(),
+                'registerMessage' => $exception->getMessage(),
+                'registerIsError' => true,
+            ]);
+        }
+
+        $this->authPage([
+            'showVerify' => true,
+            'register' => $this->registerFields(),
+            'registerMessage' => 'Регистрацията е успешна. Изпратихме 6-цифрен код на имейла Ви.',
+            'registerIsError' => false,
+        ]);
+    }
+
+    public function verifyEmail(): never
+    {
+        if (Auth::user() !== null) {
+            $this->redirect('/account');
+        }
+
+        $this->assertCsrf();
+
+        try {
+            $payload = $this->verifyEmailValidator->validate([
+                'email' => Request::input('email'),
+                'code' => Request::input('code'),
+            ]);
+            $this->emailVerification->verify($payload['email'], $payload['code']);
+        } catch (ValidationException $exception) {
+            $this->authPage([
+                'showVerify' => true,
+                'register' => $this->registerFields(),
+                'registerErrors' => $exception->errors(),
+                'registerMessage' => $exception->getMessage(),
+                'registerIsError' => true,
+            ]);
+        } catch (AuthException $exception) {
+            $this->authPage([
+                'showVerify' => true,
+                'register' => $this->registerFields(),
+                'registerMessage' => $exception->getMessage(),
+                'registerIsError' => true,
+            ]);
+        }
+
+        $this->authPage([
+            'email' => (string) Request::input('email', ''),
+            'message' => 'Имейлът е потвърден. Вече можете да влезете.',
+            'isError' => false,
+            'register' => ['first_name' => '', 'last_name' => '', 'email' => '', 'phone' => ''],
+        ]);
+    }
+
+    public function resendVerification(): never
+    {
+        if (Auth::user() !== null) {
+            $this->redirect('/account');
+        }
+
+        $this->assertCsrf();
+
+        try {
+            $payload = $this->resendVerificationValidator->validate([
+                'email' => Request::input('email'),
+            ]);
+            $this->emailVerification->resend($payload['email']);
+        } catch (ValidationException $exception) {
+            $this->authPage([
+                'showVerify' => true,
+                'register' => $this->registerFields(),
+                'registerErrors' => $exception->errors(),
+                'registerMessage' => $exception->getMessage(),
+                'registerIsError' => true,
+            ]);
+        }
+
+        $this->authPage([
+            'showVerify' => true,
+            'register' => $this->registerFields(),
+            'registerMessage' => 'Ако имейлът очаква потвърждение, изпратихме нов код.',
+            'registerIsError' => false,
+        ]);
+    }
+
+    public function logout(): never
+    {
+        $this->assertCsrf();
+        $this->tokens->revoke(Auth::token());
+        Auth::set(null);
+        StoreAuth::clearToken();
+        $this->redirect('/');
+    }
+
+    public function showProfile(): never
+    {
+        $user = $this->requireUser();
+
+        $this->view('account', [
+            'title' => 'Профил · Borz33',
+            'user' => $user,
+        ]);
+    }
+
+    public function updateTheme(): never
+    {
+        $user = $this->requireUser();
+        $this->assertCsrf();
+
+        $theme = (string) Request::input('theme', User::THEME_SYSTEM);
+        $allowed = [User::THEME_LIGHT, User::THEME_DARK, User::THEME_SYSTEM];
+
+        if (!in_array($theme, $allowed, true)) {
+            $this->view('account', [
+                'title' => 'Профил · Borz33',
+                'user' => $user,
+                'message' => 'Невалидна тема.',
+                'isError' => true,
+            ]);
+        }
+
+        $user->forceFill(['theme' => $theme])->save();
+        $this->redirect('/account');
+    }
+
+    /** @param array<string, mixed> $extra */
+    private function authPage(array $extra = []): never
+    {
+        $step = (string) ($extra['step'] ?? 'credentials');
+        $title = $step === 'device' ? 'Потвърдете устройството · Borz33' : 'Вход и регистрация · Borz33';
+
+        $this->view('login', [
+            'title' => $title,
+            'step' => $step,
+            'email' => $extra['email'] ?? '',
+            'errors' => $extra['errors'] ?? [],
+            'message' => $extra['message'] ?? null,
+            'isError' => $extra['isError'] ?? false,
+            'register' => $extra['register'] ?? ['first_name' => '', 'last_name' => '', 'email' => '', 'phone' => ''],
+            'registerErrors' => $extra['registerErrors'] ?? [],
+            'registerMessage' => $extra['registerMessage'] ?? null,
+            'registerIsError' => $extra['registerIsError'] ?? false,
+            'showVerify' => (bool) ($extra['showVerify'] ?? false),
+            'deviceUuid' => StoreAuth::deviceUuid(),
+            'deviceName' => StoreAuth::deviceName(),
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function loginInput(): array
+    {
+        return [
+            'email' => Request::input('email'),
+            'password' => Request::input('password'),
+            'code' => Request::input('code'),
+            'device_uuid' => StoreAuth::deviceUuid(),
+            'device_name' => StoreAuth::deviceName(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function registerInput(): array
+    {
+        return [
+            'first_name' => Request::input('first_name'),
+            'last_name' => Request::input('last_name'),
+            'email' => Request::input('email'),
+            'password' => Request::input('password'),
+            'password_confirmation' => Request::input('password_confirmation'),
+            'phone' => Request::input('phone'),
+            'device_uuid' => StoreAuth::deviceUuid(),
+            'device_name' => StoreAuth::deviceName(),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function registerFields(): array
+    {
+        return [
+            'first_name' => (string) Request::input('first_name', ''),
+            'last_name' => (string) Request::input('last_name', ''),
+            'email' => (string) Request::input('email', ''),
+            'phone' => (string) Request::input('phone', ''),
+        ];
+    }
+}

@@ -5,17 +5,17 @@
 ## Какво има към момента
 
 - **Сайт с плановете** — `plans/`. Това е представянето на проекта (етапи, страници, подготовка), не магазинът за клиенти. PHP страниците са в `plans/public/`, изгледите в `plans/views/`.
-- **Магазин за клиенти** — `web/`. Тук ще бъде истинският PHP SSR сайт (MVC + services). Папката е отделена нарочно, за да не се смесва с плановете.
+- **Магазин за клиенти** — `web/`. PHP SSR за витрината. Стиловете са Tailwind CSS + Font Awesome, Alpine.js е през npm (Vite build в `web/public/build/`). Рутерът е същият `App\Core\Router`, маршрутите са в `web/routes/web.php`. Eloquent е включен, за да ползва същите модели като API-то, когато има каталог.
 - **API** — `api/`. MVC + services, отговорите са JSON. Рутерът е в `api/app/Core/Router.php`, маршрутите в `api/routes/api.php`. Готов endpoint за проверка: `GET /health`.
 - **Админ панел** — `admin/`. Vite + React + Redux Toolkit. Има маршрути за вход и забравена парола (без форми още) и няма регистрация. API заявките минават през Vite proxy към JSON API.
-- **Docker** — `docker-compose.yml` в корена. Оттам се пускат всички услуги в една мрежа: MySQL, phpMyAdmin, Mailpit (локални имейли), PHP-FPM, Nginx (планове + API) и Vite за админа.
+- **Docker** — `docker-compose.yml` в корена. Оттам се пускат всички услуги в една мрежа: MySQL, phpMyAdmin, Mailpit (локални имейли), PHP-FPM, Nginx (планове + API + магазин), Vite за админа и Vite watch за стиловете на магазина (`store`).
 
 Планирано разделение:
 
 | Част | Технология | Директория | Състояние |
 |---|---|---|---|
 | Сайт с плановете | PHP | `plans/` | Готов за преглед |
-| Магазин (клиенти) | PHP SSR, MVC + services | `web/` | Предстои |
+| Магазин (клиенти) | PHP SSR, Tailwind, Alpine.js | `web/` | Начална конфигурация |
 | API | PHP, MVC + services, JSON | `api/` | Начална структура |
 | Админ панел | React / Redux | `admin/` | Вход и табло |
 | База данни | MySQL 8.4 + phpMyAdmin + Phinx | `database/` | Работи през Docker |
@@ -32,6 +32,7 @@
 | Сайт с плановете | http://localhost:8000 |
 | API | http://localhost:8080 |
 | API health (Postman) | http://localhost:8080/health |
+| Магазин (клиенти) | http://localhost:8082 |
 | phpMyAdmin | http://localhost:8081 |
 | Mailpit (имейли) | http://localhost:8026 |
 | Админ панел | http://localhost:5173 |
@@ -301,4 +302,4 @@ npm install
 npm run dev
 ```
 
-Портовете се сменят в `.env` (`PLANS_PORT`, `API_PORT`, `PHPMYADMIN_PORT`, `MAILPIT_UI_PORT`, `MYSQL_PORT`, `ADMIN_PORT`).
+Портовете се сменят в `.env` (`PLANS_PORT`, `API_PORT`, `WEB_PORT`, `PHPMYADMIN_PORT`, `MAILPIT_UI_PORT`, `MYSQL_PORT`, `ADMIN_PORT`).

@@ -11,6 +11,14 @@ class Router
 {
     protected array $routes = [];
 
+    /**
+     * @param null|callable(string, int, mixed): void $errorHandler
+     */
+    public function __construct(
+        private readonly mixed $errorHandler = null
+    ) {
+    }
+
     public function get(string $path, array $handler, array $middlewares = []): void
     {
         $this->addRoute('GET', $path, $handler, $middlewares);
@@ -109,6 +117,11 @@ class Router
 
     private function error(string $message, int $status = 400, mixed $errors = null): never
     {
+        if (is_callable($this->errorHandler)) {
+            ($this->errorHandler)($message, $status, $errors);
+            exit;
+        }
+
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
 

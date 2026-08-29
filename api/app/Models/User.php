@@ -16,6 +16,10 @@ class User extends Model
     public const ROLE_CUSTOMER = 'customer';
     public const ROLE_ADMIN = 'admin';
 
+    public const THEME_LIGHT = 'light';
+    public const THEME_DARK = 'dark';
+    public const THEME_SYSTEM = 'system';
+
     protected $fillable = [
         'first_name',
         'last_name',
@@ -26,6 +30,7 @@ class User extends Model
         'avatar_media_id',
         'role',
         'is_active',
+        'theme',
     ];
 
     protected $hidden = [
@@ -39,6 +44,7 @@ class User extends Model
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'is_active' => 'boolean',
+            'theme' => 'string',
         ];
     }
 
