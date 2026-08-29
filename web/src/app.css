@@ -140,3 +140,441 @@
     white-space: nowrap;
     pointer-events: none;
 }
+
+.store-card {
+    border: 1px solid var(--line);
+    background: var(--canvas);
+    padding: 1.35rem 1.4rem 1.5rem;
+}
+
+.store-card h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1.05rem;
+    font-weight: 650;
+}
+
+.store-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    flex-shrink: 0;
+    background: var(--ink);
+    color: var(--on-accent);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.store-dl {
+    display: grid;
+    gap: 0.85rem;
+    margin: 1.15rem 0 0;
+}
+
+.store-dl div {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.store-dl dt {
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: var(--muted);
+}
+
+.store-dl dd {
+    margin: 0;
+    font-weight: 550;
+}
+
+.store-shortcut {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-height: 3.35rem;
+    padding: 0.55rem 0;
+    color: inherit;
+    text-decoration: none;
+    border-top: 1px solid var(--line);
+}
+
+.store-shortcut:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.store-shortcut svg,
+.store-shortcut-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+    flex-shrink: 0;
+}
+
+.store-shortcut-icon {
+    display: inline-flex;
+}
+
+.store-shortcut-icon svg {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.store-shortcut strong {
+    display: block;
+    font-size: 0.95rem;
+}
+
+.store-shortcut span {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.store-shortcut-soon {
+    cursor: default;
+    opacity: 0.72;
+}
+
+.store-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-top: 1rem;
+}
+
+.store-theme-option {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.65rem;
+    border: 1px solid var(--line);
+    background: var(--canvas);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.store-theme-option.is-active {
+    border-color: var(--ink);
+}
+
+.store-theme-preview {
+    height: 3.1rem;
+    border: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 1fr 2.1rem;
+    overflow: hidden;
+}
+
+.store-theme-preview b,
+.store-theme-preview i {
+    display: block;
+    font-style: normal;
+    font-weight: 400;
+}
+
+.store-theme-preview--light b { background: #fff; }
+.store-theme-preview--light i { background: #0a0a0a; }
+.store-theme-preview--dark b { background: #0a0a0a; }
+.store-theme-preview--dark i { background: #fafafa; }
+.store-theme-preview--system {
+    grid-template-columns: 1fr 1fr;
+}
+.store-theme-preview--system b { background: #fff; }
+.store-theme-preview--system i { background: #0a0a0a; }
+
+@media (max-width: 40rem) {
+    .store-theme-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.store-profile-cover {
+    height: 9.5rem;
+    background:
+        repeating-linear-gradient(
+            -18deg,
+            transparent,
+            transparent 11px,
+            rgb(255 255 255 / 0.07) 11px,
+            rgb(255 255 255 / 0.07) 12px
+        ),
+        #141414;
+}
+
+.store-profile-head {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.1rem;
+    margin-bottom: 1.75rem;
+}
+
+.store-profile-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 6.5rem;
+    height: 6.5rem;
+    flex-shrink: 0;
+    margin-top: -3.25rem;
+    border: 4px solid var(--canvas);
+    background: var(--canvas);
+    color: var(--ink);
+    box-shadow: 0 0 0 1px var(--line);
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.store-account-layout {
+    display: grid;
+    grid-template-columns: 15.75rem minmax(0, 1fr);
+    gap: 1.75rem;
+    align-items: start;
+}
+
+.store-account-kicker {
+    margin: 0 0 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.store-account-nav {
+    display: grid;
+    border: 1px solid var(--line);
+}
+
+.store-account-nav a,
+.store-account-nav button {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    margin: 0;
+    padding: 0.8rem 0.95rem;
+    border: 0;
+    border-left: 2px solid transparent;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 550;
+    font-size: 0.92rem;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.store-account-nav a + a,
+.store-account-nav a + form,
+.store-account-nav form {
+    border-top: 1px solid var(--line);
+}
+
+.store-account-nav a:hover,
+.store-account-nav button:hover {
+    background: color-mix(in srgb, var(--ink) 6%, var(--canvas));
+}
+
+.store-account-nav a.is-active {
+    border-left-color: var(--ink);
+    font-weight: 650;
+}
+
+.store-account-nav-icon,
+.store-account-nav-icon svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+}
+
+.store-account-nav-icon {
+    display: inline-flex;
+}
+
+.store-account-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.store-account-lead {
+    margin: 0 0 1.2rem;
+    max-width: 36rem;
+    font-size: 1.02rem;
+    line-height: 1.45;
+}
+
+.store-account-stat {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 0.28rem;
+    color: inherit;
+    text-decoration: none;
+    padding-right: 2.2rem;
+    transition: border-color 120ms ease;
+}
+
+.store-account-stat:hover {
+    border-color: var(--ink);
+}
+
+.store-account-stat-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.35rem;
+    height: 2.35rem;
+    margin-bottom: 0.45rem;
+    border: 1px solid var(--line);
+}
+
+.store-account-stat-icon svg {
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
+.store-account-stat strong {
+    font-size: 1.7rem;
+    line-height: 1;
+    letter-spacing: -0.03em;
+}
+
+.store-account-stat-label {
+    font-size: 0.92rem;
+    font-weight: 650;
+}
+
+.store-account-stat-hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+.store-account-stat-go {
+    position: absolute;
+    top: 1.2rem;
+    right: 0.95rem;
+    display: inline-flex;
+    color: var(--muted);
+}
+
+.store-account-stat-go svg {
+    width: 1.05rem;
+    height: 1.05rem;
+}
+
+.store-account-dash {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.store-account-facts {
+    list-style: none;
+    margin: 0.85rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.15rem;
+}
+
+.store-account-facts li {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.65rem 0;
+    border-top: 1px solid var(--line);
+}
+
+.store-account-facts li:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.store-account-fact-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.15rem;
+    height: 2.15rem;
+    flex-shrink: 0;
+    border: 1px solid var(--line);
+}
+
+.store-account-fact-icon svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.store-account-facts li > div span {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: var(--muted);
+}
+
+.store-account-facts li > div strong {
+    display: block;
+    margin-top: 0.12rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.store-time {
+    border-bottom: 1px dotted var(--line);
+    cursor: default;
+}
+
+.store-time:focus {
+    outline: 1px solid var(--ink);
+    outline-offset: 2px;
+}
+
+@media (max-width: 48rem) {
+    .store-account-layout {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .store-account-nav {
+        display: flex;
+        overflow-x: auto;
+    }
+
+    .store-account-nav a,
+    .store-account-nav button {
+        flex: 0 0 auto;
+        border-left: 0;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+    }
+
+    .store-account-nav a + a,
+    .store-account-nav a + form,
+    .store-account-nav form {
+        border-top: 0;
+        border-left: 1px solid var(--line);
+    }
+
+    .store-account-nav a.is-active {
+        border-left-color: transparent;
+        border-bottom-color: var(--ink);
+    }
+
+    .store-account-stats,
+    .store-account-dash {
+        grid-template-columns: 1fr;
+    }
+
+    .store-profile-avatar {
+        width: 5.25rem;
+        height: 5.25rem;
+        margin-top: -2.6rem;
+        font-size: 1.2rem;
+    }
+}

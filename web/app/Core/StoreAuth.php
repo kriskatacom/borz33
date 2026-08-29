@@ -40,6 +40,30 @@ class StoreAuth
         return $token !== '' && hash_equals(self::csrf(), $token);
     }
 
+    public static function setFlash(string $message, bool $error = false): void
+    {
+        $_SESSION['store_flash'] = [
+            'message' => $message,
+            'error' => $error,
+        ];
+    }
+
+    /** @return array{message: string, error: bool}|null */
+    public static function pullFlash(): ?array
+    {
+        $flash = $_SESSION['store_flash'] ?? null;
+        unset($_SESSION['store_flash']);
+
+        if (!is_array($flash) || !isset($flash['message']) || !is_string($flash['message'])) {
+            return null;
+        }
+
+        return [
+            'message' => $flash['message'],
+            'error' => (bool) ($flash['error'] ?? false),
+        ];
+    }
+
     public static function deviceUuid(): string
     {
         return (string) ($_COOKIE[self::DEVICE_COOKIE] ?? '');

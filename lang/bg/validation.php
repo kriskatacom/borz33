@@ -36,6 +36,7 @@ return [
         'password' => 'парола',
         'password_confirmation' => 'потвърждение на паролата',
         'phone' => 'телефон',
+        'current_password' => 'текуща парола',
         'role' => 'роля',
         'is_active' => 'активен',
     ],

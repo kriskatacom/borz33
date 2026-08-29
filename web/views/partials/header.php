@@ -48,7 +48,9 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
                     >
                         <div class="border border-line bg-canvas py-1 shadow-lg">
                             <p class="px-3 py-2 text-xs text-muted"><?= htmlspecialchars($currentUser->fullName(), ENT_QUOTES, 'UTF-8') ?></p>
-                            <a class="block px-3 py-2.5 text-sm font-semibold no-underline hover:bg-ink hover:text-on-accent" href="/account">Профил</a>
+                            <a class="block px-3 py-2.5 text-sm font-semibold no-underline hover:bg-ink hover:text-on-accent" href="/account">Табло</a>
+                            <a class="block px-3 py-2.5 text-sm font-semibold no-underline hover:bg-ink hover:text-on-accent" href="/account/details">Данни на акаунта</a>
+                            <a class="block px-3 py-2.5 text-sm font-semibold no-underline hover:bg-ink hover:text-on-accent" href="/account/password">Парола</a>
                             <form method="post" action="/logout">
                                 <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
                                 <button type="submit" class="block w-full border-0 bg-transparent px-3 py-2.5 text-left text-sm font-semibold text-ink hover:bg-ink hover:text-on-accent">Изход</button>

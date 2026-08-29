@@ -8,7 +8,6 @@ use App\Core\Auth;
 use App\Core\Request;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
-use App\Models\User;
 use App\Services\Auth\EmailVerificationService;
 use App\Services\Auth\LoginService;
 use App\Services\Auth\RegisterService;
@@ -241,37 +240,6 @@ class AuthController extends Controller
         Auth::set(null);
         StoreAuth::clearToken();
         $this->redirect('/');
-    }
-
-    public function showProfile(): never
-    {
-        $user = $this->requireUser();
-
-        $this->view('account', [
-            'title' => 'Профил · Borz33',
-            'user' => $user,
-        ]);
-    }
-
-    public function updateTheme(): never
-    {
-        $user = $this->requireUser();
-        $this->assertCsrf();
-
-        $theme = (string) Request::input('theme', User::THEME_SYSTEM);
-        $allowed = [User::THEME_LIGHT, User::THEME_DARK, User::THEME_SYSTEM];
-
-        if (!in_array($theme, $allowed, true)) {
-            $this->view('account', [
-                'title' => 'Профил · Borz33',
-                'user' => $user,
-                'message' => 'Невалидна тема.',
-                'isError' => true,
-            ]);
-        }
-
-        $user->forceFill(['theme' => $theme])->save();
-        $this->redirect('/account');
     }
 
     /** @param array<string, mixed> $extra */
