@@ -6,6 +6,7 @@ namespace Store\Core;
 
 use App\Models\Category;
 use Illuminate\Support\Collection;
+use Store\Services\StoreCart;
 
 class View
 {
@@ -18,6 +19,7 @@ class View
         $data['currentPath'] = \App\Core\Request::path();
         $data['currentUser'] = \App\Core\Auth::user();
         $data['csrf'] = StoreAuth::csrf();
+        $data['cartCount'] = StoreCart::count();
         $data['navCategories'] = self::navCategories();
         $data['content'] = self::capture($view, $data);
         echo self::capture('layout', $data);

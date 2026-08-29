@@ -12,9 +12,13 @@ use Store\Controllers\ShopController;
 $router->get('/', [HomeController::class, 'index']);
 $router->get('/catalog', [ShopController::class, 'catalog']);
 $router->get('/catalog/{slug}', [ShopController::class, 'catalog']);
+$router->get('/products/{slug}', [ShopController::class, 'product']);
+$router->post('/products/{slug}/cart', [ShopController::class, 'addToCart']);
 $router->get('/search/products', [ShopController::class, 'search']);
 $router->get('/favorites', [ShopController::class, 'favorites']);
 $router->get('/cart', [ShopController::class, 'cart']);
+$router->post('/cart/{index}', [ShopController::class, 'updateCart']);
+$router->post('/cart/{index}/delete', [ShopController::class, 'removeCart']);
 
 $router->get('/login', [AuthController::class, 'showLogin']);
 $router->post('/login', [AuthController::class, 'login']);

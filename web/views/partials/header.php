@@ -8,11 +8,13 @@ use Store\Core\Html;
 /** @var \App\Models\User|null $currentUser */
 /** @var string $csrf */
 /** @var \Illuminate\Support\Collection<int, \App\Models\Category> $navCategories */
+/** @var int $cartCount */
 
 $currentPath = $currentPath ?? '/';
 $currentUser = $currentUser ?? null;
 $csrf = $csrf ?? '';
 $navCategories = $navCategories ?? collect();
+$cartCount = (int) ($cartCount ?? 0);
 $catalogActive = store_nav_active('/catalog', $currentPath);
 $accountLabel = $currentUser !== null ? 'Акаунт' : 'Вход';
 $accountActive = $currentPath === '/login' || store_nav_active('/account', $currentPath);
@@ -61,7 +63,7 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
             <?php endif; ?>
 
             <?php Html::iconLink('/favorites', 'heart', 'Любими', ['active' => store_nav_active('/favorites', $currentPath), 'badge' => '0']); ?>
-            <?php Html::iconLink('/cart', 'cart', 'Количка', ['active' => store_nav_active('/cart', $currentPath), 'badge' => '0']); ?>
+            <?php Html::iconLink('/cart', 'cart', 'Количка', ['active' => store_nav_active('/cart', $currentPath), 'badge' => $cartCount > 0 ? (string) $cartCount : null]); ?>
         </div>
 
         <form

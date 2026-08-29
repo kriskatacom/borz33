@@ -40,14 +40,12 @@ export default defineConfig(({ command }) => {
       port: 5174,
       strictPort: true,
       cors: true,
-      origin: 'http://localhost:5174',
       allowedHosts: true,
       watch: {
         usePolling: true,
         interval: 300,
       },
       hmr: {
-        host: 'localhost',
         clientPort: 5174,
       },
     },
