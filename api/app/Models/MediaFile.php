@@ -49,6 +49,11 @@ class MediaFile extends Model
         return $this->hasMany(Category::class);
     }
 
+    public function banners(): HasMany
+    {
+        return $this->hasMany(Banner::class);
+    }
+
     public function isImage(): bool
     {
         return $this->kind === self::KIND_IMAGE;

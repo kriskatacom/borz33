@@ -7,6 +7,8 @@ import { hydrateSession } from '@/features/auth/authThunks';
 import { ThemeProvider } from '@/components/theme-provider';
 import { LoadingProvider } from '@/components/loading-provider';
 import { Toaster } from '@/components/ui/Toaster';
+import { BannerFormPage } from '@/pages/BannerFormPage';
+import { BannersPage } from '@/pages/BannersPage';
 import { CategoriesPage } from '@/pages/CategoriesPage';
 import { CategoryFormPage } from '@/pages/CategoryFormPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
@@ -59,6 +61,9 @@ export function App() {
               <Route path={routes.pagesNew} element={<PageFormPage />} />
               <Route path={routes.pagesEdit} element={<PageFormPage />} />
               <Route path={routes.pages} element={<PagesPage />} />
+              <Route path={routes.bannersNew} element={<BannerFormPage />} />
+              <Route path={routes.bannersEdit} element={<BannerFormPage />} />
+              <Route path={routes.banners} element={<BannersPage />} />
               <Route path={routes.content} element={<Navigate to={routes.pages} replace />} />
               <Route path={routes.campaigns} element={<ComingSoonPage />} />
               <Route path={routes.shipments} element={<ComingSoonPage />} />

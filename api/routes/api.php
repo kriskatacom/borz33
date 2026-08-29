@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\Admin\BannersController;
 use App\Controllers\Admin\CategoriesController;
 use App\Controllers\Admin\MediaController;
 use App\Controllers\Admin\PagesController;
@@ -63,6 +64,14 @@ $router->put('/admin/pages/{id}', [PagesController::class, 'update'], $admin);
 $router->patch('/admin/pages/{id}', [PagesController::class, 'update'], $admin);
 $router->delete('/admin/pages/{id}', [PagesController::class, 'destroy'], $admin);
 $router->post('/admin/pages/{id}/restore', [PagesController::class, 'restore'], $admin);
+
+$router->get('/admin/banners', [BannersController::class, 'index'], $admin);
+$router->post('/admin/banners', [BannersController::class, 'store'], $admin);
+$router->get('/admin/banners/{id}', [BannersController::class, 'show'], $admin);
+$router->put('/admin/banners/{id}', [BannersController::class, 'update'], $admin);
+$router->patch('/admin/banners/{id}', [BannersController::class, 'update'], $admin);
+$router->delete('/admin/banners/{id}', [BannersController::class, 'destroy'], $admin);
+$router->post('/admin/banners/{id}/restore', [BannersController::class, 'restore'], $admin);
 
 $router->get('/admin/categories', [CategoriesController::class, 'index'], $admin);
 $router->post('/admin/categories', [CategoriesController::class, 'store'], $admin);

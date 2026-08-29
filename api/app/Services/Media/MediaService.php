@@ -7,6 +7,7 @@ namespace App\Services\Media;
 use App\Core\Auth;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
+use App\Models\Banner;
 use App\Models\MediaFile;
 use App\Models\ProductImage;
 use App\Models\User;
@@ -111,6 +112,10 @@ class MediaService
 
     public function delete(MediaFile $file): void
     {
+        if (Banner::query()->where('media_file_id', $file->id)->exists()) {
+            throw new AuthException('Файлът се използва от банер и не може да бъде изтрит.', 409);
+        }
+
         ProductImage::query()->where('media_file_id', $file->id)->delete();
         User::query()->where('avatar_media_id', $file->id)->update([
             'avatar_path' => null,

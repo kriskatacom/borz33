@@ -264,6 +264,7 @@ h1 {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
+  align-self: start;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--field);
@@ -392,6 +393,108 @@ h1 {
 .field-error,
 .form-message.is-error {
   color: var(--coral);
+}
+
+.text-editor {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--field);
+}
+
+.text-editor.is-invalid {
+  border-color: var(--coral);
+}
+
+.text-editor.is-disabled {
+  opacity: 0.6;
+}
+
+.text-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.text-editor .ProseMirror {
+  min-height: 8.5rem;
+  padding: 14px 16px;
+  outline: none;
+  color: var(--foreground);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.text-editor .ProseMirror p {
+  margin: 0;
+}
+
+.text-editor .ProseMirror p + p {
+  margin-top: 0.7rem;
+}
+
+.text-editor .ProseMirror strong {
+  font-weight: 700;
+}
+
+.text-editor .ProseMirror em {
+  font-style: italic;
+}
+
+.text-editor .ProseMirror u {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.text-editor .ProseMirror ul,
+.text-editor .ProseMirror ol {
+  margin: 0.7rem 0 0;
+  padding-inline-start: 2.35rem;
+  list-style-position: outside;
+}
+
+.text-editor .ProseMirror ul:has(+ *),
+.text-editor .ProseMirror ol:has(+ *) {
+  margin-bottom: 0.95rem;
+}
+
+.text-editor .ProseMirror ul {
+  list-style-type: disc;
+}
+
+.text-editor .ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.text-editor .ProseMirror ul ul,
+.text-editor .ProseMirror ol ol,
+.text-editor .ProseMirror ul ol,
+.text-editor .ProseMirror ol ul {
+  margin-top: 0.35rem;
+  padding-inline-start: 1.5rem;
+}
+
+.text-editor .ProseMirror ul ul {
+  list-style-type: circle;
+}
+
+.text-editor .ProseMirror li {
+  display: list-item;
+  padding-left: 0.2rem;
+}
+
+.text-editor .ProseMirror li + li {
+  margin-top: 0.35rem;
+}
+
+.text-editor .ProseMirror li::marker {
+  color: var(--muted-foreground);
+}
+
+.text-editor .ProseMirror > :first-child {
+  margin-top: 0;
 }
 
 .form-message {
@@ -847,6 +950,7 @@ h1 {
 .form-grid {
   display: grid;
   gap: 16px;
+  align-items: start;
 }
 
 .check {

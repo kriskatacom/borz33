@@ -8,6 +8,7 @@
 @theme inline {
     --font-sans: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
     --color-canvas: var(--canvas);
+    --color-surface: var(--surface);
     --color-ink: var(--ink);
     --color-muted: var(--muted);
     --color-line: var(--line);
@@ -19,6 +20,7 @@
 [data-theme="light"] {
     color-scheme: light;
     --canvas: #ffffff;
+    --surface: #efefef;
     --ink: #0a0a0a;
     --muted: #525252;
     --line: #e5e5e5;
@@ -29,6 +31,7 @@
 [data-theme="dark"] {
     color-scheme: dark;
     --canvas: #0a0a0a;
+    --surface: #1f1f1f;
     --ink: #fafafa;
     --muted: #a3a3a3;
     --line: #262626;
@@ -533,6 +536,272 @@
 .store-time:focus {
     outline: 1px solid var(--ink);
     outline-offset: 2px;
+}
+
+.store-banner {
+    display: grid;
+    margin-bottom: 1.75rem;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    background: var(--surface);
+}
+
+.store-banner-media {
+    display: grid;
+    min-height: 14rem;
+    min-width: 0;
+    background: var(--line);
+}
+
+.store-banner-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.store-banner:not(.store-banner--overlay) .store-banner-copy {
+    background: var(--surface);
+}
+
+.store-banner-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 1.35rem 1.4rem 1.5rem;
+}
+
+.store-banner-title {
+    margin: 0;
+    font-size: 1.5rem;
+    line-height: 1.25;
+    font-weight: 600;
+}
+
+.store-banner-text {
+    margin: 0.85rem 0 0;
+    color: var(--muted);
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+.store-banner-text p {
+    margin: 0;
+}
+
+.store-banner-text p + p {
+    margin-top: 0.7rem;
+}
+
+.store-banner-text strong,
+.store-banner-text b {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.store-banner-text em,
+.store-banner-text i {
+    font-style: italic;
+}
+
+.store-banner-text u {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+}
+
+.store-banner-text ul,
+.store-banner-text ol {
+    margin: 0.7rem 0 0;
+    padding-inline-start: 2.35rem;
+    list-style-position: outside;
+}
+
+.store-banner-text ul:has(+ *),
+.store-banner-text ol:has(+ *) {
+    margin-bottom: 0.95rem;
+}
+
+.store-banner-text ul {
+    list-style-type: disc;
+}
+
+.store-banner-text ol {
+    list-style-type: decimal;
+}
+
+.store-banner-text ul ul,
+.store-banner-text ol ol,
+.store-banner-text ul ol,
+.store-banner-text ol ul {
+    margin-top: 0.35rem;
+    padding-inline-start: 1.5rem;
+}
+
+.store-banner-text ul ul {
+    list-style-type: circle;
+}
+
+.store-banner-text li {
+    display: list-item;
+    padding-left: 0.2rem;
+}
+
+.store-banner-text li + li {
+    margin-top: 0.35rem;
+}
+
+.store-banner-text li::marker {
+    color: var(--muted);
+}
+
+.store-banner-text > :first-child {
+    margin-top: 0;
+}
+
+.store-banner-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1rem;
+}
+
+.store-banner-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 1rem;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.store-banner-btn--ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--ink);
+}
+
+@media (min-width: 48rem) {
+    .store-banner--split {
+        grid-template-columns: 1.1fr 1fr;
+        min-height: 18rem;
+    }
+
+    .store-banner--split .store-banner-media {
+        min-height: 100%;
+    }
+
+    .store-banner--split .store-banner-copy {
+        padding: 1.75rem 1.9rem;
+    }
+}
+
+.store-banner--overlay {
+    min-height: 22rem;
+}
+
+.store-banner--overlay .store-banner-media,
+.store-banner--overlay .store-banner-copy {
+    grid-area: 1 / 1;
+}
+
+.store-banner--overlay .store-banner-media {
+    min-height: 22rem;
+}
+
+.store-banner--overlay .store-banner-copy {
+    z-index: 1;
+    justify-content: flex-end;
+    padding: 2rem 1.5rem 1.7rem;
+    background: linear-gradient(180deg, transparent 18%, color-mix(in srgb, var(--ink) 78%, transparent) 100%);
+    color: var(--on-accent);
+}
+
+.store-banner--overlay .store-banner-title {
+    font-size: 1.85rem;
+}
+
+.store-banner--overlay .store-banner-text {
+    color: color-mix(in srgb, var(--on-accent) 82%, transparent);
+}
+
+.store-banner--overlay .store-banner-text strong,
+.store-banner--overlay .store-banner-text b {
+    color: var(--on-accent);
+}
+
+.store-banner--overlay .store-banner-text li::marker {
+    color: color-mix(in srgb, var(--on-accent) 70%, transparent);
+}
+
+.store-banner--overlay .store-banner-btn {
+    border-color: var(--on-accent);
+    background: var(--on-accent);
+    color: var(--ink);
+}
+
+.store-banner--overlay .store-banner-btn--ghost {
+    background: transparent;
+    color: var(--on-accent);
+    border-color: var(--on-accent);
+}
+
+.store-banner--stack .store-banner-media {
+    min-height: 16rem;
+}
+
+.store-banner--stack .store-banner-copy {
+    padding: 1.25rem 1.35rem 1.45rem;
+}
+
+.store-hero {
+    margin-bottom: 1.75rem;
+}
+
+.store-hero .store-banner {
+    margin-bottom: 0;
+}
+
+@media (min-width: 48rem) {
+    .store-banner--overlay {
+        min-height: 26rem;
+    }
+
+    .store-banner--overlay .store-banner-media {
+        min-height: 26rem;
+    }
+
+    .store-banner--overlay .store-banner-copy {
+        padding: 2.4rem 2rem 2rem;
+    }
+
+    .store-banner--stack .store-banner-media {
+        min-height: 18rem;
+    }
+
+    .store-hero .store-banner--split,
+    .store-hero .store-banner--stack {
+        grid-template-columns: 1.7fr 1fr;
+        min-height: 22rem;
+    }
+
+    .store-hero .store-banner--stack .store-banner-media,
+    .store-hero .store-banner--split .store-banner-media {
+        min-height: 100%;
+        height: 100%;
+        aspect-ratio: auto;
+    }
+
+    .store-hero .store-banner--stack .store-banner-copy,
+    .store-hero .store-banner--split .store-banner-copy {
+        width: auto;
+        margin-inline: 0;
+        padding: 1.75rem 1.9rem;
+    }
 }
 
 @media (max-width: 48rem) {
