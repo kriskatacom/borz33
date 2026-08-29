@@ -1,20 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { FolderPlus } from 'lucide-react';
 import { ApiError } from '@/api/client';
-import { listCategoryTree } from '@/api/categories';
-import { listProducts, type ProductListItem } from '@/api/products';
+import {
+  deleteCategory,
+  listCategories,
+  listCategoryTree,
+  restoreCategory,
+  type CategoryListItem,
+} from '@/api/categories';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { DataTable, DATA_TABLE_PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/components/data-table/DataTable';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
+import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getProductsColumns } from '@/features/products/productsColumns';
+import { getCategoriesColumns } from '@/features/categories/categoriesColumns';
 import { flattenCategoryTree } from '@/features/categories/categoryTree';
 import { PageTreeSelect } from '@/features/pages/PageTreeSelect';
-import { toast } from '@/lib/toast';
+import { toast, toastError } from '@/lib/toast';
 
 function parsePageSize(raw: string | null): number {
   const value = Number(raw);
@@ -22,30 +30,63 @@ function parsePageSize(raw: string | null): number {
   return (DATA_TABLE_PAGE_SIZES as readonly number[]).includes(value) ? value : DEFAULT_PAGE_SIZE;
 }
 
-export function ProductsPage() {
+export function CategoriesPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState(params.get('q') ?? '');
-  const [products, setProducts] = useState<ProductListItem[]>([]);
+  const [categories, setCategories] = useState<CategoryListItem[]>([]);
   const [treeOptions, setTreeOptions] = useState<ReturnType<typeof flattenCategoryTree>>([]);
   const [total, setTotal] = useState(0);
   const [lastPage, setLastPage] = useState(1);
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [pending, setPending] = useState<CategoryListItem | null>(null);
+  const [acting, setActing] = useState(false);
+  const [treeTick, setTreeTick] = useState(0);
   useGlobalLoading(busy);
 
   const filters = useMemo(
     () => ({
       q: params.get('q') ?? '',
       status: params.get('status') ?? 'all',
-      category: params.get('category') ?? 'all',
+      parent: params.get('parent') ?? 'all',
       page: Number(params.get('page') ?? '1') || 1,
       per_page: parsePageSize(params.get('per_page')),
     }),
     [params]
   );
 
-  const columns = useMemo(() => getProductsColumns(), []);
+  const depthById = useMemo(() => {
+    const depths: Record<number, number> = {};
+
+    for (const option of treeOptions) {
+      depths[option.id] = option.depth;
+    }
+
+    return depths;
+  }, [treeOptions]);
+
+  const listedCategories = useMemo(() => {
+    if (treeOptions.length === 0) {
+      return categories;
+    }
+
+    const order = new Map(treeOptions.map((option, index) => [option.id, index]));
+
+    return [...categories].sort(
+      (left, right) => (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+    );
+  }, [categories, treeOptions]);
+
+  const columns = useMemo(
+    () =>
+      getCategoriesColumns({
+        onRestore: setPending,
+        onDelete: setPending,
+        depthById,
+      }),
+    [depthById]
+  );
 
   function updateParams(next: Record<string, string>, resetPage = true) {
     const merged = new URLSearchParams(params);
@@ -83,14 +124,14 @@ export function ProductsPage() {
       setMessage(null);
 
       try {
-        const response = await listProducts(token, {
+        const response = await listCategories(token, {
           ...filters,
-          category: filters.category === 'all' ? undefined : filters.category,
+          parent: filters.parent === 'all' ? undefined : filters.parent,
         });
         if (cancelled) {
           return;
         }
-        setProducts(response.data.products);
+        setCategories(response.data.categories);
         setTotal(response.data.pagination.total);
         setLastPage(response.data.pagination.last_page);
       } catch (error) {
@@ -98,7 +139,7 @@ export function ProductsPage() {
           const text = error instanceof ApiError ? error.message : 'Списъкът не можа да се зареди.';
           setMessage(text);
           toast.error(text);
-          setProducts([]);
+          setCategories([]);
         }
       } finally {
         if (!cancelled) {
@@ -135,33 +176,72 @@ export function ProductsPage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, treeTick]);
+
+  async function confirmPending() {
+    if (!pending) {
+      return;
+    }
+
+    setActing(true);
+
+    try {
+      if (pending.deleted_at) {
+        const response = await restoreCategory(token, pending.id);
+        toast.success(response.message || 'Категорията е възстановена.');
+      } else {
+        const response = await deleteCategory(token, pending.id);
+        toast.success(response.message || 'Категорията е изтрита.');
+      }
+      setPending(null);
+      setTreeTick((current) => current + 1);
+      const response = await listCategories(token, {
+        ...filters,
+        parent: filters.parent === 'all' ? undefined : filters.parent,
+      });
+      setCategories(response.data.categories);
+      setTotal(response.data.pagination.total);
+      setLastPage(response.data.pagination.last_page);
+    } catch (error) {
+      toastError(error, 'Действието не беше успешно.');
+    } finally {
+      setActing(false);
+    }
+  }
 
   return (
     <div className="page">
       <PageHeader
-        title="Продукти"
-        help="Каталог с тениски и подобни артикули. От тук търсите, филтрирате и преглеждате продукт с варианти и параметри."
+        title="Категории"
+        help="Дърво от категории за каталога. Можете да влагате категории и да им зададете изображение."
         crumbs={[
           { label: 'Табло', to: routes.home },
-          { label: 'Продукти' },
+          { label: 'Категории' },
         ]}
+        actions={
+          <Button asChild>
+            <Link to={routes.categoriesNew}>
+              <FolderPlus />
+              Нова категория
+            </Link>
+          </Button>
+        }
       />
 
       <form className="filters" onSubmit={(event) => event.preventDefault()}>
         <Field
           id="q"
           label="Търсене"
-          help="Търси по име, slug, SKU или кратко описание. Резултатите се обновяват докато пишете."
+          help="Търси по име или адрес. Резултатите се обновяват докато пишете."
           value={search}
-          placeholder="Име, SKU или описание"
+          placeholder="Име или адрес"
           onChange={(event) => setSearch(event.target.value)}
         />
         <div className="field">
           <LabelWithHelp
             htmlFor="status"
             label="Статус"
-            help="По подразбиране изтритите са скрити. Активен е в каталога, неактивен е спрян."
+            help="По подразбиране изтритите са скрити. Активна може да се показва, неактивна е спряна, изтрита може да се възстанови."
           />
           <Select value={filters.status} onValueChange={(value) => updateParams({ status: value })}>
             <SelectTrigger id="status" className="w-full min-h-12 font-sans">
@@ -176,16 +256,16 @@ export function ProductsPage() {
           </Select>
         </div>
         <PageTreeSelect
-          id="category"
-          label="Категория"
-          help="Филтър по категория. „Без категория“ са продукти без избрана категория."
-          value={filters.category}
+          id="parent"
+          label="Родител"
+          help="Показва преките деца на избраната категория. Вложените категории са с дълги тирета."
+          value={filters.parent}
           options={treeOptions}
           extra={[
             { value: 'all', label: 'Всички' },
-            { value: 'none', label: 'Без категория' },
+            { value: 'root', label: 'Без родител' },
           ]}
-          onValueChange={(value) => updateParams({ category: value === 'all' ? '' : value })}
+          onValueChange={(value) => updateParams({ parent: value === 'all' ? '' : value })}
         />
       </form>
 
@@ -197,11 +277,11 @@ export function ProductsPage() {
 
       <DataTable
         columns={columns}
-        data={products}
-        getRowId={(product) => String(product.id)}
+        data={listedCategories}
+        getRowId={(category) => String(category.id)}
         loading={busy}
-        emptyMessage="Няма продукти за избраните филтри."
-        caption="Списък с продукти"
+        emptyMessage="Няма категории за избраните филтри."
+        caption="Списък с категории"
         pagination={{
           page: filters.page,
           lastPage,
@@ -212,6 +292,21 @@ export function ProductsPage() {
             updateParams({ per_page: pageSize === DEFAULT_PAGE_SIZE ? '' : String(pageSize) }),
         }}
       />
+
+      {pending ? (
+        <ConfirmDialog
+          title={pending.deleted_at ? 'Възстановяване' : 'Изтриване'}
+          message={
+            pending.deleted_at
+              ? `Да възстановим ли категорията „${pending.name}“?`
+              : `Да изтрием ли категорията „${pending.name}“? Може да я възстановите по-късно.`
+          }
+          confirmLabel={pending.deleted_at ? 'Възстанови' : 'Изтрий'}
+          busy={acting}
+          onCancel={() => setPending(null)}
+          onConfirm={() => void confirmPending()}
+        />
+      ) : null}
     </div>
   );
 }

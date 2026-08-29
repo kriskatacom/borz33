@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Eye, Images, Layers, List, Palette, Plus, Save, Share2, Shirt, Trash2, Type } from 'lucide-react';
 import { ApiError } from '@/api/client';
+import { listCategoryTree, type CategoryTreeNode } from '@/api/categories';
 import {
   getProduct,
   shareProductPersonalization,
@@ -25,6 +26,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { toast, toastError } from '@/lib/toast';
 import { ProductImagesEditor } from '@/features/products/ProductImagesSection';
+import { flattenCategoryTree } from '@/features/categories/categoryTree';
+import { PageTreeSelect } from '@/features/pages/PageTreeSelect';
 import { VariantImageField } from '@/features/products/VariantImageField';
 
 type ParameterDraft = { key: string; id?: number; name: string; value: string };
@@ -130,6 +133,8 @@ function GeneralForm({ product, token, onSaved }: SectionFormProps) {
   const [name, setName] = useState(product.name);
   const [slug, setSlug] = useState(product.slug);
   const [sku, setSku] = useState(product.sku ?? '');
+  const [categoryId, setCategoryId] = useState(product.category_id ? String(product.category_id) : 'none');
+  const [tree, setTree] = useState<CategoryTreeNode[]>([]);
   const [price, setPrice] = useState(moneyInput(product.price));
   const [compareAt, setCompareAt] = useState(moneyInput(product.compare_at_price));
   const [shortDescription, setShortDescription] = useState(product.short_description ?? '');
@@ -137,6 +142,29 @@ function GeneralForm({ product, token, onSaved }: SectionFormProps) {
   const [isActive, setIsActive] = useState(product.is_active);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTree() {
+      try {
+        const response = await listCategoryTree(token);
+        if (!cancelled) {
+          setTree(response.data.categories);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          toastError(error, 'Списъкът с категории не можа да се зареди.');
+        }
+      }
+    }
+
+    void loadTree();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -148,6 +176,7 @@ function GeneralForm({ product, token, onSaved }: SectionFormProps) {
         name: name.trim(),
         slug: slug.trim() === '' ? null : slug.trim(),
         sku: sku.trim() === '' ? null : sku.trim(),
+        category_id: categoryId === 'none' ? null : Number(categoryId),
         price: toNumber(price) ?? 0,
         compare_at_price: toNumber(compareAt),
         short_description: shortDescription.trim() === '' ? null : shortDescription.trim(),
@@ -172,6 +201,16 @@ function GeneralForm({ product, token, onSaved }: SectionFormProps) {
         <Field id="name" label="Име" help="Името, което се вижда в каталога." value={name} onChange={(event) => setName(event.target.value)} error={errors.name} />
         <Field id="slug" label="Адрес (slug)" help="Оставете празно, за да се генерира от името." value={slug} onChange={(event) => setSlug(event.target.value)} error={errors.slug} />
         <Field id="sku" label="SKU" help="Базов артикулен номер на продукта." value={sku} onChange={(event) => setSku(event.target.value)} error={errors.sku} />
+        <PageTreeSelect
+          id="category_id"
+          label="Категория"
+          help="По избор. Вложените категории са с дълги тирета."
+          value={categoryId}
+          options={flattenCategoryTree(tree)}
+          extra={[{ value: 'none', label: 'Няма' }]}
+          error={errors.category_id}
+          onValueChange={setCategoryId}
+        />
         <Field id="price" label="Цена" type="number" step="0.01" min="0" help="Базова цена „от“." value={price} onChange={(event) => setPrice(event.target.value)} error={errors.price} />
         <Field id="compare_at_price" label="Сравнителна цена" type="number" step="0.01" min="0" help="Стара цена, ако има намаление. Празно поле я маха." value={compareAt} onChange={(event) => setCompareAt(event.target.value)} error={errors.compare_at_price} />
         <SwitchField id="is_active" label="Активен" help="Неактивен продукт е скрит от каталога." checked={isActive} onCheckedChange={setIsActive} />

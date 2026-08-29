@@ -17,12 +17,14 @@ class ProductValidator
         $data = $this->blankToNull($data, [
             'slug',
             'sku',
+            'category_id',
             'short_description',
             'description',
             'compare_at_price',
             'personalization_label',
             'personalization_description',
         ]);
+        $data = $this->normalizeNullableId($data, 'category_id');
 
         $rules = $this->rules($productId);
 
@@ -52,6 +54,7 @@ class ProductValidator
                 Rule::unique('products', 'slug')->ignore($productId),
             ],
             'sku' => ['nullable', 'string', 'max:64', Rule::unique('products', 'sku')->ignore($productId)],
+            'category_id' => ['nullable', 'integer', 'min:1', Rule::exists('categories', 'id')->whereNull('deleted_at')],
             'short_description' => ['nullable', 'string', 'max:500'],
             'description' => ['nullable', 'string'],
             'price' => ['required', 'numeric', 'min:0'],
@@ -124,6 +127,25 @@ class ProductValidator
     }
 
     /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function normalizeNullableId(array $data, string $key): array
+    {
+        if (!array_key_exists($key, $data)) {
+            return $data;
+        }
+
+        $value = $data[$key];
+
+        if ($value === '' || $value === 'none' || $value === 'null' || $value === 0 || $value === '0') {
+            $data[$key] = null;
+        }
+
+        return $data;
+    }
+
+    /**
      * @param array<string, mixed> $rules
      * @param array<string, mixed> $data
      * @return array<string, mixed>
@@ -150,6 +172,7 @@ class ProductValidator
             'name' => 'име',
             'slug' => 'адрес',
             'sku' => 'SKU',
+            'category_id' => 'категория',
             'short_description' => 'кратко описание',
             'description' => 'описание',
             'price' => 'цена',

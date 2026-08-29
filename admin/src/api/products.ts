@@ -13,10 +13,18 @@ export type ProductImage = {
   sort_order: number;
 };
 
+export type ProductCategorySummary = {
+  id: number;
+  name: string;
+  slug: string;
+};
+
 export type ProductListItem = {
   id: number;
   name: string;
   slug: string;
+  category_id: number | null;
+  category: ProductCategorySummary | null;
   sku: string | null;
   short_description: string | null;
   price: string | number;
@@ -102,6 +110,7 @@ export type AdminProduct = ProductListItem & {
 export type ProductListFilters = {
   q?: string;
   status?: string;
+  category?: string;
   page?: number;
   per_page?: number;
 };

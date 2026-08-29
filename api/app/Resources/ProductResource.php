@@ -18,6 +18,7 @@ class ProductResource
     public static function toAdminArray(Product $product): array
     {
         $product->loadMissing([
+            'category',
             'parameters',
             'options.values',
             'variants.variantValues.option',
@@ -32,6 +33,8 @@ class ProductResource
             'id' => $product->id,
             'name' => $product->name,
             'slug' => $product->slug,
+            'category_id' => $product->category_id,
+            'category' => self::categorySummary($product),
             'sku' => $product->sku,
             'short_description' => $product->short_description,
             'description' => $product->description,
@@ -110,6 +113,8 @@ class ProductResource
             'id' => $product->id,
             'name' => $product->name,
             'slug' => $product->slug,
+            'category_id' => $product->category_id,
+            'category' => self::categorySummary($product),
             'sku' => $product->sku,
             'short_description' => $product->short_description,
             'price' => $product->price,
@@ -137,5 +142,21 @@ class ProductResource
         }
 
         return $items;
+    }
+
+    /** @return array{id: int, name: string, slug: string}|null */
+    private static function categorySummary(Product $product): ?array
+    {
+        $product->loadMissing('category');
+
+        if ($product->category === null) {
+            return null;
+        }
+
+        return [
+            'id' => $product->category->id,
+            'name' => $product->category->name,
+            'slug' => $product->category->slug,
+        ];
     }
 }

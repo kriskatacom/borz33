@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -17,6 +18,7 @@ class Product extends Model
     protected $fillable = [
         'name',
         'slug',
+        'category_id',
         'sku',
         'short_description',
         'description',
@@ -34,6 +36,7 @@ class Product extends Model
     protected function casts(): array
     {
         return [
+            'category_id' => 'integer',
             'price' => 'decimal:2',
             'compare_at_price' => 'decimal:2',
             'is_active' => 'boolean',
@@ -59,6 +62,11 @@ class Product extends Model
     public function allowsPersonalization(): bool
     {
         return $this->personalization_enabled === true;
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function parameters(): HasMany

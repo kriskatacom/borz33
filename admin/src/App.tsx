@@ -7,6 +7,8 @@ import { hydrateSession } from '@/features/auth/authThunks';
 import { ThemeProvider } from '@/components/theme-provider';
 import { LoadingProvider } from '@/components/loading-provider';
 import { Toaster } from '@/components/ui/Toaster';
+import { CategoriesPage } from '@/pages/CategoriesPage';
+import { CategoryFormPage } from '@/pages/CategoryFormPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { MediaPage } from '@/pages/MediaPage';
@@ -50,6 +52,9 @@ export function App() {
               <Route path={routes.productsEdit} element={<ProductEditPage />} />
               <Route path={routes.productsShow} element={<ProductViewPage />} />
               <Route path={routes.products} element={<ProductsPage />} />
+              <Route path={routes.categoriesNew} element={<CategoryFormPage />} />
+              <Route path={routes.categoriesEdit} element={<CategoryFormPage />} />
+              <Route path={routes.categories} element={<CategoriesPage />} />
               <Route path={routes.media} element={<MediaPage />} />
               <Route path={routes.pagesNew} element={<PageFormPage />} />
               <Route path={routes.pagesEdit} element={<PageFormPage />} />

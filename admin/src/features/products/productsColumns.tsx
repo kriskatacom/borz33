@@ -56,6 +56,13 @@ export function getProductsColumns() {
       meta: { help: 'Базов артикулен номер на продукта.' },
       cell: ({ row }) => row.original.sku || '—',
     }),
+    helper.accessor((product) => product.category?.name ?? '', {
+      id: 'category',
+      header: 'Категория',
+      sortFn: 'text',
+      meta: { help: 'Категорията на продукта. Празно означава без категория.' },
+      cell: ({ row }) => row.original.category?.name || '—',
+    }),
     helper.accessor((product) => Number(product.price), {
       id: 'price',
       header: 'Цена',

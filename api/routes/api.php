@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\Admin\CategoriesController;
 use App\Controllers\Admin\MediaController;
 use App\Controllers\Admin\PagesController;
 use App\Controllers\Admin\ProductImagesController;
@@ -62,6 +63,15 @@ $router->put('/admin/pages/{id}', [PagesController::class, 'update'], $admin);
 $router->patch('/admin/pages/{id}', [PagesController::class, 'update'], $admin);
 $router->delete('/admin/pages/{id}', [PagesController::class, 'destroy'], $admin);
 $router->post('/admin/pages/{id}/restore', [PagesController::class, 'restore'], $admin);
+
+$router->get('/admin/categories', [CategoriesController::class, 'index'], $admin);
+$router->post('/admin/categories', [CategoriesController::class, 'store'], $admin);
+$router->get('/admin/categories/tree', [CategoriesController::class, 'tree'], $admin);
+$router->get('/admin/categories/{id}', [CategoriesController::class, 'show'], $admin);
+$router->put('/admin/categories/{id}', [CategoriesController::class, 'update'], $admin);
+$router->patch('/admin/categories/{id}', [CategoriesController::class, 'update'], $admin);
+$router->delete('/admin/categories/{id}', [CategoriesController::class, 'destroy'], $admin);
+$router->post('/admin/categories/{id}/restore', [CategoriesController::class, 'restore'], $admin);
 
 $router->post('/admin/products', [ProductsController::class, 'store'], $admin);
 $router->get('/admin/products', [ProductsController::class, 'index'], $admin);

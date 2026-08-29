@@ -33,7 +33,7 @@ class ProductAdminService
         $query = $this->filteredQuery($filters);
         $total = (clone $query)->count();
         $products = $query
-            ->with('frontImage')
+            ->with(['frontImage', 'category'])
             ->withCount('variants')
             ->orderBy('sort_order')
             ->orderByDesc('id')
@@ -171,6 +171,14 @@ class ProductAdminService
             });
         }
 
+        $category = trim((string) ($filters['category'] ?? ''));
+
+        if ($category === 'none' || $category === '0') {
+            $query->whereNull('category_id');
+        } elseif (ctype_digit($category) && (int) $category > 0) {
+            $query->where('category_id', (int) $category);
+        }
+
         return $query;
     }
 
@@ -226,6 +234,10 @@ class ProductAdminService
             $attributes['sort_order'] = (int) $data['sort_order'];
         }
 
+        if (array_key_exists('category_id', $data)) {
+            $attributes['category_id'] = $this->nullableId($data['category_id']);
+        }
+
         return $attributes;
     }
 
@@ -255,6 +267,7 @@ class ProductAdminService
             'personalization_required' => (bool) $data['personalization_required'],
             'personalization_max_length' => (int) $data['personalization_max_length'],
             'sort_order' => (int) ($data['sort_order'] ?? 0),
+            'category_id' => $this->nullableId($data['category_id'] ?? null),
         ];
     }
 
@@ -707,6 +720,19 @@ class ProductAdminService
         $value = $value !== '' ? $value : 'option';
 
         return strtolower($value);
+    }
+
+    private function nullableId(mixed $value): ?int
+    {
+        if (is_int($value) && $value > 0) {
+            return $value;
+        }
+
+        if (is_string($value) && ctype_digit($value) && (int) $value > 0) {
+            return (int) $value;
+        }
+
+        return null;
     }
 
     private function fresh(Product $product): Product

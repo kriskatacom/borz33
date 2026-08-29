@@ -188,6 +188,18 @@ export function ProductViewPage() {
               </p>
               <dl className="mt-3 grid gap-2 sm:grid-cols-2">
                 <div>
+                  <dt className="text-muted-foreground">Категория</dt>
+                  <dd className="m-0 font-bold">
+                    {product.category ? (
+                      <Link to={`/categories/${product.category.id}`} className="text-foreground no-underline hover:underline">
+                        {product.category.name}
+                      </Link>
+                    ) : (
+                      '—'
+                    )}
+                  </dd>
+                </div>
+                <div>
                   <dt className="text-muted-foreground">SKU</dt>
                   <dd className="m-0 font-bold">{product.sku || '—'}</dd>
                 </div>
