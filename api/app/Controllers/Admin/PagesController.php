@@ -23,6 +23,11 @@ class PagesController extends Controller
         $this->ok($this->pages->paginate(Request::query()), 'Списък със страници.');
     }
 
+    public function tree(): never
+    {
+        $this->ok(['pages' => $this->pages->tree()], 'Дърво със страници.');
+    }
+
     public function show(string $id): never
     {
         $page = $this->pages->find($this->id($id), true);

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FilePlus } from 'lucide-react';
 import { ApiError } from '@/api/client';
-import { deletePage, listPages, restorePage, type PageListItem } from '@/api/pages';
+import { deletePage, listPages, listPageTree, restorePage, type PageListItem } from '@/api/pages';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { DataTable, DATA_TABLE_PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/components/data-table/DataTable';
@@ -14,6 +14,8 @@ import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getPagesColumns } from '@/features/pages/pagesColumns';
+import { PageTreeSelect } from '@/features/pages/PageTreeSelect';
+import { flattenPageTree } from '@/features/pages/pageTree';
 import { toast, toastError } from '@/lib/toast';
 
 function parsePageSize(raw: string | null): number {
@@ -27,31 +29,57 @@ export function PagesPage() {
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState(params.get('q') ?? '');
   const [pages, setPages] = useState<PageListItem[]>([]);
+  const [treeOptions, setTreeOptions] = useState<ReturnType<typeof flattenPageTree>>([]);
   const [total, setTotal] = useState(0);
   const [lastPage, setLastPage] = useState(1);
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState<PageListItem | null>(null);
   const [acting, setActing] = useState(false);
+  const [treeTick, setTreeTick] = useState(0);
   useGlobalLoading(busy);
 
   const filters = useMemo(
     () => ({
       q: params.get('q') ?? '',
       status: params.get('status') ?? 'all',
+      parent: params.get('parent') ?? 'all',
       page: Number(params.get('page') ?? '1') || 1,
       per_page: parsePageSize(params.get('per_page')),
     }),
     [params]
   );
 
+  const depthById = useMemo(() => {
+    const depths: Record<number, number> = {};
+
+    for (const option of treeOptions) {
+      depths[option.id] = option.depth;
+    }
+
+    return depths;
+  }, [treeOptions]);
+
+  const listedPages = useMemo(() => {
+    if (treeOptions.length === 0) {
+      return pages;
+    }
+
+    const order = new Map(treeOptions.map((option, index) => [option.id, index]));
+
+    return [...pages].sort(
+      (left, right) => (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+    );
+  }, [pages, treeOptions]);
+
   const columns = useMemo(
     () =>
       getPagesColumns({
         onRestore: setPending,
         onDelete: setPending,
+        depthById,
       }),
-    []
+    [depthById]
   );
 
   function updateParams(next: Record<string, string>, resetPage = true) {
@@ -90,7 +118,10 @@ export function PagesPage() {
       setMessage(null);
 
       try {
-        const response = await listPages(token, filters);
+        const response = await listPages(token, {
+          ...filters,
+          parent: filters.parent === 'all' ? undefined : filters.parent,
+        });
         if (cancelled) {
           return;
         }
@@ -118,6 +149,29 @@ export function PagesPage() {
     };
   }, [filters, token]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTree() {
+      try {
+        const response = await listPageTree(token);
+        if (!cancelled) {
+          setTreeOptions(flattenPageTree(response.data.pages));
+        }
+      } catch {
+        if (!cancelled) {
+          setTreeOptions([]);
+        }
+      }
+    }
+
+    void loadTree();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, treeTick]);
+
   async function confirmPending() {
     if (!pending) {
       return;
@@ -134,7 +188,11 @@ export function PagesPage() {
         toast.success(response.message || 'Страницата е изтрита.');
       }
       setPending(null);
-      const response = await listPages(token, filters);
+      setTreeTick((current) => current + 1);
+      const response = await listPages(token, {
+        ...filters,
+        parent: filters.parent === 'all' ? undefined : filters.parent,
+      });
       setPages(response.data.pages);
       setTotal(response.data.pagination.total);
       setLastPage(response.data.pagination.last_page);
@@ -191,6 +249,18 @@ export function PagesPage() {
             </SelectContent>
           </Select>
         </div>
+        <PageTreeSelect
+          id="parent"
+          label="Родител"
+          help="Показва преките деца на избраната страница. Вложените страници са с дълги тирета."
+          value={filters.parent}
+          options={treeOptions}
+          extra={[
+            { value: 'all', label: 'Всички' },
+            { value: 'root', label: 'Без родител' },
+          ]}
+          onValueChange={(value) => updateParams({ parent: value === 'all' ? '' : value })}
+        />
       </form>
 
       {message ? (
@@ -201,7 +271,7 @@ export function PagesPage() {
 
       <DataTable
         columns={columns}
-        data={pages}
+        data={listedPages}
         getRowId={(page) => String(page.id)}
         loading={busy}
         emptyMessage="Няма страници за избраните филтри."

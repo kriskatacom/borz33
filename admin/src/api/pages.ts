@@ -19,6 +19,8 @@ export type PageListItem = {
   id: number;
   title: string;
   slug: string;
+  parent_id: number | null;
+  parent: { id: number; title: string; slug: string } | null;
   is_active: boolean;
   sort_order: number;
   fields_count: number;
@@ -36,6 +38,7 @@ export type AdminPage = PageListItem & {
 export type PageListFilters = {
   q?: string;
   status?: string;
+  parent?: string;
   page?: number;
   per_page?: number;
 };
@@ -64,6 +67,7 @@ export type PageFieldPayload = {
 export type PagePayload = {
   title: string;
   slug?: string | null;
+  parent_id?: number | null;
   is_active: boolean;
   sort_order?: number;
   meta_title?: string | null;
@@ -73,6 +77,13 @@ export type PagePayload = {
 
 export function listPages(token: string, filters: PageListFilters) {
   return apiRequest<PageListData>('/admin/pages', { token, query: filters });
+}
+
+export function listPageTree(token: string) {
+  return apiRequest<{ pages: Array<{ id: number; title: string; slug: string; parent_id: number | null; sort_order: number }> }>(
+    '/admin/pages/tree',
+    { token }
+  );
 }
 
 export function getPage(token: string, id: number) {

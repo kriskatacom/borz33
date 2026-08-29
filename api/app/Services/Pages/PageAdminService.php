@@ -23,6 +23,7 @@ class PageAdminService
         $query = $this->filteredQuery($filters);
         $total = (clone $query)->count();
         $pages = $query
+            ->with(['parent'])
             ->withCount('fields')
             ->orderBy('sort_order')
             ->orderByDesc('id')
@@ -50,6 +51,30 @@ class PageAdminService
         }
 
         return $page;
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function tree(): array
+    {
+        $pages = Page::query()
+            ->orderBy('sort_order')
+            ->orderBy('title')
+            ->orderBy('id')
+            ->get(['id', 'title', 'slug', 'parent_id', 'sort_order']);
+
+        $items = [];
+
+        foreach ($pages as $page) {
+            $items[] = [
+                'id' => $page->id,
+                'title' => $page->title,
+                'slug' => $page->slug,
+                'parent_id' => $page->parent_id,
+                'sort_order' => $page->sort_order,
+            ];
+        }
+
+        return $items;
     }
 
     /** @param array<string, mixed> $data */
@@ -125,6 +150,14 @@ class PageAdminService
             });
         }
 
+        $parent = trim((string) ($filters['parent'] ?? ''));
+
+        if ($parent === 'root' || $parent === 'none' || $parent === '0') {
+            $query->whereNull('parent_id');
+        } elseif (ctype_digit($parent) && (int) $parent > 0) {
+            $query->where('parent_id', (int) $parent);
+        }
+
         return $query;
     }
 
@@ -141,6 +174,7 @@ class PageAdminService
             return [
                 'title' => $data['title'],
                 'slug' => $slug,
+                'parent_id' => $this->resolvedParentId($data['parent_id'] ?? null, null),
                 'is_active' => (bool) $data['is_active'],
                 'sort_order' => (int) ($data['sort_order'] ?? 0),
                 'meta_title' => $data['meta_title'] ?? null,
@@ -166,6 +200,10 @@ class PageAdminService
 
         if (array_key_exists('is_active', $data)) {
             $attributes['is_active'] = (bool) $data['is_active'];
+        }
+
+        if (array_key_exists('parent_id', $data)) {
+            $attributes['parent_id'] = $this->resolvedParentId($data['parent_id'], $pageId);
         }
 
         if (array_key_exists('sort_order', $data)) {
@@ -308,6 +346,34 @@ class PageAdminService
         return $candidate;
     }
 
+    private function resolvedParentId(mixed $value, ?int $pageId): ?int
+    {
+        $parentId = $this->nullableId($value);
+
+        if ($parentId === null) {
+            return null;
+        }
+
+        if ($pageId !== null && $parentId === $pageId) {
+            throw new ValidationException(['parent_id' => ['Страницата не може да бъде родител на себе си.']]);
+        }
+
+        $current = $parentId;
+        $guard = 0;
+
+        while ($current !== null && $guard < 64) {
+            if ($pageId !== null && $current === $pageId) {
+                throw new ValidationException(['parent_id' => ['Не може да изберете дете като родител.']]);
+            }
+
+            $current = Page::query()->where('id', $current)->value('parent_id');
+            $current = is_numeric($current) ? (int) $current : null;
+            $guard++;
+        }
+
+        return $parentId;
+    }
+
     private function nullableId(mixed $value): ?int
     {
         if (is_int($value) && $value > 0) {
@@ -323,7 +389,7 @@ class PageAdminService
 
     private function fresh(Page $page): Page
     {
-        $fresh = Page::query()->find($page->id);
+        $fresh = Page::query()->with('parent')->find($page->id);
 
         return $fresh ?? $page;
     }

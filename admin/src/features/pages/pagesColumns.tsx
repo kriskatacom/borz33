@@ -11,12 +11,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatDateTime, formatRelativeTime } from '@/lib/format';
+import { pageTreePrefix } from '@/features/pages/pageTree';
 
 const helper = createDataTableHelper<PageListItem>();
 
 type PagesColumnsOptions = {
   onRestore: (page: PageListItem) => void;
   onDelete: (page: PageListItem) => void;
+  depthById?: Record<number, number>;
 };
 
 function PagesRowActions({
@@ -61,22 +63,29 @@ function PagesRowActions({
   );
 }
 
-export function getPagesColumns({ onRestore, onDelete }: PagesColumnsOptions) {
+export function getPagesColumns({ onRestore, onDelete, depthById = {} }: PagesColumnsOptions) {
   return helper.columns([
     helper.accessor('title', {
       header: 'Страница',
       sortFn: 'text',
-      meta: { sticky: true, help: 'Заглавие и адрес. Отворете реда за редакция.' },
+      meta: { sticky: true, help: 'Заглавие и адрес. Децата са с дълги тирета според нивото.' },
       cell: ({ row }) => {
         const page = row.original;
+        const prefix = pageTreePrefix(depthById[page.id] ?? 0);
+        const title = (
+          <span className="whitespace-pre">
+            {prefix}
+            {page.title}
+          </span>
+        );
 
         return (
           <div className="min-w-48">
             {page.deleted_at ? (
-              <p className="m-0 font-bold text-foreground">{page.title}</p>
+              <p className="m-0 font-bold text-foreground">{title}</p>
             ) : (
               <Link to={`/pages/${page.id}`} className="font-bold text-foreground no-underline hover:underline">
-                {page.title}
+                {title}
               </Link>
             )}
             <p className="m-0 mt-1 flex items-center gap-1.5 text-muted-foreground">
@@ -86,6 +95,13 @@ export function getPagesColumns({ onRestore, onDelete }: PagesColumnsOptions) {
           </div>
         );
       },
+    }),
+    helper.accessor((page) => page.parent?.title ?? '', {
+      id: 'parent',
+      header: 'Родител',
+      sortFn: 'text',
+      meta: { help: 'Родителската страница. Празно означава страница на първо ниво.' },
+      cell: ({ row }) => row.original.parent?.title || '—',
     }),
     helper.accessor('fields_count', {
       header: 'Полета',

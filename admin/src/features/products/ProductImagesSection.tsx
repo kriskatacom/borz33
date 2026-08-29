@@ -714,33 +714,20 @@ export function ProductImagesPreview({ product }: { product: AdminProduct }) {
   return (
     <div className="grid gap-4">
       {product.front_image ? (
-        <button
-          type="button"
-          className="max-w-sm cursor-zoom-in overflow-hidden rounded-[6px] border border-border bg-muted p-0 outline-none transition-opacity hover:opacity-90 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          onClick={() => setLightbox(0)}
-        >
-          <img
-            src={product.front_image.url}
-            alt={product.front_image.alt || product.name}
-            className="aspect-square size-full object-cover"
-          />
-        </button>
+        <ImagePreview
+          image={product.front_image}
+          className="max-w-sm"
+          onOpen={() => setLightbox(0)}
+        />
       ) : null}
       {product.gallery_images.length > 0 ? (
         <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-4">
           {product.gallery_images.map((image, index) => (
             <li key={image.id}>
-              <button
-                type="button"
-                className="w-full cursor-zoom-in overflow-hidden rounded-[6px] border border-border bg-muted p-0 outline-none transition-opacity hover:opacity-90 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                onClick={() => setLightbox(product.front_image ? index + 1 : index)}
-              >
-                <img
-                  src={image.url}
-                  alt={image.alt || product.name}
-                  className="aspect-square size-full object-cover"
-                />
-              </button>
+              <ImagePreview
+                image={image}
+                onOpen={() => setLightbox(product.front_image ? index + 1 : index)}
+              />
             </li>
           ))}
         </ul>
@@ -749,6 +736,35 @@ export function ProductImagesPreview({ product }: { product: AdminProduct }) {
         <ImageLightbox images={images} index={lightbox} onIndex={setLightbox} onClose={() => setLightbox(null)} />
       ) : null}
     </div>
+  );
+}
+
+function imageAltText(image: ProductImage): string {
+  return image.alt?.trim() ?? '';
+}
+
+function ImagePreview({
+  image,
+  onOpen,
+  className,
+}: {
+  image: ProductImage;
+  onOpen: () => void;
+  className?: string;
+}) {
+  const alt = imageAltText(image);
+
+  return (
+    <figure className={cn('m-0', className)}>
+      <button
+        type="button"
+        className="w-full cursor-zoom-in overflow-hidden rounded-[6px] border border-border bg-muted p-0 outline-none transition-opacity hover:opacity-90 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        onClick={onOpen}
+      >
+        <img src={image.url} alt={alt} className="aspect-square size-full object-cover" />
+      </button>
+      {alt ? <figcaption className="mt-2 text-base text-muted-foreground">{alt}</figcaption> : null}
+    </figure>
   );
 }
 

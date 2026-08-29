@@ -20,6 +20,7 @@ import type { MediaFile } from '@/api/media';
 import {
   createPage,
   getPage,
+  listPageTree,
   updatePage,
   type AdminPage,
   type AdminPageField,
@@ -38,11 +39,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
 import { mediaKindLabel } from '@/features/media/mediaFile';
+import { PageTreeSelect } from '@/features/pages/PageTreeSelect';
+import { flattenPageTree, pageDescendantIds, type PageTreeNode } from '@/features/pages/pageTree';
 import { toast, toastError } from '@/lib/toast';
 
 type FormState = {
   title: string;
   slug: string;
+  parent_id: string;
   is_active: boolean;
   sort_order: string;
   meta_title: string;
@@ -64,6 +68,7 @@ type FieldDraft = {
 const emptyForm: FormState = {
   title: '',
   slug: '',
+  parent_id: 'none',
   is_active: true,
   sort_order: '0',
   meta_title: '',
@@ -193,6 +198,7 @@ export function PageFormPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [tree, setTree] = useState<PageTreeNode[]>([]);
   const [fields, setFields] = useState<FieldDraft[]>([]);
   const [deleted, setDeleted] = useState(false);
   const [busy, setBusy] = useState(!isNew);
@@ -238,10 +244,34 @@ export function PageFormPage() {
     };
   }, [isNew, pageId, token]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTree() {
+      try {
+        const response = await listPageTree(token);
+        if (!cancelled) {
+          setTree(response.data.pages);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          toastError(error, 'Списъкът със страници не можа да се зареди.');
+        }
+      }
+    }
+
+    void loadTree();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
   function applyPage(page: AdminPage) {
     setForm({
       title: page.title,
       slug: page.slug,
+      parent_id: page.parent_id ? String(page.parent_id) : 'none',
       is_active: page.is_active,
       sort_order: String(page.sort_order),
       meta_title: page.meta_title ?? '',
@@ -272,10 +302,11 @@ export function PageFormPage() {
     });
   }
 
-  function toPayload(): { title: string; slug: string | null; is_active: boolean; sort_order: number; meta_title: string | null; meta_description: string | null; fields: PageFieldPayload[] } {
+  function toPayload() {
     return {
       title: form.title.trim(),
       slug: form.slug.trim() === '' ? null : form.slug.trim(),
+      parent_id: form.parent_id === 'none' ? null : Number(form.parent_id),
       is_active: form.is_active,
       sort_order: Math.max(0, Number.parseInt(form.sort_order, 10) || 0),
       meta_title: form.meta_title.trim() === '' ? null : form.meta_title.trim(),
@@ -386,6 +417,19 @@ export function PageFormPage() {
                 onChange={(event) => patchForm('slug', event.target.value)}
                 error={errors.slug}
               />
+              <PageTreeSelect
+                id="parent_id"
+                label="Родител"
+                help="Страницата се влага под избраната. Тиретата показват нивото в дървото. „Няма“ е първо ниво."
+                value={form.parent_id}
+                options={flattenPageTree(
+                  tree,
+                  pageId === null ? [] : pageDescendantIds(tree, pageId)
+                )}
+                extra={[{ value: 'none', label: 'Няма' }]}
+                error={errors.parent_id}
+                onValueChange={(value) => patchForm('parent_id', value)}
+              />
               <Field
                 id="sort_order"
                 label="Ред"
@@ -489,7 +533,8 @@ export function PageFormPage() {
                     </div>
                   }
                 >
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                     <Field
                       id={`${field.key}-name`}
                       label="Име"
@@ -553,9 +598,9 @@ export function PageFormPage() {
                         label="Файл"
                         help="Избор от вече качени файлове в медията. Всички типове са позволени."
                       />
-                      <div className="flex flex-wrap items-center gap-3">
+                      <div className="mt-2 flex flex-wrap items-start gap-3">
                         {field.media ? <FieldFilePreview file={field.media} /> : null}
-                        <div className="min-w-0 flex-1">
+                        <div className="grid min-w-0 gap-2">
                           {field.media ? (
                             <p className="m-0 truncate font-medium">
                               {field.media.original_name}
@@ -566,21 +611,24 @@ export function PageFormPage() {
                           ) : (
                             <p className="m-0 text-muted-foreground">Няма избран файл.</p>
                           )}
+                          <div className="flex flex-wrap gap-2">
+                            <Button type="button" variant="outline" size="sm" onClick={() => setPickerIndex(index)}>
+                              <FolderOpen />
+                              {field.media ? 'Смени' : 'Избери'}
+                            </Button>
+                            {field.media ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => patchField(index, { media_file_id: null, media: null })}
+                              >
+                                <X />
+                                Премахни
+                              </Button>
+                            ) : null}
+                          </div>
                         </div>
-                        <Button type="button" variant="outline" onClick={() => setPickerIndex(index)}>
-                          <FolderOpen />
-                          {field.media ? 'Смени' : 'Избери'}
-                        </Button>
-                        {field.media ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => patchField(index, { media_file_id: null, media: null })}
-                          >
-                            <X />
-                            Премахни
-                          </Button>
-                        ) : null}
                       </div>
                       {fieldError(errors, `fields.${index}.media_file_id`) ? (
                         <p className="field-error" role="alert">
@@ -604,6 +652,7 @@ export function PageFormPage() {
                       error={fieldError(errors, `fields.${index}.value`)}
                     />
                   )}
+                  </div>
                 </CollapsibleSection>
               ))}
             </div>

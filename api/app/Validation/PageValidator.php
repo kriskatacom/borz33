@@ -14,7 +14,8 @@ class PageValidator
     /** @param array<string, mixed> $data */
     public function validate(array $data, ?int $pageId = null): array
     {
-        $data = $this->blankToNull($data, ['slug', 'meta_title', 'meta_description']);
+        $data = $this->blankToNull($data, ['slug', 'meta_title', 'meta_description', 'parent_id']);
+        $data = $this->normalizeParent($data);
         $data = $this->normalizeFields($data);
         $rules = $this->rules($pageId);
 
@@ -62,9 +63,34 @@ class PageValidator
         return $data;
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function normalizeParent(array $data): array
+    {
+        if (!array_key_exists('parent_id', $data)) {
+            return $data;
+        }
+
+        $value = $data['parent_id'];
+
+        if ($value === '' || $value === 'none' || $value === 'null' || $value === 0 || $value === '0') {
+            $data['parent_id'] = null;
+        }
+
+        return $data;
+    }
+
     /** @return array<string, mixed> */
     private function rules(?int $pageId): array
     {
+        $parentExists = Rule::exists('pages', 'id')->whereNull('deleted_at');
+
+        if ($pageId !== null) {
+            $parentExists = $parentExists->whereNot('id', $pageId);
+        }
+
         return [
             'title' => ['required', 'string', 'max:191'],
             'slug' => [
@@ -75,6 +101,7 @@ class PageValidator
                 Rule::unique('pages', 'slug')->ignore($pageId),
             ],
             'is_active' => ['required', 'boolean'],
+            'parent_id' => ['nullable', 'integer', 'min:1', $parentExists],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'meta_title' => ['nullable', 'string', 'max:191'],
             'meta_description' => ['nullable', 'string', 'max:500'],
@@ -137,6 +164,7 @@ class PageValidator
             'title' => 'заглавие',
             'slug' => 'адрес',
             'is_active' => 'активна',
+            'parent_id' => 'родителска страница',
             'sort_order' => 'ред',
             'meta_title' => 'SEO заглавие',
             'meta_description' => 'SEO описание',

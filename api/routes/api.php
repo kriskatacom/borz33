@@ -56,6 +56,7 @@ $router->delete('/admin/media/{id}', [MediaController::class, 'destroy'], $admin
 
 $router->get('/admin/pages', [PagesController::class, 'index'], $admin);
 $router->post('/admin/pages', [PagesController::class, 'store'], $admin);
+$router->get('/admin/pages/tree', [PagesController::class, 'tree'], $admin);
 $router->get('/admin/pages/{id}', [PagesController::class, 'show'], $admin);
 $router->put('/admin/pages/{id}', [PagesController::class, 'update'], $admin);
 $router->patch('/admin/pages/{id}', [PagesController::class, 'update'], $admin);
