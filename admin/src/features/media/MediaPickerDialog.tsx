@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
-import { File, FileText, Film, Grid2X2, Grid3X3, ImagePlus, Images, LayoutGrid, List, Music, Upload, X } from 'lucide-react';
+import { Check, File, FileText, Film, Grid2X2, Grid3X3, ImagePlus, Images, LayoutGrid, List, LoaderCircle, Music, Upload, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
-import { listMedia, uploadMediaFile, type MediaFile } from '@/api/media';
+import { listMediaCached, uploadMediaFile, type MediaFile } from '@/api/media';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { mediaKindLabel, validateMediaFile } from '@/features/media/mediaFile';
@@ -100,6 +100,7 @@ export function MediaPickerDialog({
   const [lastPage, setLastPage] = useState(1);
   const [busy, setBusy] = useState(true);
   const [selected, setSelected] = useState<Record<number, MediaFile>>({});
+  const [multiSelect, setMultiSelect] = useState(false);
   const [panel, setPanel] = useState<Panel>('library');
   const [view, setView] = useState<ViewMode>(() => {
     const saved = window.localStorage.getItem('media-picker-view');
@@ -146,17 +147,21 @@ export function MediaPickerDialog({
     async function load() {
       setBusy(true);
       try {
-        const response = await listMedia(token, {
+        const filters = {
           q,
           ...(allFiles ? {} : { kind: 'image', raster: true }),
           page,
           per_page: 24,
-        });
+        };
+        const response = await listMediaCached(token, filters);
         if (cancelled) {
           return;
         }
         setFiles(response.data.files);
         setLastPage(response.data.pagination.last_page);
+        if (page < response.data.pagination.last_page) {
+          void listMediaCached(token, { ...filters, page: page + 1 }).catch(() => undefined);
+        }
       } catch (error) {
         if (!cancelled) {
           toast.error(error instanceof ApiError ? error.message : 'Медията не можа да се зареди.');
@@ -177,12 +182,9 @@ export function MediaPickerDialog({
   }, [allFiles, page, q, token]);
 
   function toggle(file: MediaFile) {
-    if (!multiple) {
-      onSelect([file]);
-      return;
-    }
-
     setSelected((current) => {
+      if (!multiple || !multiSelect) return { [file.id]: file };
+
       const next = { ...current };
       if (next[file.id]) {
         delete next[file.id];
@@ -191,6 +193,17 @@ export function MediaPickerDialog({
       }
       return next;
     });
+  }
+
+  function toggleMultiSelect() {
+    const next = !multiSelect;
+    setMultiSelect(next);
+    if (!next) {
+      setSelected((selection) => {
+        const first = Object.values(selection)[0];
+        return first ? { [first.id]: first } : {};
+      });
+    }
   }
 
   async function uploadAll(incoming: File[]) {
@@ -234,18 +247,21 @@ export function MediaPickerDialog({
       setSearch('');
       setQ('');
       setPage(1);
+      setPanel('library');
+      setBusy(true);
       try {
-        const response = await listMedia(token, {
+        const response = await listMediaCached(token, {
           ...(allFiles ? {} : { kind: 'image', raster: true }),
           page: 1,
           per_page: 24,
         });
         setFiles(response.data.files);
         setLastPage(response.data.pagination.last_page);
-        setPanel('library');
         toast.success(uploaded === 1 ? 'Файлът е качен и е готов за избор.' : `${uploaded} файла са качени и са готови за избор.`);
       } catch (error) {
         toastError(error, 'Файловете са качени, но библиотеката не можа да се обнови.');
+      } finally {
+        setBusy(false);
       }
     }
   }
@@ -259,7 +275,19 @@ export function MediaPickerDialog({
 
   function fileContent(file: MediaFile) {
     if (file.kind === 'image') {
-      return <img src={file.url} alt={file.alt || file.original_name} className="size-full object-cover" />;
+      return (
+        <img
+          src={file.url}
+          alt={file.alt || file.original_name}
+          className="size-full object-cover"
+          width="320"
+          height="320"
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+          draggable={false}
+        />
+      );
     }
 
     return <KindIcon kind={file.kind} />;
@@ -306,17 +334,30 @@ export function MediaPickerDialog({
               placeholder="Име на файл"
               onChange={(event) => setSearch(event.target.value)}
             />
-            <div className="mt-2 flex items-center gap-1" role="group" aria-label="Изглед на файловете">
-              <Button type="button" size="icon" variant={view === 'comfortable' ? 'secondary' : 'outline'} aria-label="Големи плочки" aria-pressed={view === 'comfortable'} onClick={() => changeView('comfortable')}><Grid2X2 /></Button>
-              <Button type="button" size="icon" variant={view === 'compact' ? 'secondary' : 'outline'} aria-label="Компактни плочки" aria-pressed={view === 'compact'} onClick={() => changeView('compact')}><LayoutGrid /></Button>
-              <Button type="button" size="icon" variant={view === 'tiny' ? 'secondary' : 'outline'} aria-label="Много малки плочки" aria-pressed={view === 'tiny'} onClick={() => changeView('tiny')}><Grid3X3 /></Button>
-              <Button type="button" size="icon" variant={view === 'list' ? 'secondary' : 'outline'} aria-label="Списък" aria-pressed={view === 'list'} onClick={() => changeView('list')}><List /></Button>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1" role="group" aria-label="Изглед на файловете">
+                <Button type="button" size="icon" variant={view === 'comfortable' ? 'secondary' : 'outline'} aria-label="Големи плочки" aria-pressed={view === 'comfortable'} onClick={() => changeView('comfortable')}><Grid2X2 /></Button>
+                <Button type="button" size="icon" variant={view === 'compact' ? 'secondary' : 'outline'} aria-label="Компактни плочки" aria-pressed={view === 'compact'} onClick={() => changeView('compact')}><LayoutGrid /></Button>
+                <Button type="button" size="icon" variant={view === 'tiny' ? 'secondary' : 'outline'} aria-label="Много малки плочки" aria-pressed={view === 'tiny'} onClick={() => changeView('tiny')}><Grid3X3 /></Button>
+                <Button type="button" size="icon" variant={view === 'list' ? 'secondary' : 'outline'} aria-label="Списък" aria-pressed={view === 'list'} onClick={() => changeView('list')}><List /></Button>
+              </div>
+              {multiple ? (
+                <Button type="button" size="sm" variant={multiSelect ? 'secondary' : 'outline'} aria-pressed={multiSelect} onClick={toggleMultiSelect}><Images />Избери повече</Button>
+              ) : null}
             </div>
             <div ref={libraryRef} />
-            {files.length === 0 && !busy ? (
-              <p className="muted-line">{allFiles ? 'Няма файлове в медията.' : 'Няма изображения в медията.'}</p>
-            ) : (
-              <div className="mt-3 grid gap-4">
+            <div className="relative min-h-40" aria-busy={busy}>
+              {busy ? (
+                <div className="sticky top-0 z-20 mt-3 flex min-h-12 items-center justify-center gap-2 border border-border bg-card/95 px-4 text-sm font-medium shadow-sm backdrop-blur" role="status" aria-live="polite">
+                  <LoaderCircle className="size-5 animate-spin text-primary" aria-hidden />
+                  Зареждане на файловете…
+                </div>
+              ) : null}
+              <div className={cn('transition-opacity', busy && 'pointer-events-none opacity-45')}>
+                {files.length === 0 && !busy ? (
+                  <p className="muted-line">{allFiles ? 'Няма файлове в медията.' : 'Няма изображения в медията.'}</p>
+                ) : (
+                  <div className="mt-3 grid gap-4">
             {groupedFiles.map((group) => (
               <section key={group.key} aria-labelledby={`media-date-${group.key}`}>
                 <div className="mb-2 flex items-center gap-3">
@@ -335,7 +376,7 @@ export function MediaPickerDialog({
                       key={file.id}
                       type="button"
                       className={cn(
-                        'overflow-hidden border border-border bg-muted p-0 text-left',
+                        'media-picker-file relative overflow-hidden border border-border bg-muted p-0 text-left',
                         view === 'comfortable' && 'grid bg-card',
                         view === 'compact' && 'aspect-square',
                         view === 'tiny' && 'aspect-square',
@@ -344,6 +385,9 @@ export function MediaPickerDialog({
                       )}
                       onClick={() => toggle(file)}
                     >
+                      {selected[file.id] ? (
+                        <span className="absolute top-1.5 right-1.5 z-10 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow" aria-hidden><Check className="size-4" /></span>
+                      ) : null}
                       <span className={cn('flex items-center justify-center overflow-hidden', view === 'comfortable' && 'aspect-square', (view === 'compact' || view === 'tiny') && 'size-full', view === 'list' && 'aspect-square size-16')}>{fileContent(file)}</span>
                       {view === 'comfortable' ? (
                         <span className="grid gap-0.5 p-2"><span className="truncate text-sm font-medium">{file.original_name}</span><span className="text-xs text-muted-foreground">{mediaKindLabel(file.kind)} · {formatBytes(file.size)}</span></span>
@@ -356,8 +400,10 @@ export function MediaPickerDialog({
                 </div>
               </section>
             ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         ) : (
           <div role="tabpanel" className="grid min-h-[min(32rem,60vh)] content-center">
@@ -390,9 +436,9 @@ export function MediaPickerDialog({
             ) : null}
           </div>
         )}
-        <div className="dialog-actions mt-4">
+        <div className="media-picker-footer">
           {panel === 'library' && lastPage > 1 ? (
-            <nav className="mr-auto flex flex-wrap items-center gap-1" aria-label="Страници на медийната библиотека">
+            <nav className="flex flex-wrap items-center gap-1" aria-label="Страници на медийната библиотека">
               <Button type="button" variant="outline" size="sm" disabled={page <= 1 || busy} onClick={() => goToPage(page - 1)}>Предишна</Button>
               {paginationItems(page, lastPage).map((item, index) => item === 'ellipsis' ? (
                 <span key={`ellipsis-${index}`} className="flex size-8 items-center justify-center text-muted-foreground" aria-hidden>…</span>
@@ -402,15 +448,13 @@ export function MediaPickerDialog({
               <Button type="button" variant="outline" size="sm" disabled={page >= lastPage || busy} onClick={() => goToPage(page + 1)}>Следваща</Button>
             </nav>
           ) : null}
-          <Button type="button" variant="outline" onClick={onClose}>
-            Отказ
-          </Button>
-          {multiple ? (
+          <div className="ml-auto flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>Отказ</Button>
             <Button type="button" disabled={selectedList.length === 0} onClick={() => onSelect(selectedList)}>
-              <Images />
-              Избери {selectedList.length > 0 ? `(${selectedList.length})` : ''}
+              {multiple && multiSelect ? <Images /> : <Check />}
+              {multiple && multiSelect ? `Избери файловете (${selectedList.length})` : 'Избери файла'}
             </Button>
-          ) : null}
+          </div>
         </div>
       </div>
     </div>

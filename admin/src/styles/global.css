@@ -1284,10 +1284,37 @@ a.stat-card {
   overflow: auto;
 }
 
+.media-details-dialog {
+  width: min(640px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  overflow: auto;
+}
+
 .media-picker-dialog {
   width: calc(100% - 32px);
   height: calc(100% - 32px);
   max-height: calc(100% - 32px);
+  border-radius: 8px;
+}
+
+.media-picker-file {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 180px;
+}
+
+.media-picker-footer {
+  position: sticky;
+  z-index: 20;
+  bottom: -24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 16px -24px -24px;
+  padding: 12px 24px;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--cream) 96%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 :focus-visible {

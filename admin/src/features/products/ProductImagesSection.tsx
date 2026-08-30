@@ -6,6 +6,7 @@ import {
   ImagePlus,
   Images,
   Star,
+  TextCursorInput,
   Trash2,
   Upload,
   X,
@@ -589,7 +590,7 @@ export function ProductImagesEditor({
               onPickMedia={() => setPicker('gallery')}
             />
           ) : (
-            <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3">
+            <ul className="m-0 grid max-w-[55rem] list-none grid-cols-2 items-start gap-2 p-0 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {product.gallery_images.map((image, index) => (
                 <li
                   key={image.id}
@@ -651,13 +652,13 @@ export function ProductImagesEditor({
                   <ImageTile src={item.previewUrl} alt={item.name} pending={item} />
                 </li>
               ))}
-              <li className="grid gap-2">
+              <li className="grid gap-1.5">
                 <button
                   type="button"
-                  className="flex min-h-40 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-[6px] border border-dashed border-border bg-field px-3 py-4 text-center text-base text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[6px] border border-dashed border-border bg-field px-2 py-3 text-center text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                   onClick={() => galleryInputRef.current?.click()}
                 >
-                  <ImagePlus className="size-6" aria-hidden />
+                  <ImagePlus className="size-5" aria-hidden />
                   Добави снимки
                 </button>
                 <Button type="button" variant="outline" size="sm" onClick={() => setPicker('gallery')}>
@@ -889,52 +890,48 @@ function GalleryCard({
   onAltSaved: (image: ProductImage) => void;
   onAltError: (message: string) => void;
 }) {
+  const [altOpen, setAltOpen] = useState(false);
+
   return (
-    <div
-      className="overflow-hidden rounded-[6px] border border-border bg-card"
-      draggable={draggable && !busy}
-      onDragStart={(event) => {
-        event.dataTransfer.setData(DRAG_IMAGE_ID, String(image.id));
-        event.dataTransfer.effectAllowed = 'move';
-        onDragStart();
-      }}
-      onDragEnd={onDragEnd}
-    >
-      <div className="relative">
-        <img src={image.url} alt={image.alt || productName} className="aspect-square size-full object-cover" />
-        <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-gradient-to-t from-foreground/70 to-transparent p-1.5">
-          <Button type="button" size="icon" variant="secondary" className="size-8" aria-label="Преглед" onClick={onOpen}>
-            <ZoomIn />
-          </Button>
-          <Button
-            type="button"
-            size="icon"
-            variant="secondary"
-            className="size-8"
-            aria-label="Направи предно"
-            disabled={busy}
-            onClick={onMakeFront}
-          >
-            <Star />
-          </Button>
+    <>
+      <div
+        className="overflow-hidden rounded-[6px] border border-border bg-card"
+        draggable={draggable && !busy}
+        onDragStart={(event) => {
+          event.dataTransfer.setData(DRAG_IMAGE_ID, String(image.id));
+          event.dataTransfer.effectAllowed = 'move';
+          onDragStart();
+        }}
+        onDragEnd={onDragEnd}
+      >
+        <div className="relative">
+          <img src={image.url} alt={image.alt || productName} className="aspect-square size-full object-cover" />
+          <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-gradient-to-t from-foreground/70 to-transparent p-1.5">
+            <Button type="button" size="icon" variant="secondary" className="size-8" aria-label="Преглед" onClick={onOpen}>
+              <ZoomIn />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              className="size-8"
+              aria-label="Направи предно"
+              disabled={busy}
+              onClick={onMakeFront}
+            >
+              <Star />
+            </Button>
+          </div>
         </div>
-      </div>
-      <div className="grid gap-2 p-2">
-        <AltField
-          image={image}
-          productId={productId}
-          token={token}
-          disabled={busy}
-          compact
-          onSaved={onAltSaved}
-          onError={onAltError}
-        />
-        <div className="flex gap-1">
+        <div className="flex gap-0.5 p-1.5">
+          <Button type="button" size="icon" variant="outline" className="size-7" aria-label="Алтернативен текст" disabled={busy} onClick={() => setAltOpen(true)}>
+            <TextCursorInput />
+          </Button>
           <Button
             type="button"
             size="icon"
             variant="outline"
-            className="size-8"
+            className="size-7"
             aria-label="Наляво"
             disabled={!canMoveLeft || busy}
             onClick={onMoveLeft}
@@ -945,7 +942,7 @@ function GalleryCard({
             type="button"
             size="icon"
             variant="outline"
-            className="size-8"
+            className="size-7"
             aria-label="Надясно"
             disabled={!canMoveRight || busy}
             onClick={onMoveRight}
@@ -956,7 +953,7 @@ function GalleryCard({
             type="button"
             size="icon"
             variant="outline"
-            className="ml-auto size-8"
+            className="ml-auto size-7"
             aria-label="Изтрий"
             disabled={busy}
             onClick={onDelete}
@@ -965,7 +962,22 @@ function GalleryCard({
           </Button>
         </div>
       </div>
-    </div>
+      {altOpen ? (
+        <div className="dialog-root">
+          <button type="button" className="dialog-backdrop" aria-label="Затвори" onClick={() => setAltOpen(false)} />
+          <div className="dialog" role="dialog" aria-modal="true" aria-labelledby={`gallery-alt-title-${image.id}`}>
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <h2 id={`gallery-alt-title-${image.id}`}>Алтернативен текст</h2>
+              <Button type="button" size="icon" variant="outline" aria-label="Затвори" onClick={() => setAltOpen(false)}><X /></Button>
+            </div>
+            <AltField image={image} productId={productId} token={token} disabled={busy} onSaved={onAltSaved} onError={onAltError} />
+            <div className="mt-4 flex justify-end">
+              <Button type="button" onClick={() => setAltOpen(false)}>Готово</Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -1110,4 +1122,3 @@ export function ImageLightbox({
     </div>
   );
 }
-

@@ -7,6 +7,7 @@ import {
   Copy,
   Download,
   File,
+  FilePenLine,
   FileText,
   Film,
   ImagePlus,
@@ -473,12 +474,11 @@ export function MediaPage() {
                   {mediaKindLabel(file.kind)} · {formatBytes(file.size)}
                 </p>
                 <div className="flex flex-wrap gap-1">
-                  <Button type="button" size="sm" variant="outline" onClick={() => openDetails(file)}>
-                    Детайли
+                  <Button type="button" size="icon" variant="outline" aria-label="Детайли" onClick={() => openDetails(file)}>
+                    <FilePenLine />
                   </Button>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setConfirm(file)}>
+                  <Button type="button" size="icon" variant="outline" aria-label="Изтрий" onClick={() => setConfirm(file)}>
                     <Trash2 />
-                    Изтрий
                   </Button>
                 </div>
               </div>
@@ -570,7 +570,7 @@ export function MediaPage() {
       {details ? (
         <div className="dialog-root">
           <button type="button" className="dialog-backdrop" aria-label="Затвори" onClick={() => setDetails(null)} />
-          <div className="dialog max-w-lg" role="dialog" aria-modal="true" aria-labelledby="media-details-title">
+          <div className="dialog media-details-dialog" role="dialog" aria-modal="true" aria-labelledby="media-details-title">
             <h2 id="media-details-title">Детайли</h2>
             {details.kind === 'image' ? (
               <img
@@ -600,18 +600,20 @@ export function MediaPage() {
                 {mediaKindLabel(details.kind)} · {formatBytes(details.size)} · {details.mime}
                 {details.created_at ? ` · ${formatDateTime(details.created_at)}` : ''}
               </p>
-              <div className="dialog-actions">
-                <Button type="button" variant="outline" onClick={() => void copyUrl(details)}>
-                  <Copy />
-                  Копирай адрес
-                </Button>
-                <Button type="button" variant="outline" asChild>
-                  <a href={details.url} download={details.original_name}>
-                    <Download />
-                    Изтегли
-                  </a>
-                </Button>
-                <Button type="submit" disabled={savingDetails}>
+              <div className="mt-1 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={() => void copyUrl(details)}>
+                    <Copy />
+                    Копирай адрес
+                  </Button>
+                  <Button type="button" variant="outline" asChild>
+                    <a href={details.url} download={details.original_name}>
+                      <Download />
+                      Изтегли
+                    </a>
+                  </Button>
+                </div>
+                <Button type="submit" className="sm:ml-auto" disabled={savingDetails}>
                   {savingDetails ? 'Запис…' : 'Запази'}
                 </Button>
               </div>
