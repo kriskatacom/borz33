@@ -1284,6 +1284,12 @@ a.stat-card {
   overflow: auto;
 }
 
+.media-picker-dialog {
+  width: calc(100% - 32px);
+  height: calc(100% - 32px);
+  max-height: calc(100% - 32px);
+}
+
 :focus-visible {
   outline: 3px solid var(--sun);
   outline-offset: 2px;
