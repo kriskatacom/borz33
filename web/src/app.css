@@ -1677,6 +1677,9 @@ select.store-input {
     border: 1px solid var(--line);
     overflow: hidden;
     background: var(--surface);
+    color: var(--ink);
+    font-size: 1rem;
+    line-height: normal;
 }
 
 .store-banner-media {
@@ -5617,81 +5620,81 @@ html.is-cart-open {
     line-height: 1.75;
 }
 
-.store-content-page-body > :first-child {
+.store-content-page-body > :first-child:not(.store-banner) {
     margin-top: 0;
 }
 
-.store-content-page-body > :last-child {
+.store-content-page-body > :last-child:not(.store-banner) {
     margin-bottom: 0;
 }
 
-.store-content-page-body p {
+.store-content-page-body p:not(.store-banner *) {
     margin: 0 0 1.1rem;
 }
 
-.store-content-page-body h1,
-.store-content-page-body h2,
-.store-content-page-body h3,
-.store-content-page-body h4,
-.store-content-page-body h5,
-.store-content-page-body h6 {
+.store-content-page-body h1:not(.store-banner *),
+.store-content-page-body h2:not(.store-banner *),
+.store-content-page-body h3:not(.store-banner *),
+.store-content-page-body h4:not(.store-banner *),
+.store-content-page-body h5:not(.store-banner *),
+.store-content-page-body h6:not(.store-banner *) {
     margin: 1.35em 0 0.55em;
     font-weight: 650;
     line-height: 1.2;
     letter-spacing: -0.02em;
 }
 
-.store-content-page-body h1 { font-size: clamp(1.4rem, 3vw, 1.7rem); }
-.store-content-page-body h2 { font-size: clamp(1.28rem, 2.7vw, 1.52rem); }
-.store-content-page-body h3 { font-size: clamp(1.16rem, 2.4vw, 1.36rem); }
-.store-content-page-body h4 { font-size: clamp(1.05rem, 2vw, 1.2rem); }
-.store-content-page-body h5 { font-size: clamp(0.96rem, 1.8vw, 1.08rem); }
-.store-content-page-body h6 { font-size: 0.88rem; }
+.store-content-page-body h1:not(.store-banner *) { font-size: clamp(1.4rem, 3vw, 1.7rem); }
+.store-content-page-body h2:not(.store-banner *) { font-size: clamp(1.28rem, 2.7vw, 1.52rem); }
+.store-content-page-body h3:not(.store-banner *) { font-size: clamp(1.16rem, 2.4vw, 1.36rem); }
+.store-content-page-body h4:not(.store-banner *) { font-size: clamp(1.05rem, 2vw, 1.2rem); }
+.store-content-page-body h5:not(.store-banner *) { font-size: clamp(0.96rem, 1.8vw, 1.08rem); }
+.store-content-page-body h6:not(.store-banner *) { font-size: 0.88rem; }
 
-.store-content-page-body ul,
-.store-content-page-body ol {
+.store-content-page-body ul:not(.store-banner *),
+.store-content-page-body ol:not(.store-banner *) {
     margin: 0 0 1.25rem;
     padding-left: 1.65rem;
     list-style-position: outside;
 }
 
-.store-content-page-body ul { list-style-type: disc; }
-.store-content-page-body ol { list-style-type: decimal; }
-.store-content-page-body ul ul { list-style-type: circle; }
-.store-content-page-body ul ul ul { list-style-type: square; }
-.store-content-page-body ol ol { list-style-type: lower-alpha; }
+.store-content-page-body ul:not(.store-banner *) { list-style-type: disc; }
+.store-content-page-body ol:not(.store-banner *) { list-style-type: decimal; }
+.store-content-page-body ul:not(.store-banner *) ul:not(.store-banner *) { list-style-type: circle; }
+.store-content-page-body ul:not(.store-banner *) ul:not(.store-banner *) ul:not(.store-banner *) { list-style-type: square; }
+.store-content-page-body ol:not(.store-banner *) ol:not(.store-banner *) { list-style-type: lower-alpha; }
 
-.store-content-page-body ul ul,
-.store-content-page-body ul ol,
-.store-content-page-body ol ul,
-.store-content-page-body ol ol {
+.store-content-page-body ul:not(.store-banner *) ul:not(.store-banner *),
+.store-content-page-body ul:not(.store-banner *) ol:not(.store-banner *),
+.store-content-page-body ol:not(.store-banner *) ul:not(.store-banner *),
+.store-content-page-body ol:not(.store-banner *) ol:not(.store-banner *) {
     margin-top: 0.35rem;
     margin-bottom: 0.35rem;
 }
 
-.store-content-page-body li {
+.store-content-page-body li:not(.store-banner *) {
     display: list-item;
     padding-left: 0.15rem;
 }
 
-.store-content-page-body li::marker {
+.store-content-page-body li:not(.store-banner *)::marker {
     color: var(--muted);
     font-weight: 650;
 }
 
-.store-content-page-body li + li {
+.store-content-page-body li:not(.store-banner *) + li:not(.store-banner *) {
     margin-top: 0.35rem;
 }
 
-.store-content-page-body strong {
+.store-content-page-body strong:not(.store-banner *) {
     font-weight: 700;
 }
 
-.store-content-page-body u {
+.store-content-page-body u:not(.store-banner *) {
     text-underline-offset: 0.18em;
 }
 
-.store-content-page-body a {
+.store-content-page-body a:not(.store-banner *) {
     color: var(--ink);
     font-weight: 650;
     text-decoration-color: color-mix(in srgb, var(--ink) 45%, transparent);
@@ -5699,11 +5702,11 @@ html.is-cart-open {
     text-underline-offset: 0.2em;
 }
 
-.store-content-page-body a:hover {
+.store-content-page-body a:not(.store-banner *):hover {
     text-decoration-color: currentColor;
 }
 
-.store-content-page-body hr {
+.store-content-page-body hr:not(.store-banner *) {
     margin: clamp(1.5rem, 4vw, 2.25rem) 0;
     border: 0;
     border-top: 1px solid var(--line);

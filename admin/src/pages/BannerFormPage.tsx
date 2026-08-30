@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, ChevronUp, FolderOpen, Image, Plus, Save, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Copy, FolderOpen, Image, Plus, Save, Trash2, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import {
   createBanner,
@@ -304,6 +304,16 @@ export function BannerFormPage() {
                 onChange={(event) => patchForm('slug', event.target.value)}
                 error={errors.slug}
               />
+              <div className="field">
+                <LabelWithHelp label="Кратък код" help="Поставете този код като отделен ред в съдържанието на CMS страница." />
+                <div className="flex min-h-12 items-center gap-2 border border-border bg-field px-3">
+                  <code className="min-w-0 flex-1 truncate text-sm">[banner:{form.slug.trim().toLowerCase() || 'slug-na-banera'}]</code>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Копирай краткия код" disabled={form.slug.trim() === ''} onClick={() => {
+                    const code = `[banner:${form.slug.trim().toLowerCase()}]`;
+                    void navigator.clipboard.writeText(code).then(() => toast.success('Краткият код е копиран.'));
+                  }}><Copy /></Button>
+                </div>
+              </div>
               <div className="field">
                 <LabelWithHelp
                   htmlFor="layout"

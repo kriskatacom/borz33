@@ -4,7 +4,7 @@ import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, Link as LinkIcon, List, ListOrdered, Minus, Underline as UnderlineIcon, Unlink } from 'lucide-react';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Minus, Underline as UnderlineIcon, Unlink } from 'lucide-react';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -59,6 +59,8 @@ export function TextEditor({ id, label, help, value, onChange, error, disabled =
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkNewTab, setLinkNewTab] = useState(false);
+  const [bannerOpen, setBannerOpen] = useState(false);
+  const [bannerSlug, setBannerSlug] = useState('');
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -124,6 +126,16 @@ export function TextEditor({ id, label, help, value, onChange, error, disabled =
     setLinkUrl(String(attributes.href ?? ''));
     setLinkNewTab(attributes.target === '_blank');
     setLinkOpen(true);
+    setBannerOpen(false);
+  }
+
+  function insertBanner() {
+    if (!editor) return;
+    const slug = bannerSlug.trim().toLowerCase();
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return;
+    editor.chain().focus().insertContent(`<p>[banner:${slug}]</p>`).run();
+    setBannerSlug('');
+    setBannerOpen(false);
   }
 
   function normalizedLink(value: string): string {
@@ -285,6 +297,14 @@ export function TextEditor({ id, label, help, value, onChange, error, disabled =
           >
             <Minus className="size-4" aria-hidden />
           </ToolbarButton>
+          <span className="text-editor-toolbar-divider" aria-hidden />
+          <ToolbarButton
+            label="Вмъкни банер"
+            disabled={!editor || disabled}
+            onClick={() => { setBannerOpen((open) => !open); setLinkOpen(false); }}
+          >
+            <ImageIcon className="size-4" aria-hidden />
+          </ToolbarButton>
         </div>
         {linkOpen ? (
           <div className="text-editor-link-panel">
@@ -309,6 +329,25 @@ export function TextEditor({ id, label, help, value, onChange, error, disabled =
             {editor?.isActive('link') ? (
               <button type="button" className="is-remove" onClick={removeLink}><Unlink aria-hidden /> Премахни</button>
             ) : null}
+          </div>
+        ) : null}
+        {bannerOpen ? (
+          <div className="text-editor-link-panel">
+            <label htmlFor={`${id}-banner-slug`}>Slug на банера</label>
+            <input
+              id={`${id}-banner-slug`}
+              type="text"
+              value={bannerSlug}
+              placeholder="proletna-promociya"
+              autoFocus
+              onChange={(event) => setBannerSlug(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') { event.preventDefault(); insertBanner(); }
+                if (event.key === 'Escape') { event.preventDefault(); setBannerOpen(false); editor?.commands.focus(); }
+              }}
+            />
+            <span className="text-sm text-muted-foreground">Код: [banner:{bannerSlug.trim().toLowerCase() || 'slug'}]</span>
+            <button type="button" disabled={!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(bannerSlug.trim().toLowerCase())} onClick={insertBanner}>Вмъкни банер</button>
           </div>
         ) : null}
         <EditorContent editor={editor} />

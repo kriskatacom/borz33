@@ -61,6 +61,32 @@ class Banners
         require $file;
     }
 
+    public static function html(string $slug): string
+    {
+        if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', strtolower(trim($slug))) !== 1) {
+            return '';
+        }
+
+        ob_start();
+        try {
+            self::render($slug);
+            return (string) ob_get_clean();
+        } catch (\Throwable) {
+            ob_end_clean();
+            return '';
+        }
+    }
+
+    public static function expandShortcodes(string $html): string
+    {
+        $pattern = '~(?:<p(?:\s[^>]*)?>\s*)?\[banner(?:\s+slug\s*=\s*["\']([a-z0-9]+(?:-[a-z0-9]+)*)["\']|:([a-z0-9]+(?:-[a-z0-9]+)*))\s*\](?:\s*</p>)?~i';
+
+        return (string) preg_replace_callback($pattern, static function (array $match): string {
+            $slug = (string) ($match[1] !== '' ? $match[1] : ($match[2] ?? ''));
+            return self::html($slug);
+        }, $html);
+    }
+
     public static function safeUrl(string $url): ?string
     {
         $url = trim($url);
