@@ -56,7 +56,7 @@ class ProductPage
 
     public static function money(mixed $value): string
     {
-        return number_format((float) $value, 2, ',', ' ') . ' лв.';
+        return number_format((float) $value, 2, ',', ' ') . ' €';
     }
 
     /** @return list<array{label: string, href: string|null}> */

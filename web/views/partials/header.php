@@ -9,12 +9,14 @@ use Store\Core\Html;
 /** @var string $csrf */
 /** @var \Illuminate\Support\Collection<int, \App\Models\Category> $navCategories */
 /** @var int $cartCount */
+/** @var int $favoriteCount */
 
 $currentPath = $currentPath ?? '/';
 $currentUser = $currentUser ?? null;
 $csrf = $csrf ?? '';
 $navCategories = $navCategories ?? collect();
 $cartCount = (int) ($cartCount ?? 0);
+$favoriteCount = (int) ($favoriteCount ?? 0);
 $catalogActive = store_nav_active('/catalog', $currentPath);
 $accountLabel = $currentUser !== null ? 'Акаунт' : 'Вход';
 $accountActive = $currentPath === '/login' || store_nav_active('/account', $currentPath);
@@ -50,7 +52,12 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
                     >
                         <div class="border border-line bg-canvas py-1 shadow-lg">
                             <p class="px-3 py-2 text-xs text-muted"><?= htmlspecialchars($currentUser->fullName(), ENT_QUOTES, 'UTF-8') ?></p>
+                            <a class="flex items-center gap-2 border-y border-line px-3 py-2.5 text-sm font-semibold no-underline hover:bg-ink hover:text-on-accent" href="/account/orders">
+                                <span class="inline-flex size-4"><?= Html::iconSvg('package') ?></span>
+                                Моите поръчки
+                            </a>
                             <a class="block px-3 py-2.5 text-sm font-semibold no-underline hover:bg-ink hover:text-on-accent" href="/account">Табло</a>
+                            <a class="block px-3 py-2.5 text-sm font-semibold no-underline hover:bg-ink hover:text-on-accent" href="/account/profile">Профил</a>
                             <a class="block px-3 py-2.5 text-sm font-semibold no-underline hover:bg-ink hover:text-on-accent" href="/account/details">Данни на акаунта</a>
                             <a class="block px-3 py-2.5 text-sm font-semibold no-underline hover:bg-ink hover:text-on-accent" href="/account/password">Парола</a>
                             <form method="post" action="/logout">
@@ -62,8 +69,23 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
                 </div>
             <?php endif; ?>
 
-            <?php Html::iconLink('/favorites', 'heart', 'Любими', ['active' => store_nav_active('/favorites', $currentPath), 'badge' => '0']); ?>
-            <?php Html::iconLink('/cart', 'cart', 'Количка', ['active' => store_nav_active('/cart', $currentPath), 'badge' => $cartCount > 0 ? (string) $cartCount : null]); ?>
+            <?php Html::tooltipStart('Любими'); ?>
+            <a
+                class="store-icon-btn<?= store_nav_active('/favorites', $currentPath) ? ' is-active' : '' ?>"
+                href="/favorites"
+                aria-label="Любими"
+                <?= store_nav_active('/favorites', $currentPath) ? 'aria-current="page"' : '' ?>
+            >
+                <?= Html::iconSvg('heart') ?>
+                <span class="store-icon-badge" data-favorite-count <?= $favoriteCount < 1 ? 'hidden' : '' ?>><?= $favoriteCount ?></span>
+            </a>
+            <?php Html::tooltipEnd(); ?>
+            <div
+                id="store-cart-app"
+                data-count="<?= $cartCount ?>"
+                data-csrf="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>"
+                data-active="<?= store_nav_active('/cart', $currentPath) ? 'true' : 'false' ?>"
+            ></div>
         </div>
 
         <form

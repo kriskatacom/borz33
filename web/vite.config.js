@@ -1,4 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
+import vue from '@vitejs/plugin-vue';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
@@ -29,7 +30,7 @@ export default defineConfig(({ command }) => {
   return {
     base: isBuild ? '/build/' : '/',
     publicDir: false,
-    plugins: [tailwindcss(), phpFullReload()],
+    plugins: [vue(), tailwindcss(), phpFullReload()],
     experimental: {
       renderBuiltUrl(filename) {
         return '/build/' + filename.replace(/^\//, '');

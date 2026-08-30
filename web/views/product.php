@@ -14,6 +14,7 @@ use Store\Services\ProductPage;
 /** @var string|null $message */
 /** @var bool $isError */
 /** @var string $csrf */
+/** @var list<int> $favoriteIds */
 
 $product = $product ?? null;
 $crumbs = $crumbs ?? [];
@@ -22,6 +23,7 @@ $related = $related ?? [];
 $message = $message ?? null;
 $isError = $isError ?? false;
 $csrf = $csrf ?? '';
+$favoriteIds = $favoriteIds ?? [];
 $alpine = (string) json_encode($config, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP);
 $defaultVariantId = ProductPage::defaultVariantId($config);
 $options = is_array($config['options'] ?? null) ? $config['options'] : [];
@@ -37,7 +39,7 @@ $jsonLd = [
     'image' => $front !== null ? ProductImageResource::toArray($front)['url'] : null,
     'offers' => [
         '@type' => 'Offer',
-        'priceCurrency' => 'BGN',
+        'priceCurrency' => 'EUR',
         'price' => $product->price,
         'availability' => 'https://schema.org/InStock',
         'url' => '/products/' . $product->slug,
@@ -46,7 +48,7 @@ $jsonLd = [
 ?>
 <script type="application/ld+json"><?= json_encode($jsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 
-<article class="store-pdp" x-data='storeProduct(<?= $alpine ?>)' @keydown.escape.window="closeLightbox()" @keydown.arrow-left.window="lightbox && stepImage(-1)" @keydown.arrow-right.window="lightbox && stepImage(1)">
+<article class="store-pdp" x-data='storeProduct(<?= $alpine ?>)'>
     <nav class="store-pdp-crumbs" aria-label="Път">
         <?php foreach ($crumbs as $index => $crumb): ?>
             <?php if ($index > 0): ?>
@@ -102,9 +104,8 @@ $jsonLd = [
             </p>
             <p class="store-pdp-meta">
                 <span x-show="sku">Код <span x-text="sku"></span></span>
-                <span class="store-pdp-stock" :class="!inStock && 'is-out'" x-text="status()"></span>
+                <span class="store-pdp-stock" :class="{ 'is-in': inStock, 'is-out': !inStock }" x-text="status()"></span>
             </p>
-
             <form
                 class="store-pdp-form"
                 method="post"
@@ -204,25 +205,42 @@ $jsonLd = [
                     </div>
                 <?php endforeach; ?>
 
-                <div class="store-pdp-qty" role="group" aria-label="Количество">
-                    <button type="button" @click="minus()" aria-label="Намали">−</button>
-                    <input
-                        type="number"
-                        name="qty"
-                        min="1"
-                        max="99"
-                        value="1"
-                        x-model.number="qty"
-                        aria-label="Количество"
-                    >
-                    <button type="button" @click="plus()" aria-label="Увеличи">+</button>
-                </div>
-
                 <p class="store-pdp-error" x-cloak x-show="error" x-text="error"></p>
 
-                <button type="submit" class="store-submit store-pdp-add" :disabled="!canBuy">
-                    Добави в количката
-                </button>
+                <div class="store-pdp-purchase">
+                    <div class="store-pdp-purchase-qty">
+                        <span class="store-pdp-purchase-label">Количество</span>
+                        <div class="store-pdp-qty" role="group" aria-label="Количество">
+                            <button type="button" @click="minus()" aria-label="Намали">−</button>
+                            <input
+                                type="number"
+                                name="qty"
+                                min="1"
+                                max="99"
+                                value="1"
+                                x-model.number="qty"
+                                aria-label="Количество"
+                            >
+                            <button type="button" @click="plus()" aria-label="Увеличи">+</button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="store-submit store-pdp-add" :disabled="!canBuy || submitting">
+                        <span x-text="submitting ? 'Добавяне…' : 'Добави в количката'">Добави в количката</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="store-pdp-favorite"
+                        data-favorite-product="<?= (int) $product->id ?>"
+                        data-favorite="<?= in_array((int) $product->id, $favoriteIds, true) ? 'true' : 'false' ?>"
+                        aria-label="<?= in_array((int) $product->id, $favoriteIds, true) ? 'Премахни от любими' : 'Добави в любими' ?>"
+                        aria-pressed="<?= in_array((int) $product->id, $favoriteIds, true) ? 'true' : 'false' ?>"
+                        title="Любими"
+                    >
+                        <?= Html::iconSvg('heart') ?>
+                    </button>
+                </div>
             </form>
 
             <p class="store-pdp-ship">Доставка с Econt до офис, автомат или адрес. Срокът се потвърждава при поръчка.</p>
@@ -250,42 +268,6 @@ $jsonLd = [
         </section>
     <?php endif; ?>
 
-    <template x-teleport="body">
-        <div
-            class="store-lightbox"
-            x-cloak
-            x-show="lightbox"
-            x-transition.opacity.duration.180ms
-            role="dialog"
-            aria-modal="true"
-            aria-label="Снимки на продукта"
-            @click.self="closeLightbox()"
-        >
-            <button type="button" class="store-lightbox-close" x-ref="lightboxClose" @click="closeLightbox()" aria-label="Затвори">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-            <p class="store-lightbox-count" x-show="images.length > 1" x-text="(imageIndex + 1) + ' / ' + images.length"></p>
-            <button type="button" class="store-lightbox-nav store-lightbox-nav--prev" x-show="images.length > 1" @click="stepImage(-1)" aria-label="Предишна снимка"><?= Html::iconSvg('chevron-right') ?></button>
-            <figure class="store-lightbox-stage" @click.stop>
-                <template x-if="image">
-                    <img :src="image.url" :alt="image.alt" @click="images.length > 1 && stepImage(1)">
-                </template>
-            </figure>
-            <button type="button" class="store-lightbox-nav store-lightbox-nav--next" x-show="images.length > 1" @click="stepImage(1)" aria-label="Следваща снимка"><?= Html::iconSvg('chevron-right') ?></button>
-            <div class="store-lightbox-thumbs" x-show="images.length > 1" @click.stop>
-                <template x-for="(item, index) in images" :key="'lb-' + item.id + '-' + index">
-                    <button
-                        type="button"
-                        class="store-lightbox-thumb"
-                        :class="imageIndex === index && 'is-active'"
-                        @click="setImage(index)"
-                    >
-                        <img :src="item.url" :alt="item.alt" width="72" height="90">
-                    </button>
-                </template>
-            </div>
-        </div>
-    </template>
 </article>
 
 <?php if ($related !== []): ?>
@@ -298,6 +280,7 @@ $jsonLd = [
                 $url = '/products/' . $item->slug;
                 $alt = $thumb !== null && trim((string) $thumb->alt) !== '' ? (string) $thumb->alt : $item->name;
                 ?>
+                <article class="store-pdp-card-wrap">
                 <a class="store-pdp-card" href="<?= htmlspecialchars($url, ENT_QUOTES, 'UTF-8') ?>">
                     <span class="store-pdp-card-media">
                         <?php if ($thumb !== null): ?>
@@ -307,6 +290,8 @@ $jsonLd = [
                     <span class="store-pdp-card-name"><?= htmlspecialchars($item->name, ENT_QUOTES, 'UTF-8') ?></span>
                     <span class="store-pdp-card-price"><?= htmlspecialchars(ProductPage::money($item->price), ENT_QUOTES, 'UTF-8') ?></span>
                 </a>
+                <button type="button" class="store-favorite-card-button" data-favorite-product="<?= (int) $item->id ?>" data-favorite="<?= in_array((int) $item->id, $favoriteIds, true) ? 'true' : 'false' ?>" aria-label="Любим продукт" aria-pressed="<?= in_array((int) $item->id, $favoriteIds, true) ? 'true' : 'false' ?>"><?= Html::iconSvg('heart') ?></button>
+                </article>
             <?php endforeach; ?>
         </div>
     </section>

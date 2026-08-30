@@ -1,3 +1,7 @@
+import PhotoSwipeLightbox from 'photoswipe/lightbox';
+import 'photoswipe/style.css';
+import { notify } from './toast.js';
+
 function money(value) {
   const amount = typeof value === 'number' ? value : Number(value);
 
@@ -7,7 +11,7 @@ function money(value) {
 
   return new Intl.NumberFormat('bg-BG', {
     style: 'currency',
-    currency: 'BGN',
+    currency: 'EUR',
   }).format(amount);
 }
 
@@ -33,7 +37,8 @@ export function registerStoreProduct(Alpine) {
       fields: Array.isArray(config.fields) ? config.fields.map((field) => ({ ...field, value: field.value ?? '' })) : [],
       imageIndex: 0,
       error: '',
-      lightbox: false,
+      submitting: false,
+      photoSwipe: null,
 
       init() {
         this.syncVariantImage();
@@ -176,18 +181,27 @@ export function registerStoreProduct(Alpine) {
           return;
         }
 
-        this.lightbox = true;
-        document.documentElement.classList.add('is-pdp-lightbox');
-        this.$nextTick(() => this.$refs.lightboxClose?.focus());
-      },
+        const lightbox = new PhotoSwipeLightbox({
+          dataSource: this.images.map((item) => ({
+            src: item.url,
+            width: 900,
+            height: 1125,
+            alt: item.alt,
+          })),
+          pswpModule: () => import('photoswipe'),
+          bgOpacity: 0.92,
+          showHideAnimationType: 'zoom',
+        });
 
-      closeLightbox() {
-        if (!this.lightbox) {
-          return;
-        }
-
-        this.lightbox = false;
-        document.documentElement.classList.remove('is-pdp-lightbox');
+        lightbox.on('change', () => {
+          this.imageIndex = lightbox.pswp?.currIndex ?? this.imageIndex;
+        });
+        lightbox.on('destroy', () => {
+          this.photoSwipe = null;
+        });
+        lightbox.init();
+        this.photoSwipe = lightbox;
+        lightbox.loadAndOpen(this.imageIndex);
       },
 
       minus() {
@@ -211,7 +225,7 @@ export function registerStoreProduct(Alpine) {
         this.imageIndex = index >= 0 ? index : 0;
       },
 
-      onSubmit(event) {
+      async onSubmit(event) {
         const message = this.fieldError();
 
         if (!this.canBuy || message !== '') {
@@ -221,7 +235,32 @@ export function registerStoreProduct(Alpine) {
           return;
         }
 
+        event.preventDefault();
         this.error = '';
+        this.submitting = true;
+
+        try {
+          const response = await fetch(event.currentTarget.action, {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            body: new FormData(event.currentTarget),
+          });
+          const body = await response.json();
+
+          if (!response.ok) {
+            throw new Error(body?.message || 'Продуктът не може да бъде добавен.');
+          }
+
+          window.dispatchEvent(new CustomEvent('store:cart-updated', {
+            detail: { data: body.data, message: body.message },
+          }));
+          notify(body.message);
+        } catch (reason) {
+          this.error = reason instanceof Error ? reason.message : 'Възникна грешка. Опитайте отново.';
+          notify(this.error, 'error');
+        } finally {
+          this.submitting = false;
+        }
       },
     }));
   });

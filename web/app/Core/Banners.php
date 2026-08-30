@@ -9,6 +9,25 @@ use App\Support\SafeHtml;
 
 class Banners
 {
+    public static function imagePath(string $slug): ?string
+    {
+        try {
+            $banner = Banner::query()
+                ->where('slug', strtolower(trim($slug)))
+                ->where('is_active', true)
+                ->with('mediaFile')
+                ->first();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($banner?->mediaFile === null) {
+            return null;
+        }
+
+        return '/' . ltrim((string) $banner->mediaFile->path, '/');
+    }
+
     public static function render(string $slug): void
     {
         $banner = Banner::query()

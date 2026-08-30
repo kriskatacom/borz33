@@ -22,6 +22,7 @@ class AccountController extends Controller
 {
     public const SECTIONS = [
         'dashboard' => 'Табло',
+        'profile' => 'Профил',
         'details' => 'Данни на акаунта',
         'password' => 'Парола',
         'orders' => 'Поръчки',
@@ -248,6 +249,10 @@ class AccountController extends Controller
         $isError = array_key_exists('isError', $extra)
             ? (bool) $extra['isError']
             : (bool) ($flash['error'] ?? false);
+        $orderCount = $user->orders()->count();
+        $orders = $section === 'orders'
+            ? $user->orders()->with('items')->limit(50)->get()
+            : collect();
 
         $this->view('account', [
             'title' => self::SECTIONS[$section] . ' · Акаунт · Borz33',
@@ -266,6 +271,8 @@ class AccountController extends Controller
             'billingAddresses' => $this->addresses->list($user),
             'addressForm' => $extra['addressForm'] ?? $this->defaultAddressForm($user, $extra),
             'addressErrors' => $extra['addressErrors'] ?? [],
+            'orders' => $orders,
+            'orderCount' => $orderCount,
             'editingAddressId' => array_key_exists('editingAddressId', $extra)
                 ? $extra['editingAddressId']
                 : $this->requestedEditId($user),

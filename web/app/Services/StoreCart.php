@@ -47,6 +47,11 @@ class StoreCart
         return $total;
     }
 
+    public static function clear(): void
+    {
+        unset($_SESSION['store_cart']);
+    }
+
     public static function updateQty(int $index, int $qty): void
     {
         $items = array_values(self::items());
@@ -114,22 +119,39 @@ class StoreCart
 
         $kept = [];
         $lines = [];
+        $changed = false;
 
         foreach ($rows as $row) {
             $product = $products->get($row['product_id']);
 
             if (!$product instanceof Product) {
+                $changed = true;
                 continue;
             }
 
             $variant = self::variantFor($product, $row['variant_id']);
 
             if ($row['variant_id'] > 0 && $variant === null) {
+                $changed = true;
+                continue;
+            }
+
+            if ($variant !== null && !$variant->isInStock()) {
+                $changed = true;
                 continue;
             }
 
             $price = ProductPage::unitPrice($product, $variant);
             $qty = min(self::MAX_QTY, max(1, $row['qty']));
+
+            if ($variant !== null) {
+                $qty = min($qty, (int) $variant->stock);
+            }
+
+            if ($qty !== (int) $row['qty']) {
+                $changed = true;
+            }
+
             $image = $variant?->image ?? $product->frontImage;
             $optionLabels = [];
 
@@ -144,6 +166,7 @@ class StoreCart
                 }
             }
 
+            $row['qty'] = $qty;
             $kept[] = $row;
             $lines[] = [
                 'index' => count($lines),
@@ -162,7 +185,7 @@ class StoreCart
             ];
         }
 
-        if (count($kept) !== count($rows)) {
+        if ($changed || count($kept) !== count($rows)) {
             self::save($kept);
         }
 

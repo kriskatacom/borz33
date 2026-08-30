@@ -24,8 +24,8 @@ render_header('checkout', 'Как протича една поръчка', 'Пр
         </div>
         <aside class="soft-card h-fit p-6 sm:p-8">
             <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-moss">Вашата поръчка</p>
-            <div class="mt-6 flex gap-4 border-b border-forest/10 pb-6"><div class="size-20 rounded-2xl bg-sun"></div><div><h2 class="font-display text-xl font-bold">Примерен продукт</h2><p class="mt-1 text-sm text-ink/55">Вариант · 1 бр.</p><p class="mt-2 font-extrabold">89,00 лв.</p></div></div>
-            <dl class="mt-6 space-y-3 text-sm"><div class="flex justify-between"><dt>Продукти</dt><dd>89,00 лв.</dd></div><div class="flex justify-between"><dt>Доставка</dt><dd>изчислява се</dd></div><div class="flex justify-between border-t border-forest/10 pt-4 text-lg font-extrabold"><dt>Общо</dt><dd>89,00 лв.</dd></div></dl>
+            <div class="mt-6 flex gap-4 border-b border-forest/10 pb-6"><div class="size-20 rounded-2xl bg-sun"></div><div><h2 class="font-display text-xl font-bold">Примерен продукт</h2><p class="mt-1 text-sm text-ink/55">Вариант · 1 бр.</p><p class="mt-2 font-extrabold">89,00 €</p></div></div>
+            <dl class="mt-6 space-y-3 text-sm"><div class="flex justify-between"><dt>Продукти</dt><dd>89,00 €</dd></div><div class="flex justify-between"><dt>Доставка</dt><dd>изчислява се</dd></div><div class="flex justify-between border-t border-forest/10 pt-4 text-lg font-extrabold"><dt>Общо</dt><dd>89,00 €</dd></div></dl>
             <p class="mt-6 rounded-2xl bg-cream p-4 text-xs leading-5 text-ink/55">Преди завършване клиентът вижда крайната сума, условията за доставка и избрания начин на плащане.</p>
         </aside>
     </div>

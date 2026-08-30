@@ -1,6 +1,6 @@
 const moneyFormatter = new Intl.NumberFormat('bg-BG', {
   style: 'currency',
-  currency: 'BGN',
+  currency: 'EUR',
 });
 
 function formatPrice(value) {

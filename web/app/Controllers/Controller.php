@@ -31,6 +31,11 @@ abstract class Controller
         exit;
     }
 
+    protected function wantsJson(): bool
+    {
+        return str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
+    }
+
     protected function assertCsrf(): void
     {
         $token = (string) (\App\Core\Request::input('_token') ?? '');

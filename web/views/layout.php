@@ -5,9 +5,18 @@ declare(strict_types=1);
 /** @var string $title */
 /** @var string $content */
 /** @var string $currentPath */
+/** @var array<string, mixed> $seo */
 
 $title = $title ?? 'Borz33';
 $currentPath = $currentPath ?? '/';
+$seo = $seo ?? [];
+$seoTitle = (string) ($seo['title'] ?? $title);
+$seoDescription = (string) ($seo['description'] ?? 'Borz33 — онлайн магазин.');
+$seoCanonical = (string) ($seo['canonical'] ?? '');
+$seoRobots = (string) ($seo['robots'] ?? 'index, follow');
+$seoImage = is_string($seo['image'] ?? null) ? (string) $seo['image'] : null;
+$seoImageAlt = (string) ($seo['imageAlt'] ?? $seoTitle);
+$escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 /** @var \App\Models\User|null $currentUser */
 $currentUser = $currentUser ?? null;
 $accountTheme = null;
@@ -46,8 +55,48 @@ function store_asset(string $path): string
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="<?= $escape($seoDescription) ?>">
+    <meta name="robots" content="<?= $escape($seoRobots) ?>">
+    <meta name="googlebot" content="<?= $escape($seoRobots) ?>">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="application-name" content="<?= $escape((string) ($seo['siteName'] ?? 'Borz33')) ?>">
+    <meta name="apple-mobile-web-app-title" content="<?= $escape((string) ($seo['siteName'] ?? 'Borz33')) ?>">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="color-scheme" content="light dark">
     <meta name="theme-color" content="#ffffff">
-    <title><?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?></title>
+    <link rel="canonical" href="<?= $escape($seoCanonical) ?>">
+    <?php if (is_string($seo['previous'] ?? null)): ?><link rel="prev" href="<?= $escape((string) $seo['previous']) ?>"><?php endif; ?>
+    <?php if (is_string($seo['next'] ?? null)): ?><link rel="next" href="<?= $escape((string) $seo['next']) ?>"><?php endif; ?>
+    <link rel="alternate" hreflang="bg-BG" href="<?= $escape($seoCanonical) ?>">
+    <link rel="alternate" hreflang="x-default" href="<?= $escape($seoCanonical) ?>">
+
+    <meta property="og:locale" content="bg_BG">
+    <meta property="og:type" content="<?= $escape((string) ($seo['type'] ?? 'website')) ?>">
+    <meta property="og:site_name" content="<?= $escape((string) ($seo['siteName'] ?? 'Borz33')) ?>">
+    <meta property="og:title" content="<?= $escape($seoTitle) ?>">
+    <meta property="og:description" content="<?= $escape($seoDescription) ?>">
+    <meta property="og:url" content="<?= $escape($seoCanonical) ?>">
+    <?php if ($seoImage !== null): ?>
+    <meta property="og:image" content="<?= $escape($seoImage) ?>">
+    <meta property="og:image:alt" content="<?= $escape($seoImageAlt) ?>">
+    <?php endif; ?>
+    <?php if (($seo['type'] ?? '') === 'product'): ?>
+    <meta property="product:price:amount" content="<?= $escape((string) ($seo['productPrice'] ?? '')) ?>">
+    <meta property="product:price:currency" content="<?= $escape((string) ($seo['productCurrency'] ?? 'EUR')) ?>">
+    <meta property="product:availability" content="<?= $escape((string) ($seo['productAvailability'] ?? 'in stock')) ?>">
+    <?php endif; ?>
+
+    <meta name="twitter:card" content="<?= $escape((string) ($seo['twitterCard'] ?? 'summary')) ?>">
+    <meta name="twitter:title" content="<?= $escape($seoTitle) ?>">
+    <meta name="twitter:description" content="<?= $escape($seoDescription) ?>">
+    <?php if ($seoImage !== null): ?>
+    <meta name="twitter:image" content="<?= $escape($seoImage) ?>">
+    <meta name="twitter:image:alt" content="<?= $escape($seoImageAlt) ?>">
+    <?php endif; ?>
+    <title><?= $escape($seoTitle) ?></title>
+    <?php foreach (($seo['jsonLd'] ?? []) as $schema): ?>
+    <script type="application/ld+json"><?= json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP) ?></script>
+    <?php endforeach; ?>
     <script>
         (function () {
             var server = <?= json_encode($accountTheme, JSON_UNESCAPED_UNICODE) ?>;

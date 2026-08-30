@@ -14,14 +14,16 @@ $lead = $firstName !== '' ? $greeting . ', ' . $firstName . '.' : $greeting . '.
 $emailVerified = $user->hasVerifiedEmail();
 /** @var \Illuminate\Support\Collection<int, \App\Models\UserAddress> $billingAddresses */
 $addressCount = isset($billingAddresses) ? $billingAddresses->count() : 0;
+/** @var int $orderCount */
+$orderCount = (int) ($orderCount ?? 0);
 
 $stats = [
     [
         'href' => '/account/orders',
         'icon' => 'package',
-        'value' => '0',
+        'value' => (string) $orderCount,
         'label' => 'Поръчки',
-        'hint' => 'Ще се появят тук',
+        'hint' => $orderCount === 0 ? 'Ще се появят тук' : 'История на поръчките',
     ],
     [
         'href' => '/favorites',

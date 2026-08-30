@@ -68,7 +68,7 @@ function parseDate(value: string): Date | null {
 
 const moneyFormatter = new Intl.NumberFormat('bg-BG', {
   style: 'currency',
-  currency: 'BGN',
+  currency: 'EUR',
 });
 
 export function formatBytes(bytes: number): string {

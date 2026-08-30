@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -116,5 +117,17 @@ class User extends Model
             ->where('type', UserAddress::TYPE_BILLING)
             ->orderByDesc('is_default')
             ->orderByDesc('id');
+    }
+
+    public function favoriteProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'user_favorite_products')
+            ->withPivot('created_at')
+            ->orderByPivot('created_at', 'desc');
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class)->orderByDesc('created_at')->orderByDesc('id');
     }
 }
