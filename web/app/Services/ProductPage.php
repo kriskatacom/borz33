@@ -59,6 +59,14 @@ class ProductPage
         return number_format((float) $value, 2, ',', ' ') . ' €';
     }
 
+    public static function weight(mixed $grams): string
+    {
+        $value = max(0, (int) $grams);
+        if ($value < 1) return 'Теглото не е посочено';
+        if ($value < 1000) return $value . ' г';
+        return rtrim(rtrim(number_format($value / 1000, 2, ',', ' '), '0'), ',') . ' кг';
+    }
+
     /** @return list<array{label: string, href: string|null}> */
     public static function crumbs(Product $product): array
     {

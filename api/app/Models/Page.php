@@ -17,8 +17,10 @@ class Page extends Model
         'title',
         'slug',
         'parent_id',
+        'page_template_id',
         'is_active',
         'sort_order',
+        'content',
         'meta_title',
         'meta_description',
     ];
@@ -27,6 +29,7 @@ class Page extends Model
     {
         return [
             'parent_id' => 'integer',
+            'page_template_id' => 'integer',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];
@@ -52,6 +55,11 @@ class Page extends Model
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id')->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function pageTemplate(): BelongsTo
+    {
+        return $this->belongsTo(PageTemplate::class);
     }
 
     public function fields(): HasMany

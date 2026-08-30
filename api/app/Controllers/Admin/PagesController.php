@@ -6,6 +6,7 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\Controller;
 use App\Core\Request;
+use App\Models\PageTemplate;
 use App\Resources\PageResource;
 use App\Services\Pages\PageAdminService;
 use App\Validation\PageValidator;
@@ -26,6 +27,22 @@ class PagesController extends Controller
     public function tree(): never
     {
         $this->ok(['pages' => $this->pages->tree()], 'Дърво със страници.');
+    }
+
+    public function templates(): never
+    {
+        $templates = PageTemplate::query()
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'is_default'])
+            ->map(static fn (PageTemplate $template): array => [
+                'id' => (int) $template->id,
+                'name' => (string) $template->name,
+                'slug' => (string) $template->slug,
+                'is_default' => (bool) $template->is_default,
+            ])->all();
+
+        $this->ok(['templates' => $templates], 'Шаблони за страници.');
     }
 
     public function show(string $id): never

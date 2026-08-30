@@ -10,19 +10,22 @@ use App\Models\ProductOption;
 use App\Models\Order;
 use App\Resources\ProductImageResource;
 use App\Services\Orders\OrderNotificationService;
+use App\Services\Shipping\EcontShippingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Store\Core\StoreAuth;
 use Store\Core\View;
 use Store\Services\ProductPage;
 use Store\Services\ProductSearch;
+use Store\Services\RecentlyViewedProducts;
 use Store\Services\StoreCart;
 use Store\Services\StoreFavorites;
 
 class ShopController extends Controller
 {
     public function __construct(
-        private readonly OrderNotificationService $orderNotifications = new OrderNotificationService()
+        private readonly OrderNotificationService $orderNotifications = new OrderNotificationService(),
+        private readonly EcontShippingService $econtShipping = new EcontShippingService()
     ) {
     }
 
@@ -216,6 +219,8 @@ class ShopController extends Controller
             View::renderError('Продуктът не е намерен.', 404);
         }
 
+        RecentlyViewedProducts::record((int) $product->id);
+
         $flash = StoreAuth::pullFlash();
         $frontImage = $product->frontImage;
         $metaDescription = trim((string) ($product->short_description ?: $product->description));
@@ -249,12 +254,15 @@ class ShopController extends Controller
             $this->json(['message' => 'Продуктът не е намерен.'], 404);
         }
 
+        RecentlyViewedProducts::record((int) $product->id);
+
         $config = ProductPage::config($product);
         $this->json(['data' => [
             'name' => (string) $product->name,
             'href' => '/products/' . $product->slug,
             'cartUrl' => '/products/' . $product->slug . '/cart',
             'price' => ProductPage::money($product->price),
+            'weight' => ProductPage::weight($product->weight_grams),
             'image' => $config['gallery'][0]['url'] ?? null,
             'imageAlt' => $config['gallery'][0]['alt'] ?? $product->name,
             'config' => $config,
@@ -360,13 +368,18 @@ class ShopController extends Controller
     {
         $flash = StoreAuth::pullFlash();
         $lines = StoreCart::lines();
+        $recentlyViewed = RecentlyViewedProducts::products();
 
         $this->view('cart', [
             'title' => 'Количка · Borz33',
             'lines' => $lines,
             'total' => StoreCart::moneyTotal($lines),
+            'totalWeight' => StoreCart::weightTotal($lines),
             'message' => $flash['message'] ?? null,
             'isError' => (bool) ($flash['error'] ?? false),
+            'recentlyViewed' => $recentlyViewed->map(static fn (Product $product): array => StoreFavorites::productCard($product))->all(),
+            'favoriteIds' => StoreFavorites::ids(),
+            'cartProductIds' => array_values(array_unique(array_map(static fn (array $line): int => (int) $line['product_id'], $lines))),
         ]);
     }
 
@@ -385,20 +398,23 @@ class ShopController extends Controller
             'title' => 'Детайли за поръчката · Borz33',
             'lines' => $lines,
             'total' => StoreCart::moneyTotal($lines),
+            'totalWeight' => StoreCart::weightTotal($lines),
             'form' => [
                 'first_name' => (string) ($address?->first_name ?: $user?->first_name),
                 'last_name' => (string) ($address?->last_name ?: $user?->last_name),
                 'email' => (string) ($user?->email ?? ''),
                 'phone' => (string) ($user?->phone ?? ''),
                 'delivery_method' => 'address',
+                'econt_office_code' => '',
                 'address_line' => (string) ($address?->line1 ?? ''),
                 'city' => (string) ($address?->city ?? ''),
                 'postal_code' => (string) ($address?->postal_code ?? ''),
-                'country' => (string) ($address?->country ?? 'България'),
+                'country' => 'България',
                 'payment_method' => 'cash_on_delivery',
                 'notes' => '',
             ],
             'errors' => [],
+            'acceptedTerms' => false,
             'robots' => 'noindex, nofollow',
         ]);
     }
@@ -412,7 +428,7 @@ class ShopController extends Controller
             $this->redirect('/cart');
         }
 
-        $keys = ['first_name', 'last_name', 'email', 'phone', 'delivery_method', 'address_line', 'city', 'postal_code', 'country', 'payment_method', 'notes'];
+        $keys = ['first_name', 'last_name', 'email', 'phone', 'delivery_method', 'econt_office_code', 'address_line', 'city', 'postal_code', 'country', 'payment_method', 'notes'];
         $form = [];
 
         foreach ($keys as $key) {
@@ -443,6 +459,7 @@ class ShopController extends Controller
             'city' => 100,
             'postal_code' => 16,
             'country' => 80,
+            'econt_office_code' => 20,
         ] as $key => $limit) {
             if (mb_strlen($form[$key]) > $limit) {
                 $errors[$key] = 'Полето може да бъде до ' . $limit . ' символа.';
@@ -463,12 +480,43 @@ class ShopController extends Controller
             $errors['delivery_method'] = 'Изберете начин на доставка.';
         }
 
+        if ($form['delivery_method'] === 'address' && $form['postal_code'] === '') {
+            $errors['postal_code'] = 'Въведете пощенски код за изчисляване на доставката.';
+        }
+
+        if ($form['delivery_method'] === 'office' && $form['econt_office_code'] === '') {
+            $errors['address_line'] = 'Изберете офис от картата на Еконт.';
+        } elseif ($form['delivery_method'] === 'office' && preg_match('/^\d{1,20}$/', $form['econt_office_code']) !== 1) {
+            $errors['address_line'] = 'Избраният офис на Еконт е невалиден.';
+        }
+
         if (!in_array($form['payment_method'], ['cash_on_delivery', 'bank_transfer'], true)) {
             $errors['payment_method'] = 'Изберете начин на плащане.';
         }
 
+        if (mb_strtolower($form['country']) !== 'българия') {
+            $errors['country'] = 'Калкулаторът на Еконт поддържа доставки в България.';
+        }
+
         if (mb_strlen($form['notes']) > 1000) {
             $errors['notes'] = 'Бележката може да бъде до 1000 символа.';
+        }
+
+        $acceptedTerms = \App\Core\Request::wantsTrue('accept_terms');
+
+        if (!$acceptedTerms) {
+            $errors['accept_terms'] = 'Потвърдете условията, за да завършите поръчката.';
+        }
+
+        $sum = array_reduce($lines, static fn (float $carry, array $line): float => $carry + (float) $line['total'], 0.0);
+        $shipping = null;
+
+        if ($errors === []) {
+            $shipping = $this->econtShipping->quote($form['delivery_method']);
+
+            if ($shipping['currency'] !== 'EUR') {
+                $errors['shipping'] = 'Цената за доставка трябва да бъде в EUR.';
+            }
         }
 
         if ($errors !== []) {
@@ -476,17 +524,19 @@ class ShopController extends Controller
                 'title' => 'Детайли за поръчката · Borz33',
                 'lines' => $lines,
                 'total' => StoreCart::moneyTotal($lines),
+                'totalWeight' => StoreCart::weightTotal($lines),
                 'form' => $form,
                 'errors' => $errors,
+                'acceptedTerms' => $acceptedTerms,
                 'status' => 422,
                 'robots' => 'noindex, nofollow',
             ]);
         }
 
-        $sum = array_reduce($lines, static fn (float $carry, array $line): float => $carry + (float) $line['total'], 0.0);
+        $shippingAmount = (float) $shipping['amount'];
         $user = \App\Core\Auth::user();
 
-        $order = Capsule::connection()->transaction(static function () use ($form, $lines, $sum, $user): Order {
+        $order = Capsule::connection()->transaction(static function () use ($form, $lines, $sum, $shippingAmount, $user): Order {
             $order = Order::query()->create([
                 ...$form,
                 'user_id' => $user?->id,
@@ -494,7 +544,9 @@ class ShopController extends Controller
                 'status' => 'pending',
                 'currency' => 'EUR',
                 'subtotal' => $sum,
-                'total' => $sum,
+                'shipping_amount' => $shippingAmount,
+                'total' => $sum + $shippingAmount,
+                'econt_office_code' => $form['delivery_method'] === 'office' ? $form['econt_office_code'] : null,
                 'postal_code' => $form['postal_code'] !== '' ? $form['postal_code'] : null,
                 'notes' => $form['notes'] !== '' ? $form['notes'] : null,
             ]);
@@ -537,6 +589,37 @@ class ShopController extends Controller
         ]);
     }
 
+    public function shippingQuote(): never
+    {
+        $this->assertCsrf();
+        $lines = StoreCart::lines();
+
+        if ($lines === []) {
+            $this->json(['message' => 'Количката е празна.'], 422);
+        }
+
+        $deliveryMethod = trim((string) (\App\Core\Request::input('delivery_method') ?? ''));
+
+        $subtotal = array_reduce($lines, static fn (float $carry, array $line): float => $carry + (float) $line['total'], 0.0);
+
+        if (!in_array($deliveryMethod, ['address', 'office'], true)) {
+            $this->json(['message' => 'Изберете начин на доставка.'], 422);
+        }
+
+        $quote = $this->econtShipping->quote($deliveryMethod);
+
+        if ($quote['currency'] !== 'EUR') {
+            $this->json(['message' => 'Цената за доставка трябва да бъде в EUR.'], 500);
+        }
+
+        $this->json(['data' => [
+            'amount' => $quote['amount'],
+            'currency' => $quote['currency'],
+            'formatted' => ProductPage::money($quote['amount']),
+            'grand_total_formatted' => ProductPage::money($subtotal + $quote['amount']),
+        ]]);
+    }
+
     public function cartData(): never
     {
         $this->json(['data' => $this->cartPayload()]);
@@ -569,7 +652,7 @@ class ShopController extends Controller
         $this->redirect('/cart');
     }
 
-    /** @return array{count: int, lines: list<array<string, mixed>>, total: string} */
+    /** @return array{count: int, lines: list<array<string, mixed>>, total: string, totalWeight: string} */
     private function cartPayload(): array
     {
         $lines = StoreCart::lines();
@@ -578,6 +661,7 @@ class ShopController extends Controller
             'count' => StoreCart::count(),
             'lines' => $lines,
             'total' => StoreCart::moneyTotal($lines),
+            'totalWeight' => StoreCart::weightTotal($lines),
         ];
     }
 
@@ -588,6 +672,7 @@ class ShopController extends Controller
         $this->view('favorites', [
             'title' => 'Любими · Borz33',
             'products' => $products->map(static fn ($product): array => StoreFavorites::productCard($product))->all(),
+            'cartProductIds' => array_values(array_unique(array_map(static fn (array $line): int => (int) $line['product_id'], StoreCart::lines()))),
         ]);
     }
 

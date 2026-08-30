@@ -21,6 +21,8 @@ export type PageListItem = {
   slug: string;
   parent_id: number | null;
   parent: { id: number; title: string; slug: string } | null;
+  page_template_id: number;
+  page_template: { id: number; name: string; slug: string } | null;
   is_active: boolean;
   sort_order: number;
   fields_count: number;
@@ -30,9 +32,17 @@ export type PageListItem = {
 };
 
 export type AdminPage = PageListItem & {
+  content: string | null;
   meta_title: string | null;
   meta_description: string | null;
   fields: AdminPageField[];
+};
+
+export type PageTemplate = {
+  id: number;
+  name: string;
+  slug: string;
+  is_default: boolean;
 };
 
 export type PageListFilters = {
@@ -68,8 +78,10 @@ export type PagePayload = {
   title: string;
   slug?: string | null;
   parent_id?: number | null;
+  page_template_id: number;
   is_active: boolean;
   sort_order?: number;
+  content?: string | null;
   meta_title?: string | null;
   meta_description?: string | null;
   fields?: PageFieldPayload[];
@@ -84,6 +96,10 @@ export function listPageTree(token: string) {
     '/admin/pages/tree',
     { token }
   );
+}
+
+export function listPageTemplates(token: string) {
+  return apiRequest<{ templates: PageTemplate[] }>('/admin/pages/templates', { token });
 }
 
 export function getPage(token: string, id: number) {

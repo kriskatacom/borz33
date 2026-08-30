@@ -77,34 +77,94 @@ $alpineJson = static function (mixed $data): string {
 };
 
 $inputClass = 'store-input h-[42px] w-full border border-line bg-canvas px-3 text-ink';
-$navItems = [
-    'dashboard' => ['label' => 'Табло', 'icon' => 'layout'],
-    'profile' => ['label' => 'Профил', 'icon' => 'user'],
-    'details' => ['label' => 'Данни на акаунта', 'icon' => 'pencil'],
-    'password' => ['label' => 'Парола', 'icon' => 'lock'],
-    'orders' => ['label' => 'Поръчки', 'icon' => 'package'],
-    'addresses' => ['label' => 'Адреси', 'icon' => 'map-pin'],
-    'appearance' => ['label' => 'Изглед', 'icon' => 'sun'],
+$navGroups = [
+    'Преглед' => [
+        'dashboard' => ['label' => 'Табло', 'icon' => 'layout'],
+        'orders' => ['label' => 'Моите поръчки', 'icon' => 'package'],
+    ],
+    'Профил' => [
+        'profile' => ['label' => 'Публичен профил', 'icon' => 'user'],
+        'details' => ['label' => 'Лични данни', 'icon' => 'pencil'],
+        'addresses' => ['label' => 'Адреси', 'icon' => 'map-pin'],
+    ],
+    'Настройки' => [
+        'password' => ['label' => 'Сигурност', 'icon' => 'lock'],
+        'appearance' => ['label' => 'Изглед', 'icon' => 'sun'],
+    ],
 ];
 ?>
 <section class="store-profile">
     <div class="store-account-layout">
-        <nav class="store-account-nav" aria-label="Акаунт">
-            <?php foreach ($navItems as $key => $item): ?>
-                <?php $href = $key === 'dashboard' ? '/account' : '/account/' . $key; ?>
-                <a class="<?= $section === $key ? 'is-active' : '' ?>" href="<?= htmlspecialchars($href, ENT_QUOTES, 'UTF-8') ?>">
-                    <span class="store-account-nav-icon"><?= Html::iconSvg($item['icon']) ?></span>
-                    <?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?>
-                </a>
-            <?php endforeach; ?>
-            <form method="post" action="/logout">
-                <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
-                <button type="submit">
-                    <span class="store-account-nav-icon"><?= Html::iconSvg('log-out') ?></span>
-                    Изход
-                </button>
-            </form>
-        </nav>
+        <aside
+            class="store-account-sidebar"
+            x-data="{ mobileOpen: false }"
+            x-effect="document.documentElement.classList.toggle('is-account-nav-open', mobileOpen)"
+            @keydown.escape.window="mobileOpen = false"
+        >
+            <button
+                type="button"
+                class="store-account-sidebar-toggle"
+                @click="mobileOpen = true"
+                :aria-expanded="mobileOpen"
+                aria-controls="store-account-sidebar-nav"
+            >
+                <span>
+                    <small>Меню на профила</small>
+                    <strong><?= htmlspecialchars(AccountController::SECTIONS[$section] ?? 'Акаунт', ENT_QUOTES, 'UTF-8') ?></strong>
+                </span>
+                <span aria-hidden="true" :class="{ 'is-open': mobileOpen }"><?= Html::iconSvg('chevron-down') ?></span>
+            </button>
+
+            <div class="store-account-sidebar-overlay" x-cloak :class="{ 'is-mobile-open': mobileOpen }" @click.self="mobileOpen = false">
+                <div class="store-account-sidebar-panel" :role="mobileOpen ? 'dialog' : null" :aria-modal="mobileOpen ? 'true' : null" aria-label="Меню на профила">
+                    <div class="store-account-sidebar-mobile-head">
+                        <div>
+                            <p>Вашият профил</p>
+                            <strong><?= htmlspecialchars(AccountController::SECTIONS[$section] ?? 'Акаунт', ENT_QUOTES, 'UTF-8') ?></strong>
+                        </div>
+                        <button type="button" aria-label="Затвори менюто" @click="mobileOpen = false">×</button>
+                    </div>
+
+                    <a href="/account/profile" class="store-account-sidebar-user">
+                        <span class="store-account-sidebar-avatar">
+                            <?php if ($avatarUrl !== null): ?>
+                                <img src="<?= htmlspecialchars($avatarUrl, ENT_QUOTES, 'UTF-8') ?>" alt="" width="52" height="52">
+                            <?php else: ?>
+                                <?= htmlspecialchars($initials, ENT_QUOTES, 'UTF-8') ?>
+                            <?php endif; ?>
+                        </span>
+                        <span class="store-account-sidebar-identity">
+                            <strong><?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?></strong>
+                            <small><?= htmlspecialchars((string) $user->email, ENT_QUOTES, 'UTF-8') ?></small>
+                        </span>
+                        <span class="store-account-sidebar-arrow" aria-hidden="true"><?= Html::iconSvg('chevron-right') ?></span>
+                    </a>
+
+                    <nav id="store-account-sidebar-nav" class="store-account-nav" aria-label="Акаунт">
+                        <?php foreach ($navGroups as $groupLabel => $items): ?>
+                            <div class="store-account-nav-group">
+                                <p><?= htmlspecialchars($groupLabel, ENT_QUOTES, 'UTF-8') ?></p>
+                                <?php foreach ($items as $key => $item): ?>
+                                    <?php $href = $key === 'dashboard' ? '/account' : '/account/' . $key; ?>
+                                    <a class="<?= $section === $key ? 'is-active' : '' ?>" href="<?= htmlspecialchars($href, ENT_QUOTES, 'UTF-8') ?>" <?= $section === $key ? 'aria-current="page"' : '' ?>>
+                                        <span class="store-account-nav-icon"><?= Html::iconSvg($item['icon']) ?></span>
+                                        <span><?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                        <span class="store-account-nav-arrow" aria-hidden="true"><?= Html::iconSvg('chevron-right') ?></span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                        <form method="post" action="/logout">
+                            <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+                            <button type="submit">
+                                <span class="store-account-nav-icon"><?= Html::iconSvg('log-out') ?></span>
+                                <span>Изход</span>
+                            </button>
+                        </form>
+                    </nav>
+                </div>
+            </div>
+        </aside>
 
         <div class="store-account-panel">
             <p class="store-account-kicker"><?= htmlspecialchars(AccountController::SECTIONS[$section] ?? 'Акаунт', ENT_QUOTES, 'UTF-8') ?></p>

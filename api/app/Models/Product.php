@@ -25,6 +25,7 @@ class Product extends Model
         'description',
         'price',
         'compare_at_price',
+        'weight_grams',
         'is_active',
         'personalization_enabled',
         'personalization_label',
@@ -40,6 +41,7 @@ class Product extends Model
             'category_id' => 'integer',
             'price' => 'decimal:2',
             'compare_at_price' => 'decimal:2',
+            'weight_grams' => 'integer',
             'is_active' => 'boolean',
             'personalization_enabled' => 'boolean',
             'personalization_required' => 'boolean',
@@ -73,6 +75,11 @@ class Product extends Model
     public function favoritedByUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_favorite_products');
+    }
+
+    public function viewedByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_recently_viewed_products');
     }
 
     public function parameters(): HasMany

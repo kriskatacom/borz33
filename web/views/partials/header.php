@@ -10,6 +10,7 @@ use Store\Core\Html;
 /** @var \Illuminate\Support\Collection<int, \App\Models\Category> $navCategories */
 /** @var int $cartCount */
 /** @var int $favoriteCount */
+/** @var array{url: string, alt: string}|null $siteLogo */
 
 $currentPath = $currentPath ?? '/';
 $currentUser = $currentUser ?? null;
@@ -17,15 +18,35 @@ $csrf = $csrf ?? '';
 $navCategories = $navCategories ?? collect();
 $cartCount = (int) ($cartCount ?? 0);
 $favoriteCount = (int) ($favoriteCount ?? 0);
+$siteLogo = is_array($siteLogo ?? null) ? $siteLogo : null;
+$headerCompany = require dirname(__DIR__, 3) . '/config/company.php';
+$siteName = trim((string) ($headerCompany['name'] ?? 'Borz33')) ?: 'Borz33';
 $catalogActive = store_nav_active('/catalog', $currentPath);
 $accountLabel = $currentUser !== null ? 'Акаунт' : 'Вход';
 $accountActive = $currentPath === '/login' || store_nav_active('/account', $currentPath);
 ?>
 <header class="sticky top-0 z-50 overflow-visible border-b border-line bg-canvas">
     <div class="mx-auto grid w-[min(1120px,calc(100%-2rem))] grid-cols-[1fr_auto] items-center gap-x-3 gap-y-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(12rem,36rem)_minmax(0,1fr)]">
-        <a class="store-logo justify-self-start" href="/" aria-label="Borz33, начало">Borz33</a>
+        <a class="store-logo justify-self-start" href="/" aria-label="<?= htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8') ?>, начало">
+            <?php if ($siteLogo !== null): ?>
+                <img class="store-logo-image" src="<?= htmlspecialchars($siteLogo['url'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($siteLogo['alt'] !== '' ? $siteLogo['alt'] : $siteName, ENT_QUOTES, 'UTF-8') ?>">
+            <?php else: ?>
+                <?= htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8') ?>
+            <?php endif; ?>
+        </a>
 
         <div class="flex items-center justify-self-end gap-0.5 md:col-start-3">
+            <button
+                type="button"
+                class="store-icon-btn store-mobile-search-trigger"
+                aria-label="Отвори търсенето"
+                @click="openMobileSearch()"
+                :aria-expanded="mobileSearchOpen"
+                aria-controls="store-search-form"
+            >
+                <?= Html::iconSvg('search') ?>
+            </button>
+
             <?php if ($currentUser === null): ?>
                 <?php Html::iconLink('/login', 'user', $accountLabel, ['active' => $accountActive]); ?>
             <?php else: ?>
@@ -89,38 +110,51 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
         </div>
 
         <form
+            id="store-search-form"
             class="store-search col-span-2 flex h-12 min-w-0 w-full items-center border border-line bg-canvas pr-1 pl-3 md:col-span-1 md:col-start-2 md:row-start-1"
+            :class="{ 'is-mobile-open': mobileSearchOpen }"
             action="/catalog"
             method="get"
             role="search"
-            @click.outside="closeSearch()"
+            @click.outside="if (!mobileSearchOpen) closeSearch()"
             @focusin="openSearch()"
+            x-effect="document.documentElement.classList.toggle('is-mobile-search-open', mobileSearchOpen)"
         >
-            <label class="sr-only" for="q">Търсене в каталога</label>
-            <input
-                id="q"
-                name="q"
-                type="search"
-                class="min-w-0 flex-1 border-0 bg-transparent py-2 text-[0.95rem] text-ink outline-none"
-                placeholder="Търсене"
-                autocomplete="off"
-                autocorrect="off"
-                autocapitalize="off"
-                spellcheck="false"
-                role="combobox"
-                aria-autocomplete="list"
-                aria-controls="store-search-results"
-                :aria-expanded="searchOpen"
-                x-ref="searchInput"
-                x-model="searchQuery"
-                @focus="openSearch()"
-                @click="openSearch()"
-                @input.debounce.200ms="onSearchInput()"
-            >
-            <?php Html::iconButton('search', 'Търси', ['type' => 'submit', 'class' => 'store-icon-btn--sm']); ?>
+            <div class="store-mobile-search-head">
+                <div>
+                    <p>Търсене</p>
+                    <strong>Какво търсите?</strong>
+                </div>
+                <button type="button" aria-label="Затвори търсенето" @click="closeMobileSearch()">×</button>
+            </div>
+            <div class="store-search-input-row">
+                <label class="sr-only" for="q">Търсене в каталога</label>
+                <input
+                    id="q"
+                    name="q"
+                    type="search"
+                    class="min-w-0 flex-1 border-0 bg-transparent py-2 text-[0.95rem] text-ink outline-none"
+                    placeholder="Търсене"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-controls="store-search-results"
+                    :aria-expanded="searchOpen"
+                    x-ref="searchInput"
+                    x-model="searchQuery"
+                    @focus="openSearch()"
+                    @click="openSearch()"
+                    @input.debounce.200ms="onSearchInput()"
+                >
+                <?php Html::iconButton('search', 'Търси', ['type' => 'submit', 'class' => 'store-icon-btn--sm']); ?>
+            </div>
             <div
                 id="store-search-results"
                 class="store-search-panel"
+                :class="{ 'is-featured': searchFeatured }"
                 x-cloak
                 x-show="searchOpen"
                 x-transition.opacity.duration.120ms

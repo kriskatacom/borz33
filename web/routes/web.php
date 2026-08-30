@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Store\Controllers\AccountController;
 use Store\Controllers\AuthController;
+use Store\Controllers\ContentPageController;
 use Store\Controllers\HomeController;
 use Store\Controllers\ShopController;
 
@@ -21,6 +22,7 @@ $router->post('/favorites/{id}/toggle', [ShopController::class, 'toggleFavorite'
 $router->get('/cart', [ShopController::class, 'cart']);
 $router->get('/checkout', [ShopController::class, 'checkout']);
 $router->post('/checkout', [ShopController::class, 'placeOrder']);
+$router->post('/checkout/shipping-quote', [ShopController::class, 'shippingQuote']);
 $router->get('/checkout/success', [ShopController::class, 'checkoutSuccess']);
 $router->get('/cart/data', [ShopController::class, 'cartData']);
 $router->post('/cart/{index}', [ShopController::class, 'updateCart']);
@@ -44,3 +46,6 @@ $router->post('/account/addresses/{id}/delete', [AccountController::class, 'dest
 $router->post('/account/addresses/{id}/default', [AccountController::class, 'makeDefaultAddress']);
 $router->post('/account/addresses/{id}', [AccountController::class, 'updateAddress']);
 $router->post('/account/addresses', [AccountController::class, 'storeAddress']);
+
+// Keep the CMS catch-all last so explicit store and account routes always win.
+$router->get('/{slug*}', [ContentPageController::class, 'show']);

@@ -47,8 +47,16 @@ $address = implode(', ', array_filter([
         </tr>
     <?php endforeach; ?>
     <tr>
-        <td style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">Общо за продуктите</td>
-        <td align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;"><?= $escape($money($order->total)) ?></td>
+        <td style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;">Продукти</td>
+        <td align="right" style="padding:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;"><?= $escape($money($order->subtotal)) ?></td>
+    </tr>
+    <tr>
+        <td style="padding:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;">Доставка с Еконт</td>
+        <td align="right" style="padding:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;"><?= $escape($money($order->shipping_amount)) ?></td>
+    </tr>
+    <tr>
+        <td style="padding:10px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">Общо</td>
+        <td align="right" style="padding:10px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;"><?= $escape($money($order->total)) ?></td>
     </tr>
 </table>
 

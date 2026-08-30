@@ -29,6 +29,7 @@ export type ProductListItem = {
   short_description: string | null;
   price: string | number;
   compare_at_price: string | number | null;
+  weight_grams: number;
   is_active: boolean;
   personalization_enabled: boolean;
   sort_order: number;

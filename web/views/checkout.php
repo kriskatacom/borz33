@@ -8,11 +8,16 @@ use Store\Services\ProductPage;
 /** @var array<string, string> $form */
 /** @var array<string, string> $errors */
 /** @var string $total */
+/** @var string $totalWeight */
 /** @var string $csrf */
+/** @var bool $acceptedTerms */
 
 $lines = $lines ?? [];
 $form = $form ?? [];
 $errors = $errors ?? [];
+$acceptedTerms = (bool) ($acceptedTerms ?? false);
+$totalWeight = $totalWeight ?? 'Не е изчислено';
+$company = require dirname(__DIR__, 2) . '/config/company.php';
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $value = static fn (string $key): string => $escape($form[$key] ?? '');
 $error = static fn (string $key): ?string => isset($errors[$key]) ? (string) $errors[$key] : null;
@@ -86,6 +91,7 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
             </section>
 
             <section class="store-checkout-card" aria-labelledby="checkout-delivery-title" data-delivery-section>
+                <input type="hidden" name="econt_office_code" value="<?= $value('econt_office_code') ?>" data-econt-office-code>
                 <div class="store-checkout-card-title">
                     <span aria-hidden="true">2</span>
                     <div>
@@ -114,8 +120,9 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
                 <div class="store-checkout-fields">
                     <label class="<?= $error('address_line') ? 'has-error' : '' ?>">
                         <span data-address-label><?= $delivery === 'office' ? 'Офис на куриер' : 'Улица и номер' ?> <em>*</em></span>
-                        <input type="text" name="address_line" autocomplete="<?= $delivery === 'office' ? 'off' : 'street-address' ?>" value="<?= $value('address_line') ?>" maxlength="191" placeholder="<?= $delivery === 'office' ? 'Напр. Еконт Център, офис 1234' : 'Улица, номер, вход, етаж и апартамент' ?>" required data-address-input<?= $error('address_line') ? ' aria-invalid="true" aria-describedby="address-error"' : '' ?>>
-                        <span class="store-checkout-field-hint" data-address-hint><?= $delivery === 'office' ? 'Посочете куриер, име или код на офиса.' : 'Добавете вход, етаж и апартамент, ако са приложими.' ?></span>
+                        <input type="text" name="address_line" autocomplete="<?= $delivery === 'office' ? 'off' : 'street-address' ?>" value="<?= $value('address_line') ?>" maxlength="191" placeholder="<?= $delivery === 'office' ? 'Изберете офис от картата' : 'Улица, номер, вход, етаж и апартамент' ?>" required data-address-input<?= $delivery === 'office' ? ' readonly' : '' ?><?= $error('address_line') ? ' aria-invalid="true" aria-describedby="address-error"' : '' ?>>
+                        <button type="button" class="store-checkout-office-button" data-econt-office-open<?= $delivery !== 'office' ? ' hidden' : '' ?>>Избери офис на Еконт</button>
+                        <span class="store-checkout-field-hint" data-address-hint><?= $delivery === 'office' ? 'Избраният офис определя точната цена на доставката.' : 'Добавете вход, етаж и апартамент, ако са приложими.' ?></span>
                         <?php if ($error('address_line')): ?><small id="address-error"><?= $escape($error('address_line')) ?></small><?php endif; ?>
                     </label>
                     <div class="store-checkout-fields store-checkout-fields--city">
@@ -125,14 +132,14 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
                             <?php if ($error('city')): ?><small id="city-error"><?= $escape($error('city')) ?></small><?php endif; ?>
                         </label>
                         <label class="<?= $error('postal_code') ? 'has-error' : '' ?>">
-                            <span>Пощенски код</span>
-                            <input type="text" name="postal_code" autocomplete="postal-code" inputmode="numeric" value="<?= $value('postal_code') ?>" maxlength="16"<?= $error('postal_code') ? ' aria-invalid="true" aria-describedby="postal-code-error"' : '' ?>>
+                            <span>Пощенски код <em>*</em></span>
+                            <input type="text" name="postal_code" autocomplete="postal-code" inputmode="numeric" value="<?= $value('postal_code') ?>" maxlength="16" required<?= $error('postal_code') ? ' aria-invalid="true" aria-describedby="postal-code-error"' : '' ?>>
                             <?php if ($error('postal_code')): ?><small id="postal-code-error"><?= $escape($error('postal_code')) ?></small><?php endif; ?>
                         </label>
                     </div>
                     <label class="<?= $error('country') ? 'has-error' : '' ?>">
                         <span>Държава <em>*</em></span>
-                        <input type="text" name="country" autocomplete="country-name" value="<?= $value('country') ?>" maxlength="80" required<?= $error('country') ? ' aria-invalid="true" aria-describedby="country-error"' : '' ?>>
+                        <input type="text" name="country" autocomplete="country-name" value="България" maxlength="80" readonly required<?= $error('country') ? ' aria-invalid="true" aria-describedby="country-error"' : '' ?>>
                         <?php if ($error('country')): ?><small id="country-error"><?= $escape($error('country')) ?></small><?php endif; ?>
                     </label>
                 </div>
@@ -198,6 +205,7 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
                             <a href="<?= $escape($line['href']) ?>"><?= $escape($line['name']) ?></a>
                             <?php if ((string) $line['options'] !== ''): ?><small><?= $escape($line['options']) ?></small><?php endif; ?>
                             <?php foreach (($line['notes'] ?? []) as $note): ?><small><?= $escape($note) ?></small><?php endforeach; ?>
+                            <small class="store-weight-detail">Тегло: <strong><?= $escape($line['weight']) ?></strong> · общо: <strong><?= $escape($line['total_weight']) ?></strong></small>
                             <span><?= (int) $line['qty'] ?> × <?= $escape(ProductPage::money($line['price'])) ?></span>
                         </div>
                         <strong><?= $escape(ProductPage::money($line['total'])) ?></strong>
@@ -206,13 +214,33 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
             </ul>
             <div class="store-checkout-totals">
                 <p><span>Продукти</span><strong><?= $escape($total) ?></strong></p>
-                <p><span>Доставка</span><strong>Уточнява се при обработка</strong></p>
-                <p><span>Общо за продуктите</span><strong><?= $escape($total) ?></strong></p>
+                <p><span>Общо тегло</span><strong><?= $escape($totalWeight) ?></strong></p>
+                <p><span>Доставка с Еконт</span><strong data-shipping-price>Изчислява се…</strong></p>
+                <p><span>Общо</span><strong data-checkout-grand-total data-products-total="<?= $escape($total) ?>"><?= $escape($total) ?></strong></p>
             </div>
-            <p class="store-checkout-delivery-note">
-                <span aria-hidden="true">i</span>
-                Цената за доставка не е включена и се потвърждава според избрания адрес или офис.
+            <p class="store-checkout-delivery-note<?= $error('shipping') ? ' has-error' : '' ?>" data-shipping-status>
+                <span class="store-checkout-delivery-note-icon" aria-hidden="true">i</span>
+                <span data-shipping-message><?= $error('shipping') ? $escape($error('shipping')) : 'Използва се фиксирана цена според избрания начин на доставка.' ?></span>
             </p>
+            <button type="button" class="store-checkout-quote-button" data-shipping-quote>Изчисли доставката</button>
+            <div class="store-checkout-legal<?= $error('accept_terms') ? ' has-error' : '' ?>">
+                <label>
+                    <input type="checkbox" name="accept_terms" value="1" <?= $acceptedTerms ? 'checked' : '' ?> required<?= $error('accept_terms') ? ' aria-invalid="true" aria-describedby="accept-terms-error"' : '' ?>>
+                    <span>
+                        Приемам
+                        <a href="<?= $escape($company['terms_url'] ?? '/terms') ?>" target="_blank" rel="noopener">Общите условия</a>
+                        и
+                        <a href="<?= $escape($company['privacy_url'] ?? '/privacy') ?>" target="_blank" rel="noopener">Политиката за поверителност</a>.
+                    </span>
+                </label>
+                <?php if ($error('accept_terms')): ?><small id="accept-terms-error"><?= $escape($error('accept_terms')) ?></small><?php endif; ?>
+                <p>
+                    За доставката се прилагат
+                    <a href="https://www.econt.com/econt-express/common-terms" target="_blank" rel="noopener noreferrer">условията на Еконт</a>
+                    и
+                    <a href="https://www.econt.com/services/courier-services" target="_blank" rel="noopener noreferrer">актуалните цени на Еконт</a>.
+                </p>
+            </div>
             <button type="submit" data-checkout-submit>
                 <span data-submit-label>Завърши поръчката</span>
                 <span data-submit-loading hidden><i aria-hidden="true"></i> Изпращане…</span>
@@ -225,4 +253,15 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
             <a href="/cart" class="store-checkout-edit-cart">Промени продуктите в количката</a>
         </aside>
     </form>
+
+    <dialog class="store-checkout-office-dialog" data-econt-office-dialog aria-labelledby="econt-office-title">
+        <div class="store-checkout-office-dialog-head">
+            <div>
+                <p>Доставка с Еконт</p>
+                <h2 id="econt-office-title">Изберете удобен офис</h2>
+            </div>
+            <button type="button" aria-label="Затвори картата" data-econt-office-close>×</button>
+        </div>
+        <iframe title="Карта с офиси на Еконт" allow="geolocation 'self' https://offices.econt.com/" data-econt-office-frame></iframe>
+    </dialog>
 </section>

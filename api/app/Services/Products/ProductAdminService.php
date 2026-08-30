@@ -220,6 +220,10 @@ class ProductAdminService
             $attributes['price'] = $data['price'];
         }
 
+        if (array_key_exists('weight_grams', $data)) {
+            $attributes['weight_grams'] = (int) $data['weight_grams'];
+        }
+
         foreach (['is_active', 'personalization_enabled', 'personalization_required'] as $flag) {
             if (array_key_exists($flag, $data)) {
                 $attributes[$flag] = (bool) $data[$flag];
@@ -260,6 +264,7 @@ class ProductAdminService
             'description' => $data['description'] ?? null,
             'price' => $data['price'],
             'compare_at_price' => $data['compare_at_price'] ?? null,
+            'weight_grams' => (int) $data['weight_grams'],
             'is_active' => (bool) $data['is_active'],
             'personalization_enabled' => (bool) $data['personalization_enabled'],
             'personalization_label' => $data['personalization_label'] ?? null,

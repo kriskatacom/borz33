@@ -126,6 +126,13 @@ class User extends Model
             ->orderByPivot('created_at', 'desc');
     }
 
+    public function recentlyViewedProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'user_recently_viewed_products')
+            ->withPivot('viewed_at')
+            ->orderByPivot('viewed_at', 'desc');
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class)->orderByDesc('created_at')->orderByDesc('id');

@@ -18,7 +18,8 @@ final class Seo
         $description = trim((string) ($data['metaDescription'] ?? self::description($path, $siteName)));
         $robots = (string) ($data['robots'] ?? (self::isPrivate($path, (int) ($data['status'] ?? 200)) ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'));
         $canonicalPath = (string) ($data['canonicalPath'] ?? $path);
-        $page = max(1, (int) ($data['page'] ?? 1));
+        $pageValue = $data['paginationPage'] ?? $data['page'] ?? 1;
+        $page = max(1, is_numeric($pageValue) ? (int) $pageValue : 1);
         $lastPage = max(1, (int) ($data['lastPage'] ?? 1));
         $query = trim((string) (\App\Core\Request::query('q') ?? ''));
         $params = [];

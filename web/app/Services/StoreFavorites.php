@@ -103,6 +103,7 @@ final class StoreFavorites
             'price' => ProductPage::money($product->price),
             'comparePrice' => $onSale ? ProductPage::money($compare) : null,
             'discountPercent' => $onSale ? max(1, (int) round((1 - ($price / $compare)) * 100)) : null,
+            'weight' => ProductPage::weight($product->weight_grams),
             'image' => $image !== null ? (string) ProductImageResource::toArray($image)['url'] : null,
             'alt' => $image?->alt ?: $product->name,
         ];

@@ -182,6 +182,10 @@ class StoreCart
                 'alt' => $image !== null && trim((string) $image->alt) !== '' ? (string) $image->alt : (string) $product->name,
                 'price' => $price,
                 'total' => (string) ((float) $price * $qty),
+                'weight_grams' => (int) $product->weight_grams,
+                'weight' => ProductPage::weight((int) $product->weight_grams),
+                'total_weight_grams' => (int) $product->weight_grams * $qty,
+                'total_weight' => ProductPage::weight((int) $product->weight_grams * $qty),
             ];
         }
 
@@ -201,6 +205,15 @@ class StoreCart
         }
 
         return ProductPage::money($sum);
+    }
+
+    /** @param list<array<string, mixed>> $lines */
+    public static function weightTotal(array $lines): string
+    {
+        foreach ($lines as $line) {
+            if ((int) ($line['weight_grams'] ?? 0) < 1) return 'Не е изчислено';
+        }
+        return ProductPage::weight(array_sum(array_map(static fn (array $line): int => (int) ($line['total_weight_grams'] ?? 0), $lines)));
     }
 
     /** @return list<array{product_id: int, variant_id: int, qty: int, personalization: array<string, mixed>}> */

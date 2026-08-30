@@ -254,7 +254,6 @@ export function registerStoreProduct(Alpine) {
           window.dispatchEvent(new CustomEvent('store:cart-updated', {
             detail: { data: body.data, message: body.message },
           }));
-          notify(body.message);
         } catch (reason) {
           this.error = reason instanceof Error ? reason.message : 'Възникна грешка. Опитайте отново.';
           notify(this.error, 'error');

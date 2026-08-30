@@ -146,6 +146,7 @@ function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
   const [tree, setTree] = useState<CategoryTreeNode[]>([]);
   const [price, setPrice] = useState(moneyInput(product?.price));
   const [compareAt, setCompareAt] = useState(moneyInput(product?.compare_at_price));
+  const [weightGrams, setWeightGrams] = useState(String(product?.weight_grams || ''));
   const [shortDescription, setShortDescription] = useState(product?.short_description ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
@@ -188,6 +189,7 @@ function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
         category_id: categoryId === 'none' ? null : Number(categoryId),
         price: toNumber(price) ?? 0,
         compare_at_price: toNumber(compareAt),
+        weight_grams: toNumber(weightGrams) ?? 0,
         short_description: shortDescription.trim() === '' ? null : shortDescription.trim(),
         description: description.trim() === '' ? null : description.trim(),
         is_active: isActive,
@@ -236,6 +238,7 @@ function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
         />
         <Field id="price" label="Цена" type="number" step="0.01" min="0" help="Базова цена „от“." value={price} onChange={(event) => setPrice(event.target.value)} error={errors.price} />
         <Field id="compare_at_price" label="Сравнителна цена" type="number" step="0.01" min="0" help="Стара цена, ако има намаление. Празно поле я маха." value={compareAt} onChange={(event) => setCompareAt(event.target.value)} error={errors.compare_at_price} />
+        <Field id="weight_grams" label="Тегло (грама)" type="number" step="1" min="1" help="Нетно тегло на един продукт в грамове." value={weightGrams} onChange={(event) => setWeightGrams(event.target.value)} error={errors.weight_grams} />
         <SwitchField id="is_active" label="Активен" help="Неактивен продукт е скрит от каталога." checked={isActive} onCheckedChange={setIsActive} />
       </div>
       <Field id="short_description" label="Кратко описание" help="Едно изречение за списъка и картите." value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} error={errors.short_description} />

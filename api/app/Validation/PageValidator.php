@@ -14,7 +14,8 @@ class PageValidator
     /** @param array<string, mixed> $data */
     public function validate(array $data, ?int $pageId = null): array
     {
-        $data = $this->blankToNull($data, ['slug', 'meta_title', 'meta_description', 'parent_id']);
+        $data = $this->blankToNull($data, ['slug', 'content', 'meta_title', 'meta_description', 'parent_id', 'page_template_id']);
+        $data = $this->normalizeSlug($data);
         $data = $this->normalizeParent($data);
         $data = $this->normalizeFields($data);
         $rules = $this->rules($pageId);
@@ -82,6 +83,20 @@ class PageValidator
         return $data;
     }
 
+    /** @param array<string, mixed> $data
+     *  @return array<string, mixed>
+     */
+    private function normalizeSlug(array $data): array
+    {
+        if (!isset($data['slug']) || !is_string($data['slug'])) {
+            return $data;
+        }
+
+        $data['slug'] = strtolower(trim((string) preg_replace('#/+#', '/', trim($data['slug'])), '/'));
+
+        return $data;
+    }
+
     /** @return array<string, mixed> */
     private function rules(?int $pageId): array
     {
@@ -97,12 +112,14 @@ class PageValidator
                 'nullable',
                 'string',
                 'max:191',
-                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/',
                 Rule::unique('pages', 'slug')->ignore($pageId),
             ],
             'is_active' => ['required', 'boolean'],
             'parent_id' => ['nullable', 'integer', 'min:1', $parentExists],
+            'page_template_id' => ['required', 'integer', 'min:1', Rule::exists('page_templates', 'id')],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'content' => ['nullable', 'string'],
             'meta_title' => ['nullable', 'string', 'max:191'],
             'meta_description' => ['nullable', 'string', 'max:500'],
             'fields' => ['nullable', 'array'],
@@ -165,7 +182,9 @@ class PageValidator
             'slug' => 'адрес',
             'is_active' => 'активна',
             'parent_id' => 'родителска страница',
+            'page_template_id' => 'шаблон',
             'sort_order' => 'ред',
+            'content' => 'основно съдържание',
             'meta_title' => 'SEO заглавие',
             'meta_description' => 'SEO описание',
             'fields' => 'полета',

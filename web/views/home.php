@@ -36,6 +36,7 @@ $favoriteIds = $favoriteIds ?? [];
                     <div class="store-favorite-card-copy">
                         <a href="<?= htmlspecialchars((string) $product['href'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) $product['name'], ENT_QUOTES, 'UTF-8') ?></a>
                         <strong><?= htmlspecialchars((string) $product['price'], ENT_QUOTES, 'UTF-8') ?></strong>
+                        <span class="store-card-weight">Тегло <strong><?= htmlspecialchars((string) $product['weight'], ENT_QUOTES, 'UTF-8') ?></strong></span>
                     </div>
                     <button
                         type="button"

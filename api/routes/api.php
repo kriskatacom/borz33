@@ -9,6 +9,7 @@ use App\Controllers\Admin\MediaController;
 use App\Controllers\Admin\PagesController;
 use App\Controllers\Admin\ProductImagesController;
 use App\Controllers\Admin\ProductsController;
+use App\Controllers\Admin\SettingsController;
 use App\Controllers\Admin\UsersController;
 use App\Controllers\Auth\EmailVerificationController;
 use App\Controllers\Auth\LoginController;
@@ -42,6 +43,8 @@ $router->post('/auth/logout', [SessionController::class, 'destroy'], [Authentica
 
 $admin = [Authenticate::class, RequireAdmin::class];
 $router->get('/admin/dashboard', [DashboardController::class, 'show'], $admin);
+$router->get('/admin/settings', [SettingsController::class, 'show'], $admin);
+$router->patch('/admin/settings', [SettingsController::class, 'update'], $admin);
 $router->get('/admin/users', [UsersController::class, 'index'], $admin);
 $router->post('/admin/users', [UsersController::class, 'store'], $admin);
 $router->get('/admin/users/avatar-presets', [UsersController::class, 'avatarPresets'], $admin);
@@ -62,6 +65,7 @@ $router->delete('/admin/media/{id}', [MediaController::class, 'destroy'], $admin
 $router->get('/admin/pages', [PagesController::class, 'index'], $admin);
 $router->post('/admin/pages', [PagesController::class, 'store'], $admin);
 $router->get('/admin/pages/tree', [PagesController::class, 'tree'], $admin);
+$router->get('/admin/pages/templates', [PagesController::class, 'templates'], $admin);
 $router->get('/admin/pages/{id}', [PagesController::class, 'show'], $admin);
 $router->put('/admin/pages/{id}', [PagesController::class, 'update'], $admin);
 $router->patch('/admin/pages/{id}', [PagesController::class, 'update'], $admin);

@@ -21,11 +21,12 @@ import {
   createPage,
   getPage,
   listPageTree,
+  listPageTemplates,
   updatePage,
   type AdminPage,
   type AdminPageField,
-  type PageFieldPayload,
   type PageFieldType,
+  type PageTemplate,
 } from '@/api/pages';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
@@ -34,6 +35,7 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/Button';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Field } from '@/components/ui/Field';
+import { TextEditor } from '@/components/ui/TextEditor';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -47,8 +49,10 @@ type FormState = {
   title: string;
   slug: string;
   parent_id: string;
+  page_template_id: string;
   is_active: boolean;
   sort_order: string;
+  content: string;
   meta_title: string;
   meta_description: string;
 };
@@ -69,8 +73,10 @@ const emptyForm: FormState = {
   title: '',
   slug: '',
   parent_id: 'none',
+  page_template_id: '',
   is_active: true,
   sort_order: '0',
+  content: '',
   meta_title: '',
   meta_description: '',
 };
@@ -199,6 +205,7 @@ export function PageFormPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [tree, setTree] = useState<PageTreeNode[]>([]);
+  const [templates, setTemplates] = useState<PageTemplate[]>([]);
   const [fields, setFields] = useState<FieldDraft[]>([]);
   const [deleted, setDeleted] = useState(false);
   const [busy, setBusy] = useState(!isNew);
@@ -267,13 +274,34 @@ export function PageFormPage() {
     };
   }, [token]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    void listPageTemplates(token)
+      .then((response) => {
+        if (cancelled) return;
+        setTemplates(response.data.templates);
+        if (isNew) {
+          const preferred = response.data.templates.find((template) => template.is_default) ?? response.data.templates[0];
+          if (preferred) setForm((current) => ({ ...current, page_template_id: String(preferred.id) }));
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) toastError(error, 'Шаблоните не можаха да се заредят.');
+      });
+
+    return () => { cancelled = true; };
+  }, [isNew, token]);
+
   function applyPage(page: AdminPage) {
     setForm({
       title: page.title,
       slug: page.slug,
       parent_id: page.parent_id ? String(page.parent_id) : 'none',
+      page_template_id: String(page.page_template_id),
       is_active: page.is_active,
       sort_order: String(page.sort_order),
+      content: page.content ?? '',
       meta_title: page.meta_title ?? '',
       meta_description: page.meta_description ?? '',
     });
@@ -307,8 +335,10 @@ export function PageFormPage() {
       title: form.title.trim(),
       slug: form.slug.trim() === '' ? null : form.slug.trim(),
       parent_id: form.parent_id === 'none' ? null : Number(form.parent_id),
+      page_template_id: Number(form.page_template_id),
       is_active: form.is_active,
       sort_order: Math.max(0, Number.parseInt(form.sort_order, 10) || 0),
+      content: form.content.trim() === '' || form.content === '<p></p>' ? null : form.content,
       meta_title: form.meta_title.trim() === '' ? null : form.meta_title.trim(),
       meta_description: form.meta_description.trim() === '' ? null : form.meta_description.trim(),
       fields: fields.map((field, index) => {
@@ -412,7 +442,7 @@ export function PageFormPage() {
               <Field
                 id="slug"
                 label="Адрес (slug)"
-                help="Оставете празно, за да се генерира от заглавието."
+                help="Може да е единичен адрес или път с наклонени черти, напр. informaciya/dostavka/econt. Оставете празно за автоматичен адрес."
                 value={form.slug}
                 onChange={(event) => patchForm('slug', event.target.value)}
                 error={errors.slug}
@@ -430,6 +460,30 @@ export function PageFormPage() {
                 error={errors.parent_id}
                 onValueChange={(value) => patchForm('parent_id', value)}
               />
+              <div className="field">
+                <LabelWithHelp
+                  htmlFor="page_template_id"
+                  label="Шаблон"
+                  help="Шаблонът определя подредбата на публичната страница. Всяка страница има точно един шаблон."
+                />
+                <Select
+                  key={`${templates.length}:${form.page_template_id}`}
+                  value={form.page_template_id || undefined}
+                  onValueChange={(value) => patchForm('page_template_id', value)}
+                >
+                  <SelectTrigger id="page_template_id" className="w-full min-h-12 font-sans" aria-invalid={errors.page_template_id ? 'true' : undefined}>
+                    <SelectValue placeholder="Изберете шаблон" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={String(template.id)}>
+                        {template.name}{template.is_default ? ' · по подразбиране' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.page_template_id ? <p className="field-error" role="alert">{errors.page_template_id}</p> : null}
+              </div>
               <Field
                 id="sort_order"
                 label="Ред"
@@ -465,6 +519,23 @@ export function PageFormPage() {
               value={form.meta_description}
               onChange={(event) => patchForm('meta_description', event.target.value)}
               error={errors.meta_description}
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Основно съдържание"
+            icon={FileText}
+            persistKey="page.content"
+            className="overflow-visible"
+            help="Това съдържание се показва като основен текст на публичната страница."
+          >
+            <TextEditor
+              id="content"
+              label="Съдържание"
+              help="Форматирайте текста с удебеляване, курсив, подчертаване и списъци."
+              value={form.content}
+              onChange={(value) => patchForm('content', value)}
+              error={errors.content}
             />
           </CollapsibleSection>
 

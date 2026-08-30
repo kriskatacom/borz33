@@ -23,7 +23,7 @@ class PageAdminService
         $query = $this->filteredQuery($filters);
         $total = (clone $query)->count();
         $pages = $query
-            ->with(['parent'])
+            ->with(['parent', 'pageTemplate'])
             ->withCount('fields')
             ->orderBy('sort_order')
             ->orderByDesc('id')
@@ -175,8 +175,10 @@ class PageAdminService
                 'title' => $data['title'],
                 'slug' => $slug,
                 'parent_id' => $this->resolvedParentId($data['parent_id'] ?? null, null),
+                'page_template_id' => (int) $data['page_template_id'],
                 'is_active' => (bool) $data['is_active'],
                 'sort_order' => (int) ($data['sort_order'] ?? 0),
+                'content' => $this->sanitizeContent($data['content'] ?? null),
                 'meta_title' => $data['meta_title'] ?? null,
                 'meta_description' => $data['meta_description'] ?? null,
             ];
@@ -206,8 +208,16 @@ class PageAdminService
             $attributes['parent_id'] = $this->resolvedParentId($data['parent_id'], $pageId);
         }
 
+        if (array_key_exists('page_template_id', $data)) {
+            $attributes['page_template_id'] = (int) $data['page_template_id'];
+        }
+
         if (array_key_exists('sort_order', $data)) {
             $attributes['sort_order'] = (int) $data['sort_order'];
+        }
+
+        if (array_key_exists('content', $data)) {
+            $attributes['content'] = $this->sanitizeContent($data['content']);
         }
 
         foreach (['meta_title', 'meta_description'] as $nullable) {
@@ -217,6 +227,51 @@ class PageAdminService
         }
 
         return $attributes;
+    }
+
+    private function sanitizeContent(mixed $content): ?string
+    {
+        if (!is_string($content) || trim($content) === '') {
+            return null;
+        }
+
+        $html = strip_tags($content, '<p><br><hr><h1><h2><h3><h4><h5><h6><strong><em><u><ul><ol><li><a>');
+        $html = preg_replace_callback(
+            '/<(p|br|hr|h1|h2|h3|h4|h5|h6|strong|em|u|ul|ol|li|a)\b([^>]*)>/i',
+            static function (array $match): string {
+                $tag = strtolower((string) $match[1]);
+
+                if ($tag !== 'a') {
+                    if (in_array($tag, ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'], true)
+                        && preg_match('/\btext-align\s*:\s*(left|center|right|justify)\b/i', (string) $match[2], $alignMatch) === 1
+                    ) {
+                        return '<' . $tag . ' style="text-align: ' . strtolower((string) $alignMatch[1]) . '">';
+                    }
+
+                    return '<' . $tag . '>';
+                }
+
+                if (preg_match('/\bhref\s*=\s*(["\'])(.*?)\1/i', (string) $match[2], $hrefMatch) !== 1) {
+                    return '<a>';
+                }
+
+                $href = trim(html_entity_decode((string) $hrefMatch[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                $allowed = preg_match('#^(?:https?://|mailto:|tel:|/|\#)#i', $href) === 1;
+
+                if (!$allowed) {
+                    return '<a>';
+                }
+
+                $newTab = preg_match('/\btarget\s*=\s*(["\'])_blank\1/i', (string) $match[2]) === 1;
+
+                return '<a href="' . htmlspecialchars($href, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '"'
+                    . ($newTab ? ' target="_blank" rel="noopener noreferrer"' : '')
+                    . '>';
+            },
+            $html
+        ) ?? '';
+
+        return trim($html) !== '' ? trim($html) : null;
     }
 
     /** @param array<string, mixed> $data */
@@ -389,7 +444,7 @@ class PageAdminService
 
     private function fresh(Page $page): Page
     {
-        $fresh = Page::query()->with('parent')->find($page->id);
+        $fresh = Page::query()->with(['parent', 'pageTemplate'])->find($page->id);
 
         return $fresh ?? $page;
     }

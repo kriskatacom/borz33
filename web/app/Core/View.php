@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Store\Core;
 
 use App\Models\Category;
+use App\Models\SiteSetting;
 use Illuminate\Support\Collection;
 use Store\Services\StoreCart;
 use Store\Services\StoreFavorites;
@@ -23,6 +24,7 @@ class View
         $data['cartCount'] = StoreCart::count();
         $data['favoriteCount'] = StoreFavorites::count();
         $data['navCategories'] = self::navCategories();
+        $data['siteLogo'] = self::siteLogo();
         $data['seo'] = Seo::build($data);
         $data['content'] = self::capture($view, $data);
         echo self::capture('layout', $data);
@@ -63,6 +65,26 @@ class View
                 ->get();
         } catch (\Throwable) {
             return new Collection();
+        }
+    }
+
+    /** @return array{url: string, alt: string}|null */
+    private static function siteLogo(): ?array
+    {
+        try {
+            $settings = SiteSetting::query()->with('logo')->first();
+            $logo = $settings?->logo;
+
+            if ($logo === null || !$logo->isImage()) {
+                return null;
+            }
+
+            return [
+                'url' => '/' . ltrim((string) $logo->path, '/'),
+                'alt' => trim((string) $logo->alt),
+            ];
+        } catch (\Throwable) {
+            return null;
         }
     }
 

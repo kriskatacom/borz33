@@ -21,6 +21,7 @@ export function registerStoreHeader(Alpine) {
       openCat: 0,
       closeTimer: null,
       searchOpen: false,
+      mobileSearchOpen: false,
       searchQuery: typeof initialQuery === 'string' ? initialQuery : '',
       searchItems: [],
       searchFeatured: true,
@@ -33,6 +34,7 @@ export function registerStoreHeader(Alpine) {
         this.openCat = id;
         this.accountOpen = false;
         this.searchOpen = false;
+        this.mobileSearchOpen = false;
       },
 
       delayCloseCategory() {
@@ -47,6 +49,7 @@ export function registerStoreHeader(Alpine) {
         this.openCat = this.openCat === id ? 0 : id;
         this.accountOpen = false;
         this.searchOpen = false;
+        this.mobileSearchOpen = false;
       },
 
       toggleAccount() {
@@ -54,6 +57,7 @@ export function registerStoreHeader(Alpine) {
         this.menuOpen = false;
         this.openCat = 0;
         this.searchOpen = false;
+        this.mobileSearchOpen = false;
       },
 
       toggleMenu() {
@@ -61,6 +65,7 @@ export function registerStoreHeader(Alpine) {
         this.accountOpen = false;
         this.openCat = 0;
         this.searchOpen = false;
+        this.mobileSearchOpen = false;
       },
 
       closeAll() {
@@ -69,6 +74,23 @@ export function registerStoreHeader(Alpine) {
         this.accountOpen = false;
         this.openCat = 0;
         this.searchOpen = false;
+        this.mobileSearchOpen = false;
+      },
+
+      openMobileSearch() {
+        this.mobileSearchOpen = true;
+        this.searchOpen = true;
+        this.accountOpen = false;
+        this.menuOpen = false;
+        this.openCat = 0;
+        void this.loadSearch();
+        this.$nextTick(() => this.$refs.searchInput?.focus());
+      },
+
+      closeMobileSearch() {
+        this.mobileSearchOpen = false;
+        this.searchOpen = false;
+        this.$refs.searchInput?.blur();
       },
 
       openSearch() {

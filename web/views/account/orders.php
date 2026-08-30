@@ -83,6 +83,7 @@ $statuses = [
                         </ul>
                         <dl>
                             <div><dt>Доставка</dt><dd><?= $escape($delivery) ?></dd></div>
+                            <div><dt>Цена за доставка</dt><dd><?= $escape(ProductPage::money($order->shipping_amount)) ?></dd></div>
                             <div><dt>Адрес</dt><dd><?= $escape(implode(', ', array_filter([(string) $order->address_line, (string) $order->city, (string) ($order->postal_code ?? ''), (string) $order->country]))) ?></dd></div>
                             <div><dt>Плащане</dt><dd><?= $order->payment_method === 'bank_transfer' ? 'Банков превод' : 'Наложен платеж' ?></dd></div>
                         </dl>

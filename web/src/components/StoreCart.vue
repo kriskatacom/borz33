@@ -11,6 +11,7 @@ const props = defineProps({
 const count = ref(props.initialCount);
 const lines = ref([]);
 const total = ref('');
+const totalWeight = ref('');
 const open = ref(false);
 const loading = ref(false);
 const loaded = ref(false);
@@ -22,6 +23,7 @@ function applyCart(data) {
   count.value = Number(data?.count ?? 0);
   lines.value = Array.isArray(data?.lines) ? data.lines : [];
   total.value = typeof data?.total === 'string' ? data.total : '';
+  totalWeight.value = typeof data?.totalWeight === 'string' ? data.totalWeight : '';
   loaded.value = true;
 }
 
@@ -158,6 +160,7 @@ onBeforeUnmount(() => {
               <div class="store-cart-drawer-info">
                 <a :href="line.href" class="store-cart-drawer-name">{{ line.name }}</a>
                 <p v-if="line.options" class="store-cart-drawer-meta">{{ line.options }}</p>
+                <p class="store-cart-drawer-meta">Тегло: <strong>{{ line.weight }}</strong> · общо: <strong>{{ line.total_weight }}</strong></p>
                 <div class="store-cart-drawer-row">
                   <div class="store-cart-drawer-qty" aria-label="Количество">
                     <button type="button" :disabled="loading" aria-label="Намали" @click="postLine(line, line.qty - 1)">−</button>
@@ -172,6 +175,7 @@ onBeforeUnmount(() => {
           </ul>
 
           <footer v-if="loaded && lines.length" class="store-cart-drawer-foot">
+            <p class="store-cart-drawer-weight"><span>Общо тегло</span><strong>{{ totalWeight }}</strong></p>
             <p><span>Общо</span><strong>{{ total }}</strong></p>
             <div class="store-cart-drawer-actions">
               <a href="/checkout" class="store-cart-drawer-link">Към поръчка</a>

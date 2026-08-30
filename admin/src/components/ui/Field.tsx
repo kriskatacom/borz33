@@ -123,7 +123,7 @@ export function Field({
   const inputType = input.type ?? 'text';
   const isNumber = !multiline && inputType === 'number';
   const canClear = !multiline && (clearable ?? !UNCLEARABLE_TYPES.has(inputType));
-  const hasValue = typeof value === 'string' ? value.length > 0 : value != null && value !== '';
+  const hasValue = typeof value === 'string' ? value.length > 0 : value != null;
   const showClear = canClear && hasValue && !input.disabled && !input.readOnly;
   const wrapped = !multiline && (Boolean(trailing) || showClear || isNumber);
   const step = stepAmount(input.step);

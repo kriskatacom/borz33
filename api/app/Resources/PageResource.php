@@ -11,10 +11,11 @@ class PageResource
     /** @return array<string, mixed> */
     public static function toAdminArray(Page $page): array
     {
-        $page->loadMissing(['fields.mediaFile', 'parent']);
+        $page->loadMissing(['fields.mediaFile', 'parent', 'pageTemplate']);
 
         return [
             ...self::toAdminListArray($page),
+            'content' => $page->content,
             'meta_title' => $page->meta_title,
             'meta_description' => $page->meta_description,
             'fields' => PageFieldResource::collection($page->fields),
@@ -29,6 +30,12 @@ class PageResource
             'title' => $page->title,
             'slug' => $page->slug,
             'parent_id' => $page->parent_id,
+            'page_template_id' => $page->page_template_id,
+            'page_template' => $page->pageTemplate ? [
+                'id' => $page->pageTemplate->id,
+                'name' => $page->pageTemplate->name,
+                'slug' => $page->pageTemplate->slug,
+            ] : null,
             'parent' => $page->parent ? [
                 'id' => $page->parent->id,
                 'title' => $page->parent->title,

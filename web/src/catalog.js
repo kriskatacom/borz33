@@ -16,15 +16,20 @@ export function mountCatalogGrid() {
         filters.classList.toggle('is-open', mobile && open);
         catalogLayout?.classList.toggle('is-filters-collapsed', !mobile && !open);
         document.body.classList.toggle('store-filters-open', mobile && open);
+        if (openFilter) openFilter.hidden = open;
         openFilter?.setAttribute('aria-expanded', String(open));
     };
     openFilter?.addEventListener('click', () => setFiltersOpen(true));
     closeFilters.forEach((button) => button.addEventListener('click', () => setFiltersOpen(false)));
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setFiltersOpen(false); });
-    openFilter?.setAttribute('aria-expanded', String(!window.matchMedia('(max-width: 52rem)').matches));
+    const filterBreakpoint = window.matchMedia('(max-width: 52rem)');
+    const syncFiltersToViewport = () => setFiltersOpen(!filterBreakpoint.matches);
+    filterBreakpoint.addEventListener('change', syncFiltersToViewport);
+    syncFiltersToViewport();
 
     const grid = document.querySelector('.store-catalog-grid');
     const buttons = [...document.querySelectorAll('[data-catalog-columns]')];
+    mountProductActions();
 
     if (!grid || buttons.length === 0) return;
 
@@ -50,7 +55,6 @@ export function mountCatalogGrid() {
     apply(saved);
     buttons.forEach((button) => button.addEventListener('click', () => apply(button.dataset.catalogColumns, true)));
 
-    mountProductActions();
 }
 
 function escapeHtml(value) {
@@ -130,7 +134,6 @@ async function addToCart(product, variantId, qty = 1) {
     const result = await response.json();
     if (!response.ok) throw new Error(result?.message || 'Продуктът не може да бъде добавен.');
     window.dispatchEvent(new CustomEvent('store:cart-updated', { detail: { data: result.data, message: result.message } }));
-    notify(result.message);
 }
 
 function openQuickView(product, qty = 1) {
@@ -142,6 +145,7 @@ function openQuickView(product, qty = 1) {
     const modal = document.createElement('div');
     modal.className = 'store-quick-view';
     modal.innerHTML = `<button class="store-quick-view-backdrop" type="button" data-quick-close aria-label="Затвори"></button><section role="dialog" aria-modal="true" aria-label="Бърз преглед"><button class="store-quick-view-close" type="button" data-quick-close aria-label="Затвори"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button><div class="store-quick-view-media">${product.image ? `<button type="button" data-quick-lightbox aria-label="Отвори галерията"><img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.imageAlt)}"><span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4M11 8v6M8 11h6"/></svg></span></button>` : ''}</div><div class="store-quick-view-copy"><p>Бърз преглед</p><h2>${escapeHtml(product.name)}</h2><strong data-quick-price>${escapeHtml(product.price)}</strong><div class="store-quick-view-options">${options}</div><p class="store-quick-view-error" data-quick-error></p><div class="store-quick-view-actions"><button type="button" data-quick-cart>Добави в количката</button><a href="${escapeHtml(product.href)}">Към продукта</a></div></div></section>`;
+    modal.querySelector('[data-quick-price]')?.insertAdjacentHTML('afterend', `<p class="store-quick-weight">Тегло <strong>${escapeHtml(product.weight)}</strong></p>`);
     document.body.append(modal);
     document.body.classList.add('store-quick-open');
 

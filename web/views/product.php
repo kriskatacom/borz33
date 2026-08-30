@@ -102,6 +102,7 @@ $jsonLd = [
                 <span class="store-pdp-compare" x-cloak x-show="onSale" x-text="format(compare)"></span>
                 <span class="store-pdp-amount" x-text="price ? format(price) : ''"><?= htmlspecialchars(ProductPage::money($product->price), ENT_QUOTES, 'UTF-8') ?></span>
             </p>
+            <p class="store-product-weight"><span>Тегло</span><strong><?= htmlspecialchars(ProductPage::weight($product->weight_grams), ENT_QUOTES, 'UTF-8') ?></strong></p>
             <p class="store-pdp-meta">
                 <span x-show="sku">Код <span x-text="sku"></span></span>
                 <span class="store-pdp-stock" :class="{ 'is-in': inStock, 'is-out': !inStock }" x-text="status()"></span>
@@ -243,7 +244,13 @@ $jsonLd = [
                 </div>
             </form>
 
-            <p class="store-pdp-ship">Доставка с Econt до офис, автомат или адрес. Срокът се потвърждава при поръчка.</p>
+            <p class="store-pdp-ship">
+                Доставка с Еконт до офис, автомат или адрес. Вижте
+                <a href="https://www.econt.com/econt-express/common-terms" target="_blank" rel="noopener noreferrer">условията на Еконт</a>
+                и
+                <a href="https://www.econt.com/services/courier-services" target="_blank" rel="noopener noreferrer">информацията за куриерските услуги и доставката</a>.
+                Точната цена и срок се потвърждават при поръчка.
+            </p>
         </div>
     </div>
 

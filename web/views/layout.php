@@ -6,10 +6,14 @@ declare(strict_types=1);
 /** @var string $content */
 /** @var string $currentPath */
 /** @var array<string, mixed> $seo */
+/** @var bool $compactMainBottom */
+/** @var bool $flushMainTop */
 
 $title = $title ?? 'Borz33';
 $currentPath = $currentPath ?? '/';
 $seo = $seo ?? [];
+$compactMainBottom = (bool) ($compactMainBottom ?? false);
+$flushMainTop = (bool) ($flushMainTop ?? false);
 $seoTitle = (string) ($seo['title'] ?? $title);
 $seoDescription = (string) ($seo['description'] ?? 'Borz33 — онлайн магазин.');
 $seoCanonical = (string) ($seo['canonical'] ?? '');
@@ -138,14 +142,10 @@ function store_asset(string $path): string
         @keydown.escape.window="closeAll()"
     >
         <?php require dirname(__DIR__) . '/views/partials/header.php'; ?>
-        <main id="content" class="mx-auto w-[min(1120px,calc(100%-2rem))] flex-1 pb-14 <?= $currentPath === '/' ? 'pt-3' : 'pt-7' ?>">
+        <main id="content" class="mx-auto w-[min(1120px,calc(100%-2rem))] flex-1 <?= $compactMainBottom ? 'pb-3' : 'pb-14' ?> <?= $flushMainTop ? 'pt-0' : ($currentPath === '/' ? 'pt-3' : 'pt-7') ?>">
             <?= $content ?>
         </main>
-        <footer class="border-t border-line text-sm text-muted">
-            <div class="mx-auto w-[min(1120px,calc(100%-2rem))] py-5 pb-7">
-                <p class="m-0">Borz33</p>
-            </div>
-        </footer>
+        <?php require dirname(__DIR__) . '/views/partials/footer.php'; ?>
     </div>
 </body>
 </html>

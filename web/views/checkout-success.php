@@ -40,7 +40,7 @@ $address = implode(', ', array_filter([
 
     <div class="store-order-success-details">
         <div><span>Номер на поръчка</span><strong><?= $escape($order->number) ?></strong></div>
-        <div><span>Общо за продуктите</span><strong><?= $escape(ProductPage::money($order->total)) ?></strong></div>
+        <div><span>Общо с доставка</span><strong><?= $escape(ProductPage::money($order->total)) ?></strong></div>
         <div><span>Плащане</span><strong><?= $escape($payment) ?></strong></div>
     </div>
 
@@ -78,6 +78,7 @@ $address = implode(', ', array_filter([
             <dl class="store-order-success-delivery">
                 <div><dt>Начин</dt><dd><?= $escape($delivery) ?></dd></div>
                 <div><dt>Адрес</dt><dd><?= $escape($address) ?></dd></div>
+                <div><dt>Цена</dt><dd><?= $escape(ProductPage::money($order->shipping_amount)) ?></dd></div>
                 <div><dt>Получател</dt><dd><?= $escape(trim($order->first_name . ' ' . $order->last_name)) ?></dd></div>
                 <div><dt>Телефон</dt><dd><?= $escape($order->phone) ?></dd></div>
             </dl>
@@ -91,7 +92,7 @@ $address = implode(', ', array_filter([
         </p>
     <?php endif; ?>
 
-    <p class="store-order-success-shipping">Цената за доставка се уточнява отделно според избрания адрес или офис.</p>
+    <p class="store-order-success-shipping">Към поръчката е добавена фиксираната цена за избрания начин на доставка.</p>
     <div class="store-order-success-actions">
         <a href="/catalog">Продължете пазаруването</a>
         <?php if ($order->user_id): ?>

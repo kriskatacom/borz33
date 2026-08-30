@@ -6,9 +6,10 @@ type TooltipProps = {
   content: string;
   children: ReactNode;
   className?: string;
+  placement?: 'auto' | 'bottom';
 };
 
-export function Tooltip({ content, children, className }: TooltipProps) {
+export function Tooltip({ content, children, className, placement = 'auto' }: TooltipProps) {
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0, below: false });
@@ -22,7 +23,7 @@ export function Tooltip({ content, children, className }: TooltipProps) {
     }
 
     const box = node.getBoundingClientRect();
-    const below = box.top < 44;
+    const below = placement === 'bottom' || box.top < 44;
     setCoords({
       top: below ? box.bottom + 8 : box.top - 8,
       left: box.left + box.width / 2,
@@ -63,7 +64,7 @@ export function Tooltip({ content, children, className }: TooltipProps) {
       window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', onScroll);
     };
-  }, [open]);
+  }, [open, placement]);
 
   const text = content.trim();
 
