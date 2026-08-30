@@ -101,6 +101,7 @@ $siteName = trim((string) ($company['name'] ?? 'Borz33')) ?: 'Borz33';
                         <?= $footerEscape($email) ?>
                     </a>
                 <?php endif; ?>
+                <a href="/contact"><span aria-hidden="true"><?= Html::iconSvg('mail') ?></span>Изпратете съобщение</a>
                 <?php if ($address !== ''): ?>
                     <p>
                         <span aria-hidden="true"><?= Html::iconSvg('map-pin') ?></span>

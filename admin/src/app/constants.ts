@@ -33,6 +33,7 @@ export const routes = {
   campaigns: '/campaigns',
   shipments: '/shipments',
   messages: '/messages',
+  messagesShow: '/messages/:id',
   reports: '/reports',
   settings: '/settings',
 } as const;

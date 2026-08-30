@@ -31,16 +31,20 @@ class OrdersController extends Controller
     {
         $order = $this->orders->find($this->id($id));
         $previousStatus = (string) $order->status;
-        $order = $this->orders->updateStatus($order, Request::input()['status'] ?? null);
+        $previousTracking = (string) ($order->tracking_number ?? '');
+        $input = Request::input();
+        $order = $this->orders->updateFulfillment($order, $input['status'] ?? null, $input['tracking_number'] ?? null);
         $changed = $previousStatus !== (string) $order->status;
+        $trackingChanged = $previousTracking !== (string) ($order->tracking_number ?? '');
         $emailSent = $changed ? $this->notifications->sendStatusChanged($order, (string) $order->status) : false;
         $message = !$changed
-            ? 'Статусът не е променен.'
+            ? ($trackingChanged ? 'Данните за проследяване са обновени.' : 'Няма промени за записване.')
             : ($emailSent ? 'Статусът е обновен и клиентът е уведомен.' : 'Статусът е обновен, но имейлът не можа да бъде изпратен.');
 
         $this->ok([
             'order' => OrderResource::toArray($order),
             'status_changed' => $changed,
+            'tracking_changed' => $trackingChanged,
             'email_sent' => $emailSent,
         ], $message);
     }

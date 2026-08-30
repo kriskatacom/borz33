@@ -8,10 +8,13 @@ use App\Core\Request;
 use App\Exceptions\ValidationException;
 use App\Models\User;
 use App\Models\UserAddress;
+use App\Models\ContactMessage;
+use App\Models\ContactMessageReply;
 use App\Resources\UserResource;
 use App\Services\Users\AccountService;
 use App\Services\Users\BillingAddressService;
 use App\Services\Users\UserAvatarService;
+use App\Services\Messages\ContactReplyNotificationService;
 use App\Validation\BillingAddressValidator;
 use App\Validation\ChangeAccountPasswordValidator;
 use App\Validation\UpdateAccountProfileValidator;
@@ -26,6 +29,7 @@ class AccountController extends Controller
         'details' => 'Данни на акаунта',
         'password' => 'Парола',
         'orders' => 'Поръчки',
+        'messages' => 'Съобщения',
         'addresses' => 'Адреси',
         'appearance' => 'Изглед',
     ];
@@ -121,6 +125,52 @@ class AccountController extends Controller
         $user->forceFill(['theme' => $theme])->save();
         StoreAuth::setFlash('Изгледът е запазен.');
         $this->redirect('/account/appearance');
+    }
+
+    public function replyMessage(string $id): never
+    {
+        $user = $this->requireUser();
+        $this->assertCsrf();
+        $message = ContactMessage::query()->where('user_id', $user->id)->find((int) $id);
+        if ($message === null) View::renderError('Разговорът не е намерен.', 404);
+
+        $body = trim((string) Request::input('body', ''));
+        if (mb_strlen($body) < 2 || mb_strlen($body) > 10000) {
+            if ($this->wantsJson()) {
+                $this->json(['success' => false, 'message' => 'Отговорът трябва да бъде между 2 и 10 000 знака.'], 422);
+            }
+            $this->renderSection('messages', ['message' => 'Отговорът трябва да бъде между 2 и 10 000 знака.', 'isError' => true]);
+        }
+
+        $reply = ContactMessageReply::query()->create([
+            'contact_message_id' => $message->id,
+            'sender_type' => 'customer',
+            'sender_user_id' => $user->id,
+            'body' => $body,
+            'email_sent' => false,
+        ]);
+        $sent = (new ContactReplyNotificationService())->sendToAdmin($message, $reply);
+        $reply->forceFill(['email_sent' => $sent])->save();
+        $message->forceFill(['read_at' => null])->save();
+
+        if ($this->wantsJson()) {
+            $this->json([
+                'success' => true,
+                'message' => $sent ? 'Отговорът Ви е изпратен.' : 'Отговорът е записан, но уведомителният имейл не можа да бъде изпратен.',
+                'data' => [
+                    'reply' => [
+                        'id' => (int) $reply->id,
+                        'body' => (string) $reply->body,
+                        'sender' => 'Вие',
+                        'created_at' => $reply->created_at?->timezone('Europe/Sofia')->format('d.m.Y, H:i'),
+                        'email_sent' => $sent,
+                    ],
+                ],
+            ]);
+        }
+
+        StoreAuth::setFlash($sent ? 'Отговорът Ви е изпратен.' : 'Отговорът е записан, но уведомителният имейл не можа да бъде изпратен.', !$sent);
+        $this->redirect('/account/messages?conversation=' . $message->id . '#conversation');
     }
 
     public function storeAddress(): never
@@ -253,6 +303,11 @@ class AccountController extends Controller
         $orders = $section === 'orders'
             ? $user->orders()->with('items')->limit(50)->get()
             : collect();
+        $contactMessages = $section === 'messages'
+            ? ContactMessage::query()->where('user_id', $user->id)->with(['replies.admin', 'replies.sender'])->orderByDesc('created_at')->orderByDesc('id')->get()
+            : collect();
+        $requestedConversation = (int) Request::query('conversation', 0);
+        $activeContactMessage = $contactMessages->firstWhere('id', $requestedConversation) ?? $contactMessages->first();
 
         $this->view('account', [
             'title' => self::SECTIONS[$section] . ' · Акаунт · Borz33',
@@ -273,6 +328,8 @@ class AccountController extends Controller
             'addressErrors' => $extra['addressErrors'] ?? [],
             'orders' => $orders,
             'orderCount' => $orderCount,
+            'contactMessages' => $contactMessages,
+            'activeContactMessage' => $activeContactMessage,
             'editingAddressId' => array_key_exists('editingAddressId', $extra)
                 ? $extra['editingAddressId']
                 : $this->requestedEditId($user),

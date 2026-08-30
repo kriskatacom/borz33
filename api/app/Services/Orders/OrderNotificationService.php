@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Orders;
 
 use App\Models\Order;
+use App\Resources\OrderResource;
 use App\Services\Mail\MailerInterface;
 use App\Services\Mail\MailService;
 
@@ -87,6 +88,7 @@ class OrderNotificationService
                 'statusMessage' => $statusMessage,
                 'statusNote' => $statusNote,
                 'status' => $status,
+                'trackingUrl' => OrderResource::trackingUrl((string) ($order->tracking_number ?? '')),
             ],
             implode("\n", [
                 'Здравейте, ' . $order->first_name . ',',
@@ -97,6 +99,8 @@ class OrderNotificationService
                 '',
                 'Поръчка: ' . $order->number,
                 'Обща стойност: ' . $this->money($order->total),
+                $order->tracking_number ? 'Товарителница: ' . $order->tracking_number : '',
+                $order->tracking_number ? 'Проследяване: ' . OrderResource::trackingUrl((string) $order->tracking_number) : '',
                 '',
                 (string) ($this->company['name'] ?? 'Borz33'),
             ])

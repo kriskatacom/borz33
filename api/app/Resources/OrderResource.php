@@ -43,6 +43,9 @@ class OrderResource
             'postal_code' => $order->postal_code,
             'country' => $order->country,
             'econt_office_code' => $order->econt_office_code,
+            'tracking_number' => $order->tracking_number,
+            'tracking_url' => self::trackingUrl((string) ($order->tracking_number ?? '')),
+            'shipped_at' => $order->shipped_at?->toIso8601String(),
             'notes' => $order->notes,
             'items' => $order->items->map(static fn (OrderItem $item): array => [
                 'id' => $item->id,
@@ -57,5 +60,13 @@ class OrderResource
                 'total' => $item->total,
             ])->values()->all(),
         ]);
+    }
+
+    public static function trackingUrl(string $number): ?string
+    {
+        $number = trim($number);
+        if ($number === '') return null;
+
+        return 'https://ee.econt.com/load_direct.php?lang=bg&shipment_num=' . rawurlencode($number) . '&target=EeActivityTraceParcell';
     }
 }

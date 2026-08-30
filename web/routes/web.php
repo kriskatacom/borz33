@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Store\Controllers\AccountController;
 use Store\Controllers\AuthController;
 use Store\Controllers\ContentPageController;
+use Store\Controllers\ContactController;
 use Store\Controllers\HomeController;
 use Store\Controllers\ShopController;
 
@@ -27,6 +28,8 @@ $router->get('/checkout/success', [ShopController::class, 'checkoutSuccess']);
 $router->get('/cart/data', [ShopController::class, 'cartData']);
 $router->post('/cart/{index}', [ShopController::class, 'updateCart']);
 $router->post('/cart/{index}/delete', [ShopController::class, 'removeCart']);
+$router->get('/contact', [ContactController::class, 'show']);
+$router->post('/contact', [ContactController::class, 'store']);
 
 $router->get('/login', [AuthController::class, 'showLogin']);
 $router->post('/login', [AuthController::class, 'login']);
@@ -42,6 +45,7 @@ $router->post('/account/password', [AccountController::class, 'updatePassword'])
 $router->post('/account/theme', [AccountController::class, 'updateTheme']);
 $router->post('/account/avatar', [AccountController::class, 'updateAvatar']);
 $router->post('/account/avatar/delete', [AccountController::class, 'destroyAvatar']);
+$router->post('/account/messages/{id}/reply', [AccountController::class, 'replyMessage']);
 $router->post('/account/addresses/{id}/delete', [AccountController::class, 'destroyAddress']);
 $router->post('/account/addresses/{id}/default', [AccountController::class, 'makeDefaultAddress']);
 $router->post('/account/addresses/{id}', [AccountController::class, 'updateAddress']);

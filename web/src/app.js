@@ -11,6 +11,7 @@ import { registerThemeStore } from './theme.js';
 import { registerTooltip } from './tooltip.js';
 import { mountCatalogGrid } from './catalog.js';
 import { mountStoreCheckout } from './checkout.js';
+import { mountAccountMessages } from './account-messages.js';
 import './app.css';
 
 window.Alpine = Alpine;
@@ -27,3 +28,4 @@ mountCartPage();
 registerStoreFavorites();
 mountCatalogGrid();
 mountStoreCheckout();
+mountAccountMessages();

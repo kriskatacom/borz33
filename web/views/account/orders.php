@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Store\Services\ProductPage;
 use Store\Core\Html;
+use App\Resources\OrderResource;
 
 /** @var \Illuminate\Support\Collection<int, \App\Models\Order> $orders */
 /** @var int $orderCount */
@@ -86,6 +87,9 @@ $statuses = [
                             <div><dt>Цена за доставка</dt><dd><?= $escape(ProductPage::money($order->shipping_amount)) ?></dd></div>
                             <div><dt>Адрес</dt><dd><?= $escape(implode(', ', array_filter([(string) $order->address_line, (string) $order->city, (string) ($order->postal_code ?? ''), (string) $order->country]))) ?></dd></div>
                             <div><dt>Плащане</dt><dd><?= $order->payment_method === 'bank_transfer' ? 'Банков превод' : 'Наложен платеж' ?></dd></div>
+                            <?php if ($order->tracking_number): ?>
+                                <div><dt>Товарителница</dt><dd><a href="<?= $escape(OrderResource::trackingUrl((string) $order->tracking_number)) ?>" target="_blank" rel="noopener noreferrer"><?= $escape($order->tracking_number) ?> · Проследи</a></dd></div>
+                            <?php endif; ?>
                         </dl>
                     </div>
                 </details>

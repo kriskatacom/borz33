@@ -15,6 +15,8 @@ import { CategoryFormPage } from '@/pages/CategoryFormPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { MediaPage } from '@/pages/MediaPage';
+import { MessageDetailsPage } from '@/pages/MessageDetailsPage';
+import { MessagesPage } from '@/pages/MessagesPage';
 import { OrderDetailsPage } from '@/pages/OrderDetailsPage';
 import { OrdersPage } from '@/pages/OrdersPage';
 import { PageFormPage } from '@/pages/PageFormPage';
@@ -73,7 +75,8 @@ export function App() {
               <Route path={routes.content} element={<Navigate to={routes.pages} replace />} />
               <Route path={routes.campaigns} element={<ComingSoonPage />} />
               <Route path={routes.shipments} element={<ComingSoonPage />} />
-              <Route path={routes.messages} element={<ComingSoonPage />} />
+              <Route path={routes.messagesShow} element={<MessageDetailsPage />} />
+              <Route path={routes.messages} element={<MessagesPage />} />
               <Route path={routes.reports} element={<ComingSoonPage />} />
               <Route path={routes.settings} element={<SettingsPage />} />
             </Route>

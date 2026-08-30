@@ -42,6 +42,9 @@ export type AdminOrder = OrderListItem & {
   postal_code: string | null;
   country: string;
   econt_office_code: string | null;
+  tracking_number: string | null;
+  tracking_url: string | null;
+  shipped_at: string | null;
   notes: string | null;
   items: OrderItem[];
 };
@@ -63,6 +66,6 @@ export function getOrder(token: string, id: number) {
   return apiRequest<{ order: AdminOrder }>(`/admin/orders/${id}`, { token });
 }
 
-export function updateOrderStatus(token: string, id: number, status: OrderStatus) {
-  return apiRequest<{ order: AdminOrder; status_changed: boolean; email_sent: boolean }>(`/admin/orders/${id}`, { method: 'PATCH', token, body: { status } });
+export function updateOrderStatus(token: string, id: number, status: OrderStatus, trackingNumber: string) {
+  return apiRequest<{ order: AdminOrder; status_changed: boolean; tracking_changed: boolean; email_sent: boolean }>(`/admin/orders/${id}`, { method: 'PATCH', token, body: { status, tracking_number: trackingNumber } });
 }

@@ -81,6 +81,7 @@ $navGroups = [
     'Преглед' => [
         'dashboard' => ['label' => 'Табло', 'icon' => 'layout'],
         'orders' => ['label' => 'Моите поръчки', 'icon' => 'package'],
+        'messages' => ['label' => 'Съобщения', 'icon' => 'mail'],
     ],
     'Профил' => [
         'profile' => ['label' => 'Публичен профил', 'icon' => 'user'],

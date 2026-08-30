@@ -142,7 +142,7 @@ function store_asset(string $path): string
         @keydown.escape.window="closeAll()"
     >
         <?php require dirname(__DIR__) . '/views/partials/header.php'; ?>
-        <main id="content" class="mx-auto w-[min(1120px,calc(100%-2rem))] flex-1 <?= $compactMainBottom ? 'pb-3' : 'pb-14' ?> <?= $flushMainTop ? 'pt-0' : ($currentPath === '/' ? 'pt-3' : 'pt-7') ?>">
+        <main id="content" class="mx-auto <?= str_starts_with($currentPath, '/account') ? 'w-[min(1440px,calc(100%-2rem))]' : 'w-[min(1120px,calc(100%-2rem))]' ?> flex-1 <?= $compactMainBottom ? 'pb-3' : 'pb-14' ?> <?= $flushMainTop ? 'pt-0' : ($currentPath === '/' ? 'pt-3' : 'pt-7') ?>">
             <?= $content ?>
         </main>
         <?php require dirname(__DIR__) . '/views/partials/footer.php'; ?>
