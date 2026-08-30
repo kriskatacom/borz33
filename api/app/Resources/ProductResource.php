@@ -11,6 +11,7 @@ use App\Models\ProductParameter;
 use App\Models\ProductPersonalizationField;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantValue;
+use App\Models\SiteSetting;
 
 class ProductResource
 {
@@ -28,6 +29,19 @@ class ProductResource
             'frontImage',
             'galleryImages',
         ]);
+        $personalization = $product->effectivePersonalization();
+        $defaultPersonalization = SiteSetting::query()->first()?->product_personalization_default;
+        $personalizationFields = $product->personalization_override
+            ? $product->personalizationFields->map(static fn (ProductPersonalizationField $field): array => [
+                'id' => $field->id,
+                'name' => $field->name,
+                'description' => $field->description,
+                'field_type' => $field->field_type,
+                'is_required' => $field->is_required,
+                'max_length' => $field->max_length,
+                'sort_order' => $field->sort_order,
+            ])->values()->all()
+            : array_values(is_array($personalization['fields'] ?? null) ? $personalization['fields'] : []);
 
         return [
             'id' => $product->id,
@@ -42,11 +56,13 @@ class ProductResource
             'compare_at_price' => $product->compare_at_price,
             'weight_grams' => (int) $product->weight_grams,
             'is_active' => $product->is_active,
-            'personalization_enabled' => $product->personalization_enabled,
-            'personalization_label' => $product->personalization_label,
-            'personalization_description' => $product->personalization_description,
-            'personalization_required' => $product->personalization_required,
-            'personalization_max_length' => $product->personalization_max_length,
+            'personalization_enabled' => (bool) ($personalization['enabled'] ?? false),
+            'personalization_label' => $personalization['label'] ?? null,
+            'personalization_description' => $personalization['description'] ?? null,
+            'personalization_required' => (bool) ($personalization['required'] ?? false),
+            'personalization_max_length' => (int) ($personalization['max_length'] ?? 80),
+            'personalization_override' => (bool) $product->personalization_override,
+            'personalization_default' => $defaultPersonalization,
             'sort_order' => $product->sort_order,
             'front_image' => $product->frontImage
                 ? ProductImageResource::toArray($product->frontImage)
@@ -90,17 +106,7 @@ class ProductResource
                     'hex_color' => $row->optionValue?->hex_color,
                 ])->values()->all(),
             ])->values()->all(),
-            'personalization_fields' => $product->personalizationFields->map(
-                static fn (ProductPersonalizationField $field): array => [
-                    'id' => $field->id,
-                    'name' => $field->name,
-                    'description' => $field->description,
-                    'field_type' => $field->field_type,
-                    'is_required' => $field->is_required,
-                    'max_length' => $field->max_length,
-                    'sort_order' => $field->sort_order,
-                ]
-            )->values()->all(),
+            'personalization_fields' => $personalizationFields,
             'created_at' => $product->created_at?->toIso8601String(),
             'updated_at' => $product->updated_at?->toIso8601String(),
             'deleted_at' => $product->deleted_at?->toIso8601String(),

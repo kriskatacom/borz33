@@ -630,6 +630,18 @@ class ShopController extends Controller
         $this->assertCsrf();
         $line = (int) $index;
         $qty = (int) (\App\Core\Request::input('qty') ?? 0);
+        $current = StoreCart::lines()[$line] ?? null;
+
+        if (is_array($current) && $qty > (int) ($current['stock'] ?? StoreCart::MAX_QTY)) {
+            $message = 'Няма достатъчна наличност. Максималното количество за този продукт е ' . (int) $current['stock'] . '.';
+
+            if ($this->wantsJson()) {
+                $this->json(['message' => $message, 'data' => $this->cartPayload()], 422);
+            }
+
+            StoreAuth::setFlash($message, true);
+            $this->redirect('/cart');
+        }
 
         StoreCart::updateQty($line, $qty);
 

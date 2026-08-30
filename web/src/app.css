@@ -406,8 +406,9 @@
     }
 
     .store-search-panel.is-featured {
-        max-height: min(15rem, 38dvh);
-        align-self: start;
+        min-height: 0;
+        max-height: none;
+        align-self: stretch;
     }
 
     .store-search-panel.is-featured .store-search-item {
@@ -3585,12 +3586,12 @@ body.store-quick-open { overflow: hidden; }
 }
 
 #content:has(> .store-favorites-page > [data-favorites-empty]:not([hidden])),
-#content:has(> .store-cart > .store-empty-state--cart) {
+#content:has(> .store-cart .store-empty-state--cart) {
     width: 100%;
 }
 
 #content:has(> .store-favorites-page > [data-favorites-empty]:not([hidden])) .store-favorites-head,
-#content:has(> .store-cart > .store-empty-state--cart) .store-cart-title {
+#content:has(> .store-cart .store-empty-state--cart) .store-cart-title {
     width: min(1120px, calc(100% - 2rem));
     margin-right: auto;
     margin-left: auto;
@@ -3724,7 +3725,7 @@ body.store-quick-open { overflow: hidden; }
     text-align: left;
 }
 
-#content:has(> .store-cart > .store-empty-state--cart) .store-empty-state--cart {
+#content:has(> .store-cart .store-empty-state--cart) .store-empty-state--cart {
     border-right: 0;
     border-left: 0;
     border-radius: 0;
@@ -3873,23 +3874,62 @@ body.store-quick-open { overflow: hidden; }
     gap: 0.65rem;
 }
 
+.store-cart-control-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.store-cart .store-pdp-qty {
+    width: auto;
+    max-width: max-content;
+    flex: 0 0 auto;
+    justify-content: initial;
+}
+
 .store-cart-price {
     margin: 0;
     font-weight: 650;
 }
 
 .store-cart-remove {
+    display: grid;
+    width: 2.9rem;
+    height: 2.9rem;
     margin: 0;
-    border: 0;
-    background: transparent;
     padding: 0;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--line));
+    border-radius: 0.45rem;
+    background: var(--canvas);
     color: var(--muted);
     font: inherit;
-    font-size: 0.85rem;
     cursor: pointer;
+    transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
 }
 
 .store-cart-remove:hover {
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+    background: color-mix(in srgb, var(--danger) 7%, var(--canvas));
+    color: var(--danger);
+}
+
+.store-cart-remove svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.store-cart-remove:disabled {
+    cursor: wait;
+    opacity: 0.5;
+}
+
+.store-cart-remove:focus-visible {
     color: var(--ink);
 }
 
@@ -4910,9 +4950,12 @@ html.is-cart-open {
 }
 
 .store-cart-drawer-list {
+    display: grid;
+    align-content: start;
+    gap: 0.45rem;
     min-height: 0;
     margin: 0;
-    padding: 0 1.25rem;
+    padding: 0.5rem 0.3rem;
     overflow-y: auto;
     list-style: none;
     transition: opacity 120ms ease;
@@ -4925,10 +4968,9 @@ html.is-cart-open {
 
 .store-cart-drawer-item {
     display: grid;
-    grid-template-columns: 5rem minmax(0, 1fr);
+    grid-template-columns: 7.25rem minmax(0, 1fr);
     gap: 0.9rem;
-    padding: 1.1rem 0;
-    border-bottom: 1px solid var(--line);
+    padding: 0;
 }
 
 .store-cart-drawer-thumb {
@@ -4960,24 +5002,31 @@ html.is-cart-open {
     font-size: 0.8rem;
 }
 
-.store-cart-drawer-row {
+.store-cart-drawer-price {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.store-cart-drawer-controls {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-top: 0.8rem;
+    gap: 0.35rem;
+    margin-top: 0.65rem;
 }
 
 .store-cart-drawer-qty {
     display: inline-grid;
-    grid-template-columns: 2rem 2rem 2rem;
+    grid-template-columns: 1.65rem 1.65rem 1.65rem;
     align-items: center;
+    height: 2.15rem;
     border: 1px solid var(--line);
     text-align: center;
 }
 
 .store-cart-drawer-qty button {
-    height: 2rem;
+    height: 100%;
+    padding: 0;
     border: 0;
     background: transparent;
     color: inherit;
@@ -4985,14 +5034,33 @@ html.is-cart-open {
 }
 
 .store-cart-drawer-remove {
-    margin-top: 0.7rem;
+    display: grid;
+    width: 2.15rem;
+    height: 2.15rem;
+    flex: 0 0 auto;
+    margin: 0;
     padding: 0;
-    border: 0;
-    border-bottom: 1px solid currentColor;
-    background: transparent;
+    place-items: center;
+    border: 1px solid var(--line);
+    background: var(--canvas);
     color: var(--muted);
-    font-size: 0.75rem;
     cursor: pointer;
+}
+
+.store-cart-drawer-remove:hover {
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+    background: color-mix(in srgb, var(--danger) 7%, var(--canvas));
+    color: var(--danger);
+}
+
+.store-cart-drawer-remove svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .store-cart-drawer-state,

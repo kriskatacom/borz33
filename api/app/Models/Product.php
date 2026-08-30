@@ -32,6 +32,7 @@ class Product extends Model
         'personalization_description',
         'personalization_required',
         'personalization_max_length',
+        'personalization_override',
         'sort_order',
     ];
 
@@ -46,6 +47,7 @@ class Product extends Model
             'personalization_enabled' => 'boolean',
             'personalization_required' => 'boolean',
             'personalization_max_length' => 'integer',
+            'personalization_override' => 'boolean',
             'sort_order' => 'integer',
         ];
     }
@@ -64,7 +66,38 @@ class Product extends Model
 
     public function allowsPersonalization(): bool
     {
-        return $this->personalization_enabled === true;
+        return (bool) ($this->effectivePersonalization()['enabled'] ?? false);
+    }
+
+    /** @return array<string, mixed> */
+    public function effectivePersonalization(): array
+    {
+        if ($this->personalization_override === true) {
+            return [
+                'enabled' => (bool) $this->personalization_enabled,
+                'label' => $this->personalization_label,
+                'description' => $this->personalization_description,
+                'required' => (bool) $this->personalization_required,
+                'max_length' => (int) $this->personalization_max_length,
+                'fields' => $this->personalizationFields->map(static fn (ProductPersonalizationField $field): array => [
+                    'name' => (string) $field->name,
+                    'description' => $field->description,
+                    'field_type' => (string) $field->field_type,
+                    'is_required' => (bool) $field->is_required,
+                    'max_length' => (int) $field->max_length,
+                    'sort_order' => (int) $field->sort_order,
+                ])->values()->all(),
+            ];
+        }
+
+        return SiteSetting::query()->first()?->product_personalization_default ?? [
+            'enabled' => false,
+            'label' => null,
+            'description' => null,
+            'required' => false,
+            'max_length' => 80,
+            'fields' => [],
+        ];
     }
 
     public function category(): BelongsTo
@@ -123,7 +156,14 @@ class Product extends Model
     /** @return Collection<int, ProductPersonalizationField> */
     public function personalizationInputs(): Collection
     {
-        $fields = $this->personalizationFields;
+        $config = $this->effectivePersonalization();
+        $fields = $this->personalization_override === true
+            ? $this->personalizationFields
+            : new Collection(array_map(static function (array $row): ProductPersonalizationField {
+                $field = new ProductPersonalizationField();
+                $field->forceFill($row);
+                return $field;
+            }, is_array($config['fields'] ?? null) ? $config['fields'] : []));
 
         if ($fields->isNotEmpty() || !$this->allowsPersonalization()) {
             return $fields;
@@ -132,11 +172,11 @@ class Product extends Model
         $field = new ProductPersonalizationField();
         $field->forceFill([
             'product_id' => $this->id,
-            'name' => $this->personalization_label ?: 'Персонализация',
-            'description' => $this->personalization_description,
+            'name' => ($config['label'] ?? null) ?: 'Персонализация',
+            'description' => $config['description'] ?? null,
             'field_type' => ProductPersonalizationField::TYPE_TEXTAREA,
-            'is_required' => $this->personalization_required,
-            'max_length' => $this->personalization_max_length,
+            'is_required' => (bool) ($config['required'] ?? false),
+            'max_length' => (int) ($config['max_length'] ?? 80),
             'sort_order' => 0,
         ]);
 

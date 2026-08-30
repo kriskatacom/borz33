@@ -69,9 +69,7 @@ class ProductsController extends Controller
 
         $this->ok(
             ['product' => ProductResource::toAdminArray($result['product']), 'updated_count' => $result['updated_count']],
-            $result['updated_count'] === 0
-                ? 'Няма други продукти, към които да се приложи персонализацията.'
-                : 'Персонализацията е приложена към всички продукти.'
+            'Персонализацията е запазена като настройка по подразбиране.'
         );
     }
 

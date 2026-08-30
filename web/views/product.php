@@ -171,6 +171,7 @@ $jsonLd = [
                     $fieldId = 'pdp-' . $fieldKey;
                     $required = (bool) ($field['required'] ?? false);
                     $max = $field['max'] ?? null;
+                    $placeholder = trim((string) ($field['description'] ?? ''));
                     ?>
                     <div class="store-pdp-field">
                         <label for="<?= htmlspecialchars($fieldId, ENT_QUOTES, 'UTF-8') ?>">
@@ -179,14 +180,12 @@ $jsonLd = [
                                 <span class="text-muted"> (по желание)</span>
                             <?php endif; ?>
                         </label>
-                        <?php if (trim((string) ($field['description'] ?? '')) !== ''): ?>
-                            <p class="store-pdp-field-hint"><?= htmlspecialchars((string) $field['description'], ENT_QUOTES, 'UTF-8') ?></p>
-                        <?php endif; ?>
                         <?php if (($field['type'] ?? '') === 'textarea'): ?>
                             <textarea
                                 class="store-input"
                                 id="<?= htmlspecialchars($fieldId, ENT_QUOTES, 'UTF-8') ?>"
                                 name="personalization[<?= htmlspecialchars($fieldKey, ENT_QUOTES, 'UTF-8') ?>]"
+                                <?= $placeholder !== '' ? 'placeholder="' . htmlspecialchars($placeholder, ENT_QUOTES, 'UTF-8') . '"' : '' ?>
                                 <?= $max !== null ? 'maxlength="' . (int) $max . '"' : '' ?>
                                 <?= $required ? 'required' : '' ?>
                                 x-model="fields[<?= (int) $index ?>].value"
@@ -198,6 +197,7 @@ $jsonLd = [
                                 id="<?= htmlspecialchars($fieldId, ENT_QUOTES, 'UTF-8') ?>"
                                 name="personalization[<?= htmlspecialchars($fieldKey, ENT_QUOTES, 'UTF-8') ?>]"
                                 type="text"
+                                <?= $placeholder !== '' ? 'placeholder="' . htmlspecialchars($placeholder, ENT_QUOTES, 'UTF-8') . '"' : '' ?>
                                 <?= $max !== null ? 'maxlength="' . (int) $max . '"' : '' ?>
                                 <?= $required ? 'required' : '' ?>
                                 x-model="fields[<?= (int) $index ?>].value"

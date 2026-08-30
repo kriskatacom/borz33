@@ -66,6 +66,7 @@ class ProductValidator
             'personalization_description' => ['nullable', 'string'],
             'personalization_required' => ['required', 'boolean'],
             'personalization_max_length' => ['required', 'integer', 'min:1', 'max:2000'],
+            'personalization_override' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'parameters' => ['nullable', 'array'],
             'parameters.*.id' => ['nullable', 'integer', 'min:1'],

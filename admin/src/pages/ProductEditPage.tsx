@@ -691,6 +691,7 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
   const [description, setDescription] = useState(product.personalization_description ?? '');
   const [required, setRequired] = useState(product.personalization_required);
   const [maxLength, setMaxLength] = useState(String(product.personalization_max_length ?? 80));
+  const [override, setOverride] = useState(product.personalization_override);
   const [fields, setFields] = useState<PersonalizationFieldDraft[]>(() => mapPersonalization(product.personalization_fields));
   const [busy, setBusy] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -704,6 +705,7 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
       personalization_description: description.trim() === '' ? null : description.trim(),
       personalization_required: required,
       personalization_max_length: Math.max(1, Number.parseInt(maxLength, 10) || 80),
+      personalization_override: override,
       personalization_fields: fields.map((field, index) => ({
         ...(field.id ? { id: field.id } : {}),
         name: field.name.trim(),
@@ -756,17 +758,32 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
     }
   }
 
+  function changeOverride(checked: boolean) {
+    if (!checked && product.personalization_default) {
+      const defaults = product.personalization_default;
+      setEnabled(defaults.enabled);
+      setLabel(defaults.label ?? '');
+      setDescription(defaults.description ?? '');
+      setRequired(defaults.required);
+      setMaxLength(String(defaults.max_length ?? 80));
+      setFields(mapPersonalization(defaults.fields ?? []));
+    }
+    setOverride(checked);
+  }
+
   return (
     <form className="grid gap-3" onSubmit={(event) => void onSubmit(event)} noValidate>
+      <SwitchField id="personalization_override" label="Собствена настройка за този продукт" help="Когато е изключено, продуктът използва автоматично запазената настройка по подразбиране." checked={override} onCheckedChange={changeOverride} />
+      <fieldset className="grid gap-3 border-0 p-0 m-0 disabled:opacity-60" disabled={!override}>
       <SwitchField id="personalization_enabled" label="Включена" help="Клиентът вижда полета за текст преди добавяне в количката." checked={enabled} onCheckedChange={setEnabled} />
       <Field id="personalization_label" label="Етикет" help="Заглавие над полето в магазина, ако няма отделни полета." value={label} onChange={(event) => setLabel(event.target.value)} error={errors.personalization_label} />
-      <Field id="personalization_description" label="Указания" multiline rows={3} help="Кратък текст какво да въведе клиентът." value={description} onChange={(event) => setDescription(event.target.value)} error={errors.personalization_description} />
+      <Field id="personalization_description" label="Placeholder" multiline rows={3} value={description} onChange={(event) => setDescription(event.target.value)} error={errors.personalization_description} />
       <SwitchField id="personalization_required" label="Задължителна" help="Ако няма отделни полета, това важи за единственото текстово поле." checked={required} onCheckedChange={setRequired} />
       <Field id="personalization_max_length" label="Макс. дължина" type="number" min="1" help="Лимит на символите, ако няма отделни полета." value={maxLength} onChange={(event) => setMaxLength(event.target.value)} error={errors.personalization_max_length} />
       {fields.map((field, index) => (
         <div key={field.key} className="grid gap-3 rounded-[6px] border border-border p-3">
           <Field id={`${field.key}-name`} label="Поле" help="Името на полето, напр. Име върху тениската." value={field.name} onChange={(event) => patchField(index, { name: event.target.value })} error={fieldError(errors, `personalization_fields.${index}.name`)} />
-          <Field id={`${field.key}-description`} label="Описание" help="Подсказка под полето в магазина." value={field.description} onChange={(event) => patchField(index, { description: event.target.value })} error={fieldError(errors, `personalization_fields.${index}.description`)} />
+          <Field id={`${field.key}-description`} label="Placeholder" value={field.description} onChange={(event) => patchField(index, { description: event.target.value })} error={fieldError(errors, `personalization_fields.${index}.description`)} />
           <div className="field">
             <LabelWithHelp htmlFor={`${field.key}-type`} label="Тип" help="Текст е един ред. Многоредов е за по-дълги надписи." />
             <Select value={field.field_type} onValueChange={(value) => patchField(index, { field_type: value })}>
@@ -792,6 +809,7 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
         <Plus />
         Поле
       </Button>
+      </fieldset>
       <div className="row-actions">
         <Button type="submit" disabled={busy || sharing}>
           <Save />
@@ -799,14 +817,14 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
         </Button>
         <Button type="button" variant="outline" disabled={busy || sharing} onClick={() => setConfirmShare(true)}>
           <Share2 />
-          Към всички продукти
+          Запази по подразбиране
         </Button>
       </div>
       {confirmShare ? (
         <ConfirmDialog
-          title="Споделяне на персонализация"
-          message="Тези настройки и полета ще заменят персонализацията на всички останали продукти. Действието не може да се отмени автоматично."
-          confirmLabel="Приложи към всички"
+          title="Настройка по подразбиране"
+          message="Тези настройки и полета ще се използват автоматично от всички продукти без собствена настройка."
+          confirmLabel="Запази по подразбиране"
           variant="default"
           busy={sharing}
           onConfirm={() => void onShare()}
@@ -823,8 +841,8 @@ function PersonalizationForm({ product, token, onSaved }: SectionFormProps) {
 
 function mapPersonalization(fields: ProductPersonalizationField[]): PersonalizationFieldDraft[] {
   return fields.map((field) => ({
-    key: `pf-${field.id}`,
-    id: field.id,
+    key: field.id ? `pf-${field.id}` : nextKey(),
+    id: field.id ?? undefined,
     name: field.name,
     description: field.description ?? '',
     field_type: field.field_type || 'text',

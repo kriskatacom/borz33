@@ -86,7 +86,7 @@ export type ProductVariant = {
 };
 
 export type ProductPersonalizationField = {
-  id: number;
+  id?: number | null;
   name: string;
   description: string | null;
   field_type: string;
@@ -101,6 +101,15 @@ export type AdminProduct = ProductListItem & {
   personalization_description: string | null;
   personalization_required: boolean;
   personalization_max_length: number | null;
+  personalization_override: boolean;
+  personalization_default: {
+    enabled: boolean;
+    label: string | null;
+    description: string | null;
+    required: boolean;
+    max_length: number;
+    fields: ProductPersonalizationField[];
+  } | null;
   gallery_images: ProductImage[];
   parameters: ProductParameter[];
   options: ProductOption[];

@@ -13,6 +13,7 @@ use App\Models\ProductParameter;
 use App\Models\ProductPersonalizationField;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantValue;
+use App\Models\SiteSetting;
 use App\Resources\ProductResource;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Eloquent\Builder;
@@ -139,10 +140,27 @@ class ProductAdminService
 
             $source = $this->fresh($product);
             $source->loadMissing('personalizationFields');
+            $settings = SiteSetting::query()->firstOrCreate([]);
+            $settings->product_personalization_default = [
+                'enabled' => (bool) $source->personalization_enabled,
+                'label' => $source->personalization_label,
+                'description' => $source->personalization_description,
+                'required' => (bool) $source->personalization_required,
+                'max_length' => (int) $source->personalization_max_length,
+                'fields' => $source->personalizationFields->values()->map(static fn (ProductPersonalizationField $field, int $index): array => [
+                    'name' => (string) $field->name,
+                    'description' => $field->description,
+                    'field_type' => (string) $field->field_type,
+                    'is_required' => (bool) $field->is_required,
+                    'max_length' => (int) $field->max_length,
+                    'sort_order' => $index,
+                ])->all(),
+            ];
+            $settings->save();
 
             return [
                 'product' => $source,
-                'updated_count' => $this->copyPersonalizationToOthers($source),
+                'updated_count' => Product::query()->where('personalization_override', false)->count(),
             ];
         });
     }
@@ -224,7 +242,7 @@ class ProductAdminService
             $attributes['weight_grams'] = (int) $data['weight_grams'];
         }
 
-        foreach (['is_active', 'personalization_enabled', 'personalization_required'] as $flag) {
+        foreach (['is_active', 'personalization_enabled', 'personalization_required', 'personalization_override'] as $flag) {
             if (array_key_exists($flag, $data)) {
                 $attributes[$flag] = (bool) $data[$flag];
             }
@@ -271,6 +289,7 @@ class ProductAdminService
             'personalization_description' => $data['personalization_description'] ?? null,
             'personalization_required' => (bool) $data['personalization_required'],
             'personalization_max_length' => (int) $data['personalization_max_length'],
+            'personalization_override' => (bool) ($data['personalization_override'] ?? false),
             'sort_order' => (int) ($data['sort_order'] ?? 0),
             'category_id' => $this->nullableId($data['category_id'] ?? null),
         ];

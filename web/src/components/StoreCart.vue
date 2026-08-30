@@ -94,6 +94,10 @@ function onCartUpdated(event) {
   void showCart();
 }
 
+function onCartState(event) {
+  applyCart(event.detail?.data);
+}
+
 function onKeydown(event) {
   if (event.key === 'Escape' && open.value) {
     closeCart();
@@ -102,11 +106,13 @@ function onKeydown(event) {
 
 onMounted(() => {
   window.addEventListener('store:cart-updated', onCartUpdated);
+  window.addEventListener('store:cart-state', onCartState);
   window.addEventListener('keydown', onKeydown);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('store:cart-updated', onCartUpdated);
+  window.removeEventListener('store:cart-state', onCartState);
   window.removeEventListener('keydown', onKeydown);
   document.documentElement.classList.remove('is-cart-open');
 });
@@ -141,7 +147,6 @@ onBeforeUnmount(() => {
           </header>
 
           <p class="sr-only" aria-live="polite">{{ announcement }}</p>
-          <p v-if="error" class="store-cart-drawer-error" role="alert">{{ error }}</p>
           <p v-if="loading && !loaded" class="store-cart-drawer-state">Зареждане…</p>
           <div v-else-if="empty" class="store-cart-drawer-empty">
             <span class="store-cart-drawer-empty-icon" aria-hidden="true">
@@ -161,15 +166,17 @@ onBeforeUnmount(() => {
                 <a :href="line.href" class="store-cart-drawer-name">{{ line.name }}</a>
                 <p v-if="line.options" class="store-cart-drawer-meta">{{ line.options }}</p>
                 <p class="store-cart-drawer-meta">Тегло: <strong>{{ line.weight }}</strong> · общо: <strong>{{ line.total_weight }}</strong></p>
-                <div class="store-cart-drawer-row">
+                <strong class="store-cart-drawer-price">{{ new Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'EUR' }).format(Number(line.total)) }}</strong>
+                <div class="store-cart-drawer-controls">
                   <div class="store-cart-drawer-qty" aria-label="Количество">
                     <button type="button" :disabled="loading" aria-label="Намали" @click="postLine(line, line.qty - 1)">−</button>
                     <span>{{ line.qty }}</span>
                     <button type="button" :disabled="loading" aria-label="Увеличи" @click="postLine(line, line.qty + 1)">+</button>
                   </div>
-                  <strong>{{ new Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'EUR' }).format(Number(line.total)) }}</strong>
+                  <button type="button" class="store-cart-drawer-remove" :disabled="loading" aria-label="Премахни продукта" title="Премахни" @click="postLine(line)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                  </button>
                 </div>
-                <button type="button" class="store-cart-drawer-remove" :disabled="loading" @click="postLine(line)">Премахни</button>
               </div>
             </li>
           </ul>

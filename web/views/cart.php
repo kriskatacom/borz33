@@ -25,13 +25,14 @@ $recentlyViewed = $recentlyViewed ?? [];
 $favoriteIds = $favoriteIds ?? [];
 $cartProductIds = $cartProductIds ?? [];
 ?>
-<section class="store-cart">
+<section class="store-cart <?= $lines === [] ? 'is-empty' : '' ?>" data-cart-page data-csrf="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
     <h1 class="store-cart-title">Количка</h1>
 
     <?php if ($message): ?>
         <p class="store-pdp-flash <?= $isError ? 'is-error' : '' ?>" role="status"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>
 
+    <div data-cart-page-body>
     <?php if ($lines === []): ?>
         <div class="store-empty-state store-empty-state--cart">
             <img src="/images/empty-cart.webp" alt="" width="768" height="512">
@@ -65,23 +66,26 @@ $cartProductIds = $cartProductIds ?? [];
                         <?php endforeach; ?>
                     </div>
                     <div class="store-cart-actions">
-                        <form method="post" action="/cart/<?= (int) $line['index'] ?>" class="store-pdp-qty">
-                            <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
-                            <button type="submit" name="qty" value="<?= max(0, (int) $line['qty'] - 1) ?>" aria-label="Намали">−</button>
-                            <span><?= (int) $line['qty'] ?></span>
-                            <button type="submit" name="qty" value="<?= min(99, (int) $line['qty'] + 1) ?>" aria-label="Увеличи">+</button>
-                        </form>
+                        <div class="store-cart-control-row">
+                            <form method="post" action="/cart/<?= (int) $line['index'] ?>" class="store-pdp-qty" data-cart-action>
+                                <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+                                <button type="submit" name="qty" value="<?= max(0, (int) $line['qty'] - 1) ?>" aria-label="Намали">−</button>
+                                <span><?= (int) $line['qty'] ?></span>
+                                <button type="submit" name="qty" value="<?= min(99, (int) $line['qty'] + 1) ?>" aria-label="Увеличи">+</button>
+                            </form>
+                            <form method="post" action="/cart/<?= (int) $line['index'] ?>/delete" data-cart-action>
+                                <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+                                <button type="submit" class="store-cart-remove" aria-label="Премахни продукта" title="Премахни"><?= Html::iconSvg('trash') ?></button>
+                            </form>
+                        </div>
                         <p class="store-cart-price"><?= htmlspecialchars(ProductPage::money($line['total']), ENT_QUOTES, 'UTF-8') ?></p>
-                        <form method="post" action="/cart/<?= (int) $line['index'] ?>/delete">
-                            <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
-                            <button type="submit" class="store-cart-remove">Премахни</button>
-                        </form>
                     </div>
                 </li>
             <?php endforeach; ?>
         </ul>
         <div class="store-cart-checkout"><div class="store-cart-summary"><p>Общо тегло <strong><?= htmlspecialchars($totalWeight, ENT_QUOTES, 'UTF-8') ?></strong></p><p class="store-cart-total">Общо <?= htmlspecialchars($total, ENT_QUOTES, 'UTF-8') ?></p></div><a href="/checkout">Към детайли за поръчката</a></div>
     <?php endif; ?>
+    </div>
 </section>
 
 <?php if ($recentlyViewed !== []): ?>

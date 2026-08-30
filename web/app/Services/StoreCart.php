@@ -173,6 +173,7 @@ class StoreCart
                 'product_id' => (int) $product->id,
                 'variant_id' => $row['variant_id'],
                 'qty' => $qty,
+                'stock' => $variant !== null ? (int) $variant->stock : self::MAX_QTY,
                 'name' => (string) $product->name,
                 'href' => '/products/' . $product->slug,
                 'sku' => $variant !== null && $variant->sku !== '' ? (string) $variant->sku : (string) ($product->sku ?? ''),
