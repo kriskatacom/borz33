@@ -206,6 +206,14 @@ export function BannersPage() {
         loading={busy}
         emptyMessage="Няма банери за избраните филтри."
         caption="Списък с банери"
+        isRowSelectable={(banner) => !banner.deleted_at}
+        onBulkDelete={async (selected) => {
+          await Promise.all(selected.map((banner) => deleteBanner(token, banner.id)));
+          const ids = new Set(selected.map((banner) => banner.id));
+          setBanners((current) => current.filter((banner) => !ids.has(banner.id)));
+          setTotal((current) => Math.max(0, current - selected.length));
+          toast.success(`${selected.length} банера бяха изтрити.`);
+        }}
         pagination={{
           page: filters.page,
           lastPage,

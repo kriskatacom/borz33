@@ -241,6 +241,14 @@ export function ProductsPage() {
         loading={busy}
         emptyMessage="Няма продукти за избраните филтри."
         caption="Списък с продукти"
+        isRowSelectable={(product) => !product.deleted_at}
+        onBulkDelete={async (selected) => {
+          await Promise.all(selected.map((product) => deleteProduct(token, product.id)));
+          const ids = new Set(selected.map((product) => product.id));
+          setProducts((current) => current.filter((product) => !ids.has(product.id)));
+          setTotal((current) => Math.max(0, current - selected.length));
+          toast.success(`${selected.length} продукта бяха изтрити.`);
+        }}
         pagination={{
           page: filters.page,
           lastPage,

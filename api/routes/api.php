@@ -8,6 +8,7 @@ use App\Controllers\Admin\CategoriesController;
 use App\Controllers\Admin\MediaController;
 use App\Controllers\Admin\OrdersController;
 use App\Controllers\Admin\MessagesController;
+use App\Controllers\Admin\ReportsController;
 use App\Controllers\Admin\PagesController;
 use App\Controllers\Admin\ProductImagesController;
 use App\Controllers\Admin\ProductsController;
@@ -72,6 +73,8 @@ $router->get('/admin/messages', [MessagesController::class, 'index'], $admin);
 $router->get('/admin/messages/{id}', [MessagesController::class, 'show'], $admin);
 $router->patch('/admin/messages/{id}', [MessagesController::class, 'update'], $admin);
 $router->post('/admin/messages/{id}/replies', [MessagesController::class, 'reply'], $admin);
+$router->get('/admin/reports', [ReportsController::class, 'index'], $admin);
+$router->post('/admin/reports', [ReportsController::class, 'store'], $admin);
 
 $router->get('/admin/pages', [PagesController::class, 'index'], $admin);
 $router->post('/admin/pages', [PagesController::class, 'store'], $admin);

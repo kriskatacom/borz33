@@ -276,6 +276,14 @@ export function PagesPage() {
         loading={busy}
         emptyMessage="Няма страници за избраните филтри."
         caption="Списък със страници"
+        isRowSelectable={(page) => !page.deleted_at}
+        onBulkDelete={async (selected) => {
+          await Promise.all(selected.map((page) => deletePage(token, page.id)));
+          const ids = new Set(selected.map((page) => page.id));
+          setPages((current) => current.filter((page) => !ids.has(page.id)));
+          setTotal((current) => Math.max(0, current - selected.length));
+          toast.success(`${selected.length} страници бяха изтрити.`);
+        }}
         pagination={{
           page: filters.page,
           lastPage,

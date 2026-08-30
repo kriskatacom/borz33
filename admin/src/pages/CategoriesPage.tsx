@@ -282,6 +282,14 @@ export function CategoriesPage() {
         loading={busy}
         emptyMessage="Няма категории за избраните филтри."
         caption="Списък с категории"
+        isRowSelectable={(category) => !category.deleted_at}
+        onBulkDelete={async (selected) => {
+          await Promise.all(selected.map((category) => deleteCategory(token, category.id)));
+          const ids = new Set(selected.map((category) => category.id));
+          setCategories((current) => current.filter((category) => !ids.has(category.id)));
+          setTotal((current) => Math.max(0, current - selected.length));
+          toast.success(`${selected.length} категории бяха изтрити.`);
+        }}
         pagination={{
           page: filters.page,
           lastPage,

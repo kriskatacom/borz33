@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Trash2, X } from 'lucide-react';
 import { useTable, type ColumnDef, type RowData, type SortingState } from '@tanstack/react-table';
 import {
   Table,
@@ -16,6 +16,8 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { scrollPageToTop } from '@/lib/scroll';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toastError } from '@/lib/toast';
 
 export const DATA_TABLE_PAGE_SIZES = [10, 20, 50, 100] as const;
 export const DEFAULT_PAGE_SIZE = 20;
@@ -79,7 +81,15 @@ type DataTableProps<TData extends RowData> = {
   emptyMessage?: string;
   caption?: string;
   pagination?: DataTablePagination;
+  onBulkDelete?: (rows: TData[]) => Promise<void>;
+  isRowSelectable?: (row: TData) => boolean;
 };
+
+function SelectionCheckbox({ checked, indeterminate = false, label, disabled = false, onChange }: { checked: boolean; indeterminate?: boolean; label: string; disabled?: boolean; onChange: (checked: boolean) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (ref.current) ref.current.indeterminate = indeterminate; }, [indeterminate]);
+  return <input ref={ref} type="checkbox" className="data-table-checkbox" checked={checked} disabled={disabled} aria-label={label} onChange={(event) => onChange(event.target.checked)} />;
+}
 
 export function DataTable<TData extends RowData>({
   columns,
@@ -89,8 +99,13 @@ export function DataTable<TData extends RowData>({
   emptyMessage = 'Няма записи.',
   caption,
   pagination,
+  onBulkDelete,
+  isRowSelectable = () => true,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const table = useTable({
     features: dataTableFeatures,
     columns,
@@ -100,15 +115,41 @@ export function DataTable<TData extends RowData>({
     onSortingChange: setSorting,
   });
   const pageRows = table.getRowModel().rows;
+  const selectableRows = pageRows.filter((row) => isRowSelectable(row.original));
+  const selectedRows = pageRows.filter((row) => selected.has(row.id));
+  const allSelected = selectableRows.length > 0 && selectableRows.every((row) => selected.has(row.id));
+  const someSelected = selectableRows.some((row) => selected.has(row.id)) && !allSelected;
+
+  useEffect(() => {
+    const available = new Set(pageRows.map((row) => row.id));
+    setSelected((current) => new Set([...current].filter((id) => available.has(id))));
+  }, [data]);
+
+  function selectAll(checked: boolean) {
+    setSelected(checked ? new Set(selectableRows.map((row) => row.id)) : new Set());
+  }
+
+  async function bulkDelete() {
+    if (!onBulkDelete || selectedRows.length === 0) return;
+    setBulkBusy(true);
+    try {
+      await onBulkDelete(selectedRows.map((row) => row.original));
+      setSelected(new Set());
+      setConfirmBulkDelete(false);
+    } catch (error) { toastError(error, 'Масовото действие не беше успешно.'); }
+    finally { setBulkBusy(false); }
+  }
 
   return (
     <div className="grid gap-3">
+      {onBulkDelete && selectedRows.length > 0 ? <div className="data-table-bulk-bar" role="toolbar" aria-label="Масови действия"><strong>{selectedRows.length} избрани</strong><div><Button type="button" variant="destructive" size="sm" disabled={bulkBusy} onClick={() => setConfirmBulkDelete(true)}><Trash2 />Изтрий избраните</Button><Button type="button" variant="ghost" size="sm" disabled={bulkBusy} onClick={() => setSelected(new Set())}><X />Откажи избора</Button></div></div> : null}
       <div className="overflow-hidden border border-border bg-card" aria-busy={loading}>
         <Table>
           {caption ? <caption className="sr-only">{caption}</caption> : null}
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                {onBulkDelete ? <TableHead className="w-12 bg-muted px-4 py-3"><SelectionCheckbox checked={allSelected} indeterminate={someSelected} disabled={selectableRows.length === 0 || loading} label="Избери всички записи на страницата" onChange={selectAll} /></TableHead> : null}
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta;
                   const canSort = header.column.getCanSort();
@@ -119,7 +160,7 @@ export function DataTable<TData extends RowData>({
                       key={header.id}
                       className={cn(
                         'bg-muted px-4 py-3 font-sans text-sm font-extrabold tracking-wide text-muted-foreground uppercase',
-                        meta?.sticky && 'sticky left-0 z-10 bg-muted',
+                        meta?.sticky && `sticky ${onBulkDelete ? 'left-12' : 'left-0'} z-10 bg-muted`,
                         meta?.className
                       )}
                     >
@@ -174,13 +215,14 @@ export function DataTable<TData extends RowData>({
           <TableBody>
             {pageRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center font-sans text-muted-foreground">
+                <TableCell colSpan={columns.length + (onBulkDelete ? 1 : 0)} className="h-24 text-center font-sans text-muted-foreground">
                   {emptyMessage}
                 </TableCell>
               </TableRow>
             ) : (
               pageRows.map((row) => (
                 <TableRow key={row.id} className="group">
+                  {onBulkDelete ? <TableCell className="w-12 px-4 py-3"><SelectionCheckbox checked={selected.has(row.id)} disabled={!isRowSelectable(row.original) || loading || bulkBusy} label={`Избери запис ${row.id}`} onChange={(checked) => setSelected((current) => { const next = new Set(current); if (checked) next.add(row.id); else next.delete(row.id); return next; })} /></TableCell> : null}
                   {row.getAllCells().map((cell) => {
                     const meta = cell.column.columnDef.meta;
 
@@ -189,7 +231,7 @@ export function DataTable<TData extends RowData>({
                         key={cell.id}
                         className={cn(
                           'px-4 py-3 font-sans',
-                          meta?.sticky && 'sticky left-0 z-10 bg-card group-hover:bg-muted',
+                          meta?.sticky && `sticky ${onBulkDelete ? 'left-12' : 'left-0'} z-10 bg-card group-hover:bg-muted`,
                           meta?.className
                         )}
                       >
@@ -290,6 +332,7 @@ export function DataTable<TData extends RowData>({
           </div>
         </div>
       ) : null}
+      {confirmBulkDelete ? <ConfirmDialog title="Масово изтриване" message={`Ще бъдат изтрити ${selectedRows.length} избрани записа. Те могат да бъдат възстановени по-късно.`} confirmLabel="Изтрий избраните" busy={bulkBusy} onCancel={() => setConfirmBulkDelete(false)} onConfirm={() => void bulkDelete()} /> : null}
     </div>
   );
 }

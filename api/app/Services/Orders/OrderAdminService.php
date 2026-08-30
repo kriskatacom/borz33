@@ -75,10 +75,6 @@ class OrderAdminService
         if ($trackingNumber !== '' && preg_match('/^[A-Z0-9-]{6,64}$/', $trackingNumber) !== 1) {
             throw new ValidationException(['tracking_number' => ['Номерът трябва да съдържа между 6 и 64 цифри, букви или тирета.']]);
         }
-        if (in_array($status, ['shipped', 'delivered'], true) && $trackingNumber === '') {
-            throw new ValidationException(['tracking_number' => ['Добавете номер на товарителница за изпратена или доставена поръчка.']]);
-        }
-
         $order->status = $status;
         $order->tracking_number = $trackingNumber !== '' ? $trackingNumber : null;
         if ($order->shipped_at === null && in_array($status, ['shipped', 'delivered'], true)) $order->shipped_at = new \DateTimeImmutable();

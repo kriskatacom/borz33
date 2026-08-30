@@ -28,6 +28,7 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { ReportsPage } from '@/pages/ReportsPage';
 import { UserFormPage } from '@/pages/UserFormPage';
 import { UsersPage } from '@/pages/UsersPage';
 
@@ -77,7 +78,7 @@ export function App() {
               <Route path={routes.shipments} element={<ComingSoonPage />} />
               <Route path={routes.messagesShow} element={<MessageDetailsPage />} />
               <Route path={routes.messages} element={<MessagesPage />} />
-              <Route path={routes.reports} element={<ComingSoonPage />} />
+              <Route path={routes.reports} element={<ReportsPage />} />
               <Route path={routes.settings} element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<Navigate to={routes.login} replace />} />

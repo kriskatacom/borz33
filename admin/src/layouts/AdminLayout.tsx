@@ -2,7 +2,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { routes } from '@/app/constants';
-import { navItems } from '@/app/nav';
+import { navItems, navSections } from '@/app/nav';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Button } from '@/components/ui/Button';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -113,11 +113,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           Borz33
         </Link>
         <nav className="side-nav" aria-label="Основна навигация">
-          {navItems.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
-              <span>{item.label}</span>
-              {item.to === routes.messages && unreadMessages > 0 ? <span className="sidebar-unread-badge" aria-label={`${unreadMessages} непрочетени съобщения`}>{unreadMessages > 99 ? '99+' : unreadMessages}</span> : null}
-            </NavLink>
+          {navSections.map((section) => (
+            <section key={section.label} className="nav-section" aria-labelledby={`nav-section-${section.label}`}>
+              <h2 id={`nav-section-${section.label}`} className="nav-section-title">{section.label}</h2>
+              {section.items.map((item) => (
+                <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
+                  <span>{item.label}</span>
+                  {item.to === routes.messages && unreadMessages > 0 ? <span className="sidebar-unread-badge" aria-label={`${unreadMessages} непрочетени съобщения`}>{unreadMessages > 99 ? '99+' : unreadMessages}</span> : null}
+                </NavLink>
+              ))}
+            </section>
           ))}
         </nav>
         <div className="sidebar-user">
