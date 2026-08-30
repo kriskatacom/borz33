@@ -15,6 +15,8 @@ import { CategoryFormPage } from '@/pages/CategoryFormPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { MediaPage } from '@/pages/MediaPage';
+import { OrderDetailsPage } from '@/pages/OrderDetailsPage';
+import { OrdersPage } from '@/pages/OrdersPage';
 import { PageFormPage } from '@/pages/PageFormPage';
 import { PagesPage } from '@/pages/PagesPage';
 import { ProductsPage } from '@/pages/ProductsPage';
@@ -52,7 +54,8 @@ export function App() {
               <Route path={routes.usersEdit} element={<UserFormPage />} />
               <Route path={routes.users} element={<UsersPage />} />
               <Route path={routes.customers} element={<Navigate to={routes.users} replace />} />
-              <Route path={routes.orders} element={<ComingSoonPage />} />
+              <Route path={routes.ordersShow} element={<OrderDetailsPage />} />
+              <Route path={routes.orders} element={<OrdersPage />} />
               <Route path={routes.productsNew} element={<ProductEditPage />} />
               <Route path={routes.productsEdit} element={<ProductEditPage />} />
               <Route path={routes.productsShow} element={<ProductViewPage />} />

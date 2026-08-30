@@ -10,6 +10,7 @@ export const routes = {
   resetPassword: '/reset-password',
   home: '/',
   orders: '/orders',
+  ordersShow: '/orders/:id',
   products: '/products',
   productsNew: '/products/new',
   productsShow: '/products/:id',

@@ -6,6 +6,7 @@ use App\Controllers\Admin\BannersController;
 use App\Controllers\Admin\DashboardController;
 use App\Controllers\Admin\CategoriesController;
 use App\Controllers\Admin\MediaController;
+use App\Controllers\Admin\OrdersController;
 use App\Controllers\Admin\PagesController;
 use App\Controllers\Admin\ProductImagesController;
 use App\Controllers\Admin\ProductsController;
@@ -61,6 +62,10 @@ $router->post('/admin/media', [MediaController::class, 'store'], $admin);
 $router->get('/admin/media/{id}', [MediaController::class, 'show'], $admin);
 $router->patch('/admin/media/{id}', [MediaController::class, 'update'], $admin);
 $router->delete('/admin/media/{id}', [MediaController::class, 'destroy'], $admin);
+
+$router->get('/admin/orders', [OrdersController::class, 'index'], $admin);
+$router->get('/admin/orders/{id}', [OrdersController::class, 'show'], $admin);
+$router->patch('/admin/orders/{id}', [OrdersController::class, 'update'], $admin);
 
 $router->get('/admin/pages', [PagesController::class, 'index'], $admin);
 $router->post('/admin/pages', [PagesController::class, 'store'], $admin);

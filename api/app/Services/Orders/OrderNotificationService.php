@@ -61,6 +61,48 @@ class OrderNotificationService
         return ['customer' => $customerSent, 'admin' => $adminSent];
     }
 
+    public function sendStatusChanged(Order $order, string $status): bool
+    {
+        $messages = [
+            'pending' => ['Поръчката Ви очаква обработка', 'Поръчката отново е отбелязана като нова и очаква обработка от нашия екип.', 'Ще Ви уведомим при следваща промяна.'],
+            'confirmed' => ['Поръчката Ви е потвърдена', 'Потвърдихме поръчката и данните за нейното изпълнение.', 'Скоро ще започнем подготовката на продуктите.'],
+            'processing' => ['Подготвяме поръчката Ви', 'Вашата поръчка вече се обработва и продуктите се подготвят за изпращане.', 'Ще получите ново съобщение, когато пратката бъде предадена на куриер.'],
+            'shipped' => ['Поръчката Ви е изпратена', 'Предадохме поръчката Ви за доставка.', 'Куриерът ще се свърже с Вас според избрания начин на доставка.'],
+            'delivered' => ['Поръчката Ви е доставена', 'Поръчката е отбелязана като успешно доставена.', 'Благодарим Ви, че избрахте ' . (string) ($this->company['name'] ?? 'Borz33') . '.'],
+            'cancelled' => ['Поръчката Ви е отказана', 'Поръчката е отбелязана като отказана и няма да бъде изпълнена.', 'Ако смятате, че това е грешка, моля свържете се с нас.'],
+        ];
+
+        if (!isset($messages[$status])) return false;
+        [$statusTitle, $statusMessage, $statusNote] = $messages[$status];
+
+        return $this->attempt(
+            (string) $order->email,
+            $statusTitle . ' · ' . $order->number,
+            'order-status',
+            [
+                'order' => $order,
+                'title' => $statusTitle,
+                'preheader' => $statusMessage,
+                'statusTitle' => $statusTitle,
+                'statusMessage' => $statusMessage,
+                'statusNote' => $statusNote,
+                'status' => $status,
+            ],
+            implode("\n", [
+                'Здравейте, ' . $order->first_name . ',',
+                '',
+                $statusTitle,
+                $statusMessage,
+                $statusNote,
+                '',
+                'Поръчка: ' . $order->number,
+                'Обща стойност: ' . $this->money($order->total),
+                '',
+                (string) ($this->company['name'] ?? 'Borz33'),
+            ])
+        );
+    }
+
     /** @param array<string, mixed> $data */
     private function attempt(string $to, string $subject, string $template, array $data, string $text): bool
     {

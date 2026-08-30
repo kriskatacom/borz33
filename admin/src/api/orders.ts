@@ -1,0 +1,68 @@
+import { apiRequest } from '@/api/client';
+
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
+export type OrderListItem = {
+  id: number;
+  number: string;
+  status: OrderStatus;
+  customer_name: string;
+  email: string;
+  phone: string;
+  delivery_method: string;
+  payment_method: string;
+  currency: string;
+  total: string;
+  items_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type OrderItem = {
+  id: number;
+  product_id: number | null;
+  variant_id: number | null;
+  name: string;
+  sku: string | null;
+  options: string | null;
+  notes: string | null;
+  qty: number;
+  unit_price: string;
+  total: string;
+};
+
+export type AdminOrder = OrderListItem & {
+  user_id: number | null;
+  first_name: string;
+  last_name: string;
+  subtotal: string;
+  shipping_amount: string;
+  address_line: string;
+  city: string;
+  postal_code: string | null;
+  country: string;
+  econt_office_code: string | null;
+  notes: string | null;
+  items: OrderItem[];
+};
+
+export type OrderFilters = {
+  q?: string;
+  status?: string;
+  delivery_method?: string;
+  payment_method?: string;
+  page?: number;
+  per_page?: number;
+};
+
+export function listOrders(token: string, filters: OrderFilters) {
+  return apiRequest<{ orders: OrderListItem[]; pagination: { page: number; per_page: number; total: number; last_page: number } }>('/admin/orders', { token, query: filters });
+}
+
+export function getOrder(token: string, id: number) {
+  return apiRequest<{ order: AdminOrder }>(`/admin/orders/${id}`, { token });
+}
+
+export function updateOrderStatus(token: string, id: number, status: OrderStatus) {
+  return apiRequest<{ order: AdminOrder; status_changed: boolean; email_sent: boolean }>(`/admin/orders/${id}`, { method: 'PATCH', token, body: { status } });
+}

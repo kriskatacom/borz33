@@ -590,7 +590,7 @@ export function ProductImagesEditor({
               onPickMedia={() => setPicker('gallery')}
             />
           ) : (
-            <ul className="m-0 grid max-w-[55rem] list-none grid-cols-2 items-start gap-2 p-0 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <ul className="m-0 grid w-full list-none grid-cols-2 items-start gap-2 p-0 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {product.gallery_images.map((image, index) => (
                 <li
                   key={image.id}
@@ -923,7 +923,7 @@ function GalleryCard({
             </Button>
           </div>
         </div>
-        <div className="flex gap-0.5 p-1.5">
+        <div className="flex justify-center gap-0.5 p-1.5">
           <Button type="button" size="icon" variant="outline" className="size-7" aria-label="Алтернативен текст" disabled={busy} onClick={() => setAltOpen(true)}>
             <TextCursorInput />
           </Button>
@@ -953,7 +953,7 @@ function GalleryCard({
             type="button"
             size="icon"
             variant="outline"
-            className="ml-auto size-7"
+            className="size-7"
             aria-label="Изтрий"
             disabled={busy}
             onClick={onDelete}
