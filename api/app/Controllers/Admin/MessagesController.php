@@ -9,6 +9,7 @@ use App\Core\Request;
 use App\Resources\ContactMessageResource;
 use App\Services\Messages\ContactMessageService;
 use App\Services\Messages\ContactReplyNotificationService;
+use App\Services\Messages\ContactAttachmentService;
 use App\Models\ContactMessageReply;
 use App\Core\Auth;
 use App\Exceptions\ValidationException;
@@ -17,14 +18,15 @@ class MessagesController extends Controller
 {
     public function __construct(
         private readonly ContactMessageService $messages = new ContactMessageService(),
-        private readonly ContactReplyNotificationService $notifications = new ContactReplyNotificationService()
+        private readonly ContactReplyNotificationService $notifications = new ContactReplyNotificationService(),
+        private readonly ContactAttachmentService $attachments = new ContactAttachmentService()
     ) {}
 
     public function index(): never { $this->ok($this->messages->paginate(Request::query()), 'Списък със съобщения.'); }
 
     public function show(string $id): never
     {
-        $message = $this->messages->mark($this->messages->find($this->id($id)), true)->load(['replies.admin', 'replies.sender']);
+        $message = $this->messages->mark($this->messages->find($this->id($id)), true)->load(['attachments.file', 'replies.admin', 'replies.sender', 'replies.attachments.file']);
         $this->ok(['message' => ContactMessageResource::toDetailArray($message)]);
     }
 
@@ -32,6 +34,8 @@ class MessagesController extends Controller
     {
         $message = $this->messages->find($this->id($id));
         $body = trim((string) Request::input('body', ''));
+        $files = Request::files('attachments');
+        $this->attachments->validate($files);
         if (mb_strlen($body) < 2 || mb_strlen($body) > 10000) throw new ValidationException(['body' => ['Отговорът трябва да бъде между 2 и 10 000 знака.']]);
 
         $reply = ContactMessageReply::query()->create([
@@ -41,11 +45,12 @@ class MessagesController extends Controller
             'body' => $body,
             'email_sent' => false,
         ]);
+        $this->attachments->attach($message, $reply, $files);
         $sent = $this->notifications->send($message, $reply);
         $reply->email_sent = $sent;
         $reply->save();
         $this->messages->mark($message, true);
-        $message->load(['replies.admin', 'replies.sender']);
+        $message->load(['attachments.file', 'replies.admin', 'replies.sender', 'replies.attachments.file']);
 
         $this->ok(['message' => ContactMessageResource::toDetailArray($message), 'email_sent' => $sent], $sent ? 'Отговорът е изпратен.' : 'Отговорът е записан, но имейлът не можа да бъде изпратен.');
     }
@@ -53,7 +58,7 @@ class MessagesController extends Controller
     public function update(string $id): never
     {
         $read = filter_var(Request::input('read', true), FILTER_VALIDATE_BOOLEAN);
-        $message = $this->messages->mark($this->messages->find($this->id($id)), $read)->load(['replies.admin', 'replies.sender']);
+        $message = $this->messages->mark($this->messages->find($this->id($id)), $read)->load(['attachments.file', 'replies.admin', 'replies.sender', 'replies.attachments.file']);
         $this->ok(['message' => ContactMessageResource::toDetailArray($message)], $read ? 'Съобщението е отбелязано като прочетено.' : 'Съобщението е отбелязано като непрочетено.');
     }
 

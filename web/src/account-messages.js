@@ -8,7 +8,11 @@ function appendReply(chat, reply) {
   bubble.textContent = reply.body ?? '';
 
   const meta = document.createElement('small');
-  meta.textContent = `${reply.sender || 'Вие'} · ${reply.created_at || ''}`;
+  meta.append(document.createTextNode(`${reply.sender || 'Вие'} · `));
+  const time = document.createElement('time');
+  time.dateTime = reply.created_at_iso || '';
+  time.textContent = reply.created_at || '';
+  meta.append(time);
 
   article.append(bubble, meta);
   chat.append(article);
@@ -16,6 +20,20 @@ function appendReply(chat, reply) {
 }
 
 export function mountAccountMessages() {
+  const welcome = document.querySelector('[data-conversation-welcome]');
+  if (welcome instanceof HTMLDialogElement) {
+    welcome.querySelectorAll('[data-conversation-welcome-close]').forEach((button) => button.addEventListener('click', () => welcome.close()));
+    welcome.addEventListener('click', (event) => { if (event.target === welcome) welcome.close(); });
+    welcome.addEventListener('close', () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('started');
+      url.searchParams.delete('email');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      document.querySelector('[data-account-message-reply] textarea')?.focus({ preventScroll: true });
+    }, { once: true });
+    welcome.showModal();
+  }
+
   const form = document.querySelector('[data-account-message-reply]');
   if (!(form instanceof HTMLFormElement)) return;
 
@@ -58,7 +76,7 @@ export function mountAccountMessages() {
       appendReply(chat, result.data.reply);
       textarea.value = '';
       if (status) status.textContent = 'Отговорът е добавен към разговора.';
-      notify(result.message || 'Отговорът Ви е изпратен.', result.data?.reply?.email_sent === false ? 'warning' : 'success');
+      notify(result.message || 'Отговорът Ви е изпратен.', result.data?.reply?.notification_status === 'failed' ? 'warning' : 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Отговорът не можа да бъде изпратен.';
       if (status) status.textContent = message;

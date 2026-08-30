@@ -20,7 +20,7 @@ $error = static fn (string $key): string => isset($errors[$key]) ? (string) $err
     <?php endif; ?>
     <?php if ($message): ?><p class="store-contact-error" role="alert"><?= $escape($message) ?><?= $error('form') ? ' ' . $escape($error('form')) : '' ?></p><?php endif; ?>
 
-    <form class="store-contact-form" method="post" action="/contact" novalidate>
+    <form class="store-contact-form" method="post" action="/contact" enctype="multipart/form-data" novalidate>
         <input type="hidden" name="_token" value="<?= $escape($csrf) ?>">
         <label class="store-contact-honeypot" aria-hidden="true">Уебсайт<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
         <div class="store-checkout-fields store-checkout-fields--two">
@@ -32,6 +32,7 @@ $error = static fn (string $key): string => isset($errors[$key]) ? (string) $err
             <label class="<?= $error('subject') ? 'has-error' : '' ?>"><span>Тема <em>*</em></span><input name="subject" value="<?= $escape($form['subject'] ?? '') ?>" maxlength="191" required><?php if ($error('subject')): ?><small><?= $escape($error('subject')) ?></small><?php endif; ?></label>
         </div>
         <label class="store-checkout-notes <?= $error('message') ? 'has-error' : '' ?>"><span>Съобщение *</span><textarea name="message" rows="8" minlength="10" maxlength="5000" required><?= $escape($form['message'] ?? '') ?></textarea><?php if ($error('message')): ?><small><?= $escape($error('message')) ?></small><?php endif; ?></label>
+        <label class="store-contact-attachments <?= $error('attachments') ? 'has-error' : '' ?>"><span>Прикачени файлове</span><input type="file" name="attachments[]" multiple accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain,.doc,.docx,.xls,.xlsx"><small><?= $error('attachments') ? $escape($error('attachments')) : 'До 5 файла. Максимален размер 32 MB на файл.' ?></small></label>
         <div class="store-contact-actions"><p>С изпращането приемате съобщението да бъде обработено с цел отговор на запитването.</p><button class="store-btn" type="submit">Изпрати съобщението</button></div>
     </form>
 </article>

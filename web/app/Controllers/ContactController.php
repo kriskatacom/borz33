@@ -8,10 +8,12 @@ use App\Core\Auth;
 use App\Core\Request;
 use App\Models\ContactMessage;
 use App\Services\Messages\ContactNotificationService;
+use App\Services\Messages\ContactAttachmentService;
+use App\Exceptions\ValidationException;
 
 class ContactController extends Controller
 {
-    public function __construct(private readonly ContactNotificationService $notifications = new ContactNotificationService()) {}
+    public function __construct(private readonly ContactNotificationService $notifications = new ContactNotificationService(), private readonly ContactAttachmentService $attachments = new ContactAttachmentService()) {}
 
     public function show(): never
     {
@@ -42,6 +44,15 @@ class ContactController extends Controller
         if (mb_strlen($form['message']) < 10 || mb_strlen($form['message']) > 5000) $errors['message'] = 'Съобщението трябва да бъде между 10 и 5000 знака.';
         if ($errors !== []) $this->renderForm($form, $errors, 'Проверете отбелязаните полета.', 422);
 
+        $files = Request::files('attachments');
+        try {
+            $this->attachments->validate($files);
+        } catch (ValidationException $exception) {
+            $values = $exception->errors();
+            $first = $values['attachments'][0] ?? $values['file'][0] ?? 'Прикачените файлове не са валидни.';
+            $this->renderForm($form, ['attachments' => (string) $first], 'Проверете прикачените файлове.', 422);
+        }
+
         $ip = trim((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
         $record = ContactMessage::query()->create([
             ...$form,
@@ -50,10 +61,14 @@ class ContactController extends Controller
             'ip_hash' => $ip !== '' ? hash('sha256', $ip . '|' . session_id()) : null,
             'email_sent' => false,
         ]);
+        $this->attachments->attach($record, null, $files);
         $sent = $this->notifications->send($record);
         $record->email_sent = $sent['admin'];
         $record->save();
         $_SESSION['contact_last_sent_at'] = time();
+        if ($record->user_id !== null) {
+            $this->redirect('/account/messages?conversation=' . $record->id . '&started=1&email=' . ($sent['sender'] ? '1' : '0') . '#conversation');
+        }
         $this->redirect('/contact?sent=1');
     }
 

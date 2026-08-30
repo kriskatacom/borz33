@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { LogOut, Menu, X } from 'lucide-react';
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { routes } from '@/app/constants';
 import { navItems } from '@/app/nav';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { logout } from '@/features/auth/authThunks';
 import { toast } from '@/lib/toast';
+import { listMessages } from '@/api/messages';
 
 type AdminLayoutProps = {
   children: ReactNode;
@@ -17,9 +18,33 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem('admin-sidebar-collapsed') === '1');
   const menuId = useId();
   const location = useLocation();
   const displayName = user ? `${user.first_name} ${user.last_name}`.trim() : 'Екип';
+  const token = useAppSelector((state) => state.auth.token) ?? '';
+
+  function toggleSidebar() {
+    setSidebarCollapsed((collapsed) => {
+      const next = !collapsed;
+      window.localStorage.setItem('admin-sidebar-collapsed', next ? '1' : '0');
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    if (!token) { setUnreadMessages(0); return; }
+    let cancelled = false;
+    const refresh = () => { void listMessages(token, { page: 1, per_page: 1 }).then((response) => { if (!cancelled) setUnreadMessages(response.data.unread_count); }).catch(() => undefined); };
+    const onRefresh = () => refresh();
+    const onCount = (event: Event) => { const count = Number((event as CustomEvent).detail?.count); if (Number.isFinite(count) && count >= 0) setUnreadMessages(count); };
+    refresh();
+    const interval = window.setInterval(refresh, 60_000);
+    window.addEventListener('admin:messages-unread-refresh', onRefresh);
+    window.addEventListener('admin:messages-unread-count', onCount);
+    return () => { cancelled = true; window.clearInterval(interval); window.removeEventListener('admin:messages-unread-refresh', onRefresh); window.removeEventListener('admin:messages-unread-count', onCount); };
+  }, [token]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -46,7 +71,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }, [menuOpen]);
 
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
       <header className="admin-topbar">
         <Tooltip content={menuOpen ? 'Затвори менюто' : 'Отвори менюто'}>
           <button
@@ -79,6 +104,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <button type="button" className="nav-backdrop" aria-label="Затвори менюто" onClick={() => setMenuOpen(false)} />
       ) : null}
 
+      <button type="button" className="sidebar-desktop-toggle" title={sidebarCollapsed ? 'Разгъни страничната лента' : 'Прибери страничната лента'} aria-label={sidebarCollapsed ? 'Разгъни страничната лента' : 'Прибери страничната лента'} aria-expanded={!sidebarCollapsed} aria-controls={menuId} onClick={toggleSidebar}>
+        {sidebarCollapsed ? <PanelLeftOpen aria-hidden /> : <PanelLeftClose aria-hidden />}
+      </button>
+
       <aside id={menuId} className={`admin-sidebar ${menuOpen ? 'is-open' : ''}`}>
         <Link to={routes.home} className="sidebar-brand">
           Borz33
@@ -86,7 +115,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <nav className="side-nav" aria-label="Основна навигация">
           {navItems.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
-              {item.label}
+              <span>{item.label}</span>
+              {item.to === routes.messages && unreadMessages > 0 ? <span className="sidebar-unread-badge" aria-label={`${unreadMessages} непрочетени съобщения`}>{unreadMessages > 99 ? '99+' : unreadMessages}</span> : null}
             </NavLink>
           ))}
         </nav>

@@ -30,6 +30,7 @@ class ContactMessageResource
     public static function toDetailArray(ContactMessage $message): array
     {
         return array_merge(self::toArray($message), [
+            'attachments' => self::attachments($message->attachments),
             'replies' => $message->replies->map(static fn (\App\Models\ContactMessageReply $reply): array => [
                 'id' => $reply->id,
                 'body' => $reply->body,
@@ -39,7 +40,24 @@ class ContactMessageResource
                     ? ($reply->sender?->fullName() ?: $message->name)
                     : ($reply->admin?->fullName() ?: 'Администратор'),
                 'created_at' => $reply->created_at?->toIso8601String(),
+                'attachments' => self::attachments($reply->attachments),
             ])->values()->all(),
         ]);
+    }
+
+    private static function attachments(iterable $attachments): array
+    {
+        $items = [];
+        foreach ($attachments as $attachment) {
+            if ($attachment->file === null) continue;
+            $items[] = [
+                'id' => (int) $attachment->id,
+                'name' => (string) $attachment->file->original_name,
+                'url' => '/' . ltrim((string) $attachment->file->path, '/'),
+                'mime' => (string) $attachment->file->mime,
+                'size' => (int) $attachment->file->size,
+            ];
+        }
+        return $items;
     }
 }

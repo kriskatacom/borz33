@@ -149,27 +149,42 @@ class AccountController extends Controller
             'body' => $body,
             'email_sent' => false,
         ]);
-        $sent = (new ContactReplyNotificationService())->sendToAdmin($message, $reply);
+        $recentNotificationExists = ContactMessageReply::query()
+            ->where('contact_message_id', $message->id)
+            ->where('sender_type', 'customer')
+            ->where('email_sent', true)
+            ->where('id', '!=', $reply->id)
+            ->where('created_at', '>=', \Carbon\Carbon::now('UTC')->subMinutes(10))
+            ->exists();
+        $sent = !$recentNotificationExists && (new ContactReplyNotificationService())->sendToAdmin($message, $reply);
+        $notificationStatus = $recentNotificationExists ? 'suppressed' : ($sent ? 'sent' : 'failed');
+        $responseMessage = match ($notificationStatus) {
+            'sent' => 'Отговорът Ви е изпратен.',
+            'suppressed' => 'Отговорът Ви е записан в разговора.',
+            default => 'Отговорът е записан, но уведомителният имейл не можа да бъде изпратен.',
+        };
         $reply->forceFill(['email_sent' => $sent])->save();
         $message->forceFill(['read_at' => null])->save();
 
         if ($this->wantsJson()) {
             $this->json([
                 'success' => true,
-                'message' => $sent ? 'Отговорът Ви е изпратен.' : 'Отговорът е записан, но уведомителният имейл не можа да бъде изпратен.',
+                'message' => $responseMessage,
                 'data' => [
                     'reply' => [
                         'id' => (int) $reply->id,
                         'body' => (string) $reply->body,
                         'sender' => 'Вие',
                         'created_at' => $reply->created_at?->timezone('Europe/Sofia')->format('d.m.Y, H:i'),
+                        'created_at_iso' => $reply->created_at?->toIso8601String(),
                         'email_sent' => $sent,
+                        'notification_status' => $notificationStatus,
                     ],
                 ],
             ]);
         }
 
-        StoreAuth::setFlash($sent ? 'Отговорът Ви е изпратен.' : 'Отговорът е записан, но уведомителният имейл не можа да бъде изпратен.', !$sent);
+        StoreAuth::setFlash($responseMessage, $notificationStatus === 'failed');
         $this->redirect('/account/messages?conversation=' . $message->id . '#conversation');
     }
 
@@ -304,10 +319,14 @@ class AccountController extends Controller
             ? $user->orders()->with('items')->limit(50)->get()
             : collect();
         $contactMessages = $section === 'messages'
-            ? ContactMessage::query()->where('user_id', $user->id)->with(['replies.admin', 'replies.sender'])->orderByDesc('created_at')->orderByDesc('id')->get()
+            ? ContactMessage::query()->where('user_id', $user->id)->with(['attachments.file', 'replies.admin', 'replies.sender', 'replies.attachments.file'])->orderByDesc('created_at')->orderByDesc('id')->get()
             : collect();
         $requestedConversation = (int) Request::query('conversation', 0);
         $activeContactMessage = $contactMessages->firstWhere('id', $requestedConversation) ?? $contactMessages->first();
+        $conversationStarted = $section === 'messages'
+            && Request::query('started') === '1'
+            && $activeContactMessage !== null
+            && (int) $activeContactMessage->id === $requestedConversation;
 
         $this->view('account', [
             'title' => self::SECTIONS[$section] . ' · Акаунт · Borz33',
@@ -330,6 +349,8 @@ class AccountController extends Controller
             'orderCount' => $orderCount,
             'contactMessages' => $contactMessages,
             'activeContactMessage' => $activeContactMessage,
+            'conversationStarted' => $conversationStarted,
+            'conversationEmailSent' => Request::query('email') === '1',
             'editingAddressId' => array_key_exists('editingAddressId', $extra)
                 ? $extra['editingAddressId']
                 : $this->requestedEditId($user),

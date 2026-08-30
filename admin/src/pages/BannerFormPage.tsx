@@ -107,6 +107,24 @@ function SwitchField({
   );
 }
 
+function BannerPreview({ form, buttons, media }: { form: FormState; buttons: ButtonDraft[]; media: MediaFile | null }) {
+  const visibleButtons = buttons.filter((button) => button.label.trim() !== '');
+  return <aside className="banner-preview-panel" aria-label="Преглед на банера">
+    <header><div><p>Преглед на живо</p><h2>Как ще изглежда в сайта</h2></div><span>{BANNER_LAYOUTS.find((item) => item.value === form.layout)?.label ?? 'Разделен'}</span></header>
+    <div className="banner-preview-viewport">
+      <section className={`banner-preview-banner is-${form.layout}`}>
+        <div className="banner-preview-media">{media ? <img src={media.url} alt={media.alt?.trim() || form.title || ''} /> : <div><Image aria-hidden /><span>Изберете изображение</span></div>}</div>
+        <div className="banner-preview-copy">
+          <h3>{form.title.trim() || 'Заглавие на банера'}</h3>
+          <div className={`banner-preview-text ${form.text.trim() === '' ? 'is-placeholder' : ''}`} dangerouslySetInnerHTML={{ __html: form.text.trim() || '<p>Текстът на банера ще се покаже тук.</p>' }} />
+          <div className="banner-preview-actions">{visibleButtons.length > 0 ? visibleButtons.map((button, index) => <span key={button.key} className={index === 0 ? '' : 'is-ghost'}>{button.label}</span>) : <span>Основен бутон</span>}</div>
+        </div>
+      </section>
+    </div>
+    <p className="banner-preview-note">Визуализацията се обновява автоматично. Крайният размер зависи от страницата, в която е поставен банерът.</p>
+  </aside>;
+}
+
 export function BannerFormPage() {
   const { id } = useParams();
   const isNew = id === undefined;
@@ -280,7 +298,8 @@ export function BannerFormPage() {
       ) : null}
 
       {canEdit ? (
-        <form className="flex min-w-0 max-w-full flex-col gap-3" onSubmit={(event) => void onSubmit(event)} noValidate>
+        <form className="banner-form-with-preview" onSubmit={(event) => void onSubmit(event)} noValidate>
+          <div className="flex min-w-0 max-w-full flex-col gap-3">
           <CollapsibleSection
             title="Банер"
             icon={Image}
@@ -514,6 +533,8 @@ export function BannerFormPage() {
               </Link>
             </Button>
           </div>
+          </div>
+          <BannerPreview form={form} buttons={buttons} media={media} />
         </form>
       ) : null}
 

@@ -33,6 +33,7 @@ class ContactNotificationService
                 $this->mailer->sendTemplate($this->adminEmail, 'Контактна форма · ' . str_replace(["\r", "\n"], ' ', (string) $message->subject), 'contact-admin', [
                     'contactMessage' => $message, 'title' => 'Ново съобщение', 'preheader' => $message->subject,
                     'adminConversationUrl' => $this->adminUrl . '/messages/' . $message->id,
+                    'attachmentLinks' => $this->attachmentLinks($message->attachments()->with('file')->get()),
                 ], implode("\n", ['Ново съобщение от контактната форма', '', 'От: ' . $message->name, 'Имейл: ' . $message->email, 'Тема: ' . $message->subject, '', $message->message, '', 'Разговор: ' . $this->adminUrl . '/messages/' . $message->id]));
                 $result['admin'] = true;
             } catch (\Throwable $exception) {
@@ -47,6 +48,7 @@ class ContactNotificationService
             $this->mailer->sendTemplate((string) $message->email, 'Получихме запитването Ви · ' . str_replace(["\r", "\n"], ' ', (string) $message->subject), 'contact-confirmation', [
                 'contactMessage' => $message, 'title' => 'Получихме запитването Ви', 'preheader' => $message->subject,
                 'customerConversationUrl' => $customerUrl, 'hasConversation' => $message->user_id !== null,
+                'attachmentLinks' => $this->attachmentLinks($message->attachments()->with('file')->get()),
             ], implode("\n", ['Здравейте, ' . $message->name . ',', '', 'Получихме запитването Ви: ' . $message->subject, '', $message->message, '', 'Разговор: ' . $customerUrl]));
             $result['sender'] = true;
         } catch (\Throwable $exception) {
@@ -54,5 +56,12 @@ class ContactNotificationService
         }
 
         return $result;
+    }
+
+    private function attachmentLinks(iterable $attachments): array
+    {
+        $links = [];
+        foreach ($attachments as $attachment) if ($attachment->file !== null) $links[] = ['name' => $attachment->file->original_name, 'url' => $this->websiteUrl . '/' . ltrim($attachment->file->path, '/')];
+        return $links;
     }
 }

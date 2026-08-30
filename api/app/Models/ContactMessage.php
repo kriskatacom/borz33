@@ -16,4 +16,5 @@ class ContactMessage extends Model
     }
 
     public function replies(): HasMany { return $this->hasMany(ContactMessageReply::class)->orderBy('created_at')->orderBy('id'); }
+    public function attachments(): HasMany { return $this->hasMany(ContactMessageAttachment::class)->whereNull('contact_message_reply_id')->orderBy('id'); }
 }

@@ -32,7 +32,7 @@ class ContactReplyNotificationService
                 (string) $message->email,
                 $subject,
                 'contact-reply',
-                ['contactMessage' => $message, 'reply' => $reply, 'title' => $subject, 'preheader' => (string) $reply->body, 'customerConversationUrl' => $message->user_id ? $this->websiteUrl . '/account/messages?conversation=' . $message->id . '#conversation' : $this->websiteUrl . '/login', 'hasConversation' => $message->user_id !== null],
+                ['contactMessage' => $message, 'reply' => $reply, 'title' => $subject, 'preheader' => (string) $reply->body, 'customerConversationUrl' => $message->user_id ? $this->websiteUrl . '/account/messages?conversation=' . $message->id . '#conversation' : $this->websiteUrl . '/login', 'hasConversation' => $message->user_id !== null, 'attachmentLinks' => $this->attachmentLinks($reply)],
                 implode("\n", ['Здравейте, ' . $message->name . ',', '', $reply->body, '', 'Относно: ' . $message->subject])
             );
             return true;
@@ -56,5 +56,12 @@ class ContactReplyNotificationService
             error_log('Customer reply email failed [reply=' . $reply->id . ']: ' . $exception->getMessage());
             return false;
         }
+    }
+
+    private function attachmentLinks(ContactMessageReply $reply): array
+    {
+        $links = [];
+        foreach ($reply->attachments()->with('file')->get() as $attachment) if ($attachment->file !== null) $links[] = ['name' => $attachment->file->original_name, 'url' => $this->websiteUrl . '/' . ltrim($attachment->file->path, '/')];
+        return $links;
     }
 }
