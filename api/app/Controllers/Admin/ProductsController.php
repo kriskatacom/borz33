@@ -61,6 +61,13 @@ class ProductsController extends Controller
         $this->ok(['product' => ProductResource::toAdminArray($product)], 'Продуктът е възстановен.');
     }
 
+    public function forceDestroy(string $id): never
+    {
+        $this->products->forceDelete($this->products->find($this->id($id), true));
+
+        $this->ok([], 'Продуктът е изтрит завинаги.');
+    }
+
     public function sharePersonalization(string $id): never
     {
         $product = $this->products->find($this->id($id));

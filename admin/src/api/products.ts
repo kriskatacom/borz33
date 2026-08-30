@@ -151,6 +151,18 @@ export function updateProduct(token: string, id: number, body: Record<string, un
   return apiRequest<{ product: AdminProduct }>(`/admin/products/${id}`, { method: 'PATCH', token, body });
 }
 
+export function deleteProduct(token: string, id: number) {
+  return apiRequest<Record<string, never>>(`/admin/products/${id}`, { method: 'DELETE', token });
+}
+
+export function restoreProduct(token: string, id: number) {
+  return apiRequest<{ product: AdminProduct }>(`/admin/products/${id}/restore`, { method: 'POST', token });
+}
+
+export function forceDeleteProduct(token: string, id: number) {
+  return apiRequest<Record<string, never>>(`/admin/products/${id}/force`, { method: 'DELETE', token });
+}
+
 export function shareProductPersonalization(token: string, id: number, body: Record<string, unknown>) {
   return apiRequest<{ product: AdminProduct; updated_count: number }>(`/admin/products/${id}/personalization/share`, {
     method: 'POST',

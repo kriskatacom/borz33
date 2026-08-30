@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Shirt } from 'lucide-react';
+import { Eye, MoreHorizontal, Pencil, RotateCcw, Shirt, Trash2 } from 'lucide-react';
 import type { ProductListItem } from '@/api/products';
 import { createDataTableHelper } from '@/components/data-table/columnHelper';
 import { formatMoney } from '@/lib/format';
+import { Button } from '@/components/ui/Button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const helper = createDataTableHelper<ProductListItem>();
 
@@ -21,7 +23,13 @@ function ProductThumb({ product }: { product: ProductListItem }) {
   );
 }
 
-export function getProductsColumns() {
+type ProductActions = {
+  onDelete: (product: ProductListItem) => void;
+  onRestore: (product: ProductListItem) => void;
+  onForceDelete: (product: ProductListItem) => void;
+};
+
+export function getProductsColumns({ onDelete, onRestore, onForceDelete }: ProductActions) {
   return helper.columns([
     helper.display({
       id: 'image',
@@ -105,5 +113,26 @@ export function getProductsColumns() {
           row.original.personalization_enabled ? <span className="badge info">Да</span> : '—',
       }
     ),
+    helper.display({
+      id: 'actions',
+      header: 'Действия',
+      enableSorting: false,
+      meta: { className: 'w-20 text-right', help: 'Преглед, редакция и управление на изтриването.' },
+      cell: ({ row }) => {
+        const product = row.original;
+        return <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" aria-label="Действия за продукта"><MoreHorizontal /></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild><Link to={`/products/${product.id}`}><Eye />Преглед</Link></DropdownMenuItem>
+            <DropdownMenuItem asChild><Link to={`/products/${product.id}/edit`}><Pencil />Редакция</Link></DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {product.deleted_at ? <>
+              <DropdownMenuItem onSelect={() => onRestore(product)}><RotateCcw />Възстанови</DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onSelect={() => onForceDelete(product)}><Trash2 />Изтрий завинаги</DropdownMenuItem>
+            </> : <DropdownMenuItem variant="destructive" onSelect={() => onDelete(product)}><Trash2 />Изтрий</DropdownMenuItem>}
+          </DropdownMenuContent>
+        </DropdownMenu>;
+      },
+    }),
   ]);
 }

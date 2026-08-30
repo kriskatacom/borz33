@@ -95,6 +95,7 @@ $router->get('/admin/products/{id}', [ProductsController::class, 'show'], $admin
 $router->put('/admin/products/{id}', [ProductsController::class, 'update'], $admin);
 $router->patch('/admin/products/{id}', [ProductsController::class, 'update'], $admin);
 $router->delete('/admin/products/{id}', [ProductsController::class, 'destroy'], $admin);
+$router->delete('/admin/products/{id}/force', [ProductsController::class, 'forceDestroy'], $admin);
 $router->post('/admin/products/{id}/restore', [ProductsController::class, 'restore'], $admin);
 $router->post('/admin/products/{id}/personalization/share', [ProductsController::class, 'sharePersonalization'], $admin);
 $router->post('/admin/products/{id}/images/front', [ProductImagesController::class, 'storeFront'], $admin);

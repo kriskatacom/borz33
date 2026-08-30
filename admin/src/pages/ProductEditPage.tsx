@@ -1,12 +1,16 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Eye, Images, Layers, List, Palette, Plus, Save, Share2, Shirt, Trash2, Type } from 'lucide-react';
+import { ArrowLeft, Eye, ImagePlus, Images, Layers, List, Palette, Plus, RotateCcw, Save, Share2, Shirt, Trash2, Type, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { listCategoryTree, type CategoryTreeNode } from '@/api/categories';
 import {
   createProduct,
+  deleteProduct,
   getProduct,
+  restoreProduct,
   shareProductPersonalization,
+  uploadProductFrontImage,
+  uploadProductGalleryImage,
   updateProduct,
   type AdminProduct,
   type ProductOption,
@@ -54,6 +58,8 @@ type PersonalizationFieldDraft = {
   is_required: boolean;
   max_length: string;
 };
+type DraftProductImage = { key: string; file: File; previewUrl: string };
+type DraftProductImages = { front: DraftProductImage | null; gallery: DraftProductImage[] };
 
 let draftSeq = 0;
 function nextKey(): string {
@@ -134,7 +140,7 @@ type GeneralFormProps = {
   product: AdminProduct | null;
   token: string;
   onSaved: (product: AdminProduct) => void;
-  onCreated?: (product: AdminProduct) => void;
+  onCreated?: (product: AdminProduct) => void | Promise<void>;
 };
 
 function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
@@ -203,7 +209,7 @@ function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
           personalization_max_length: 80,
         });
         toast.success(response.message || 'Продуктът е създаден.');
-        onCreated?.(response.data.product);
+        await onCreated?.(response.data.product);
         return;
       }
 
@@ -246,6 +252,56 @@ function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
       <SectionActions busy={busy} />
     </form>
   );
+}
+
+function DraftImagesEditor({ images, setImages }: { images: DraftProductImages; setImages: Dispatch<SetStateAction<DraftProductImages>> }) {
+  const frontInput = useRef<HTMLInputElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
+  const accept = 'image/jpeg,image/png,image/webp';
+
+  function draft(file: File): DraftProductImage {
+    return { key: `${Date.now()}-${Math.random()}`, file, previewUrl: URL.createObjectURL(file) };
+  }
+
+  function setFront(file?: File) {
+    if (!file) return;
+    setImages((current) => {
+      if (current.front) URL.revokeObjectURL(current.front.previewUrl);
+      return { ...current, front: draft(file) };
+    });
+  }
+
+  function addGallery(files: FileList | null) {
+    if (!files?.length) return;
+    setImages((current) => ({ ...current, gallery: [...current.gallery, ...Array.from(files).map(draft)] }));
+  }
+
+  function remove(image: DraftProductImage, target: 'front' | 'gallery') {
+    URL.revokeObjectURL(image.previewUrl);
+    setImages((current) => target === 'front'
+      ? { ...current, front: null }
+      : { ...current, gallery: current.gallery.filter((item) => item.key !== image.key) });
+  }
+
+  return <div className="grid gap-4">
+    <div className="grid gap-2">
+      <LabelWithHelp label="Основно изображение" help="Ще се използва като предна снимка на продукта." />
+      {images.front ? <div className="relative w-40 overflow-hidden border border-border bg-muted aspect-[4/5]">
+        <img src={images.front.previewUrl} alt="Основно изображение" className="h-full w-full object-cover" />
+        <Button type="button" size="icon" variant="outline" className="absolute right-2 top-2 bg-background" aria-label="Премахни основното изображение" onClick={() => remove(images.front!, 'front')}><X /></Button>
+      </div> : <Button type="button" variant="outline" className="w-fit" onClick={() => frontInput.current?.click()}><ImagePlus />Избери основно изображение</Button>}
+      <input ref={frontInput} className="sr-only" type="file" accept={accept} onChange={(event) => { setFront(event.target.files?.[0]); event.target.value = ''; }} />
+    </div>
+    <div className="grid gap-2">
+      <LabelWithHelp label="Галерия" help="Може да изберете няколко изображения още преди създаването." />
+      {images.gallery.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">{images.gallery.map((image) => <div key={image.key} className="relative overflow-hidden border border-border bg-muted aspect-[4/5]">
+        <img src={image.previewUrl} alt={image.file.name} className="h-full w-full object-cover" />
+        <Button type="button" size="icon" variant="outline" className="absolute right-1 top-1 bg-background" aria-label="Премахни изображението" onClick={() => remove(image, 'gallery')}><X /></Button>
+      </div>)}</div> : null}
+      <Button type="button" variant="outline" className="w-fit" onClick={() => galleryInput.current?.click()}><Images />Добави към галерията</Button>
+      <input ref={galleryInput} className="sr-only" type="file" accept={accept} multiple onChange={(event) => { addGallery(event.target.files); event.target.value = ''; }} />
+    </div>
+  </div>;
 }
 
 function ParametersForm({ product, token, onSaved }: SectionFormProps) {
@@ -878,7 +934,52 @@ export function ProductEditPage() {
   const [product, setProduct] = useState<AdminProduct | null>(null);
   const [busy, setBusy] = useState(!isNew);
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmStatus, setConfirmStatus] = useState<'delete' | 'restore' | null>(null);
+  const [draftImages, setDraftImages] = useState<DraftProductImages>({ front: null, gallery: [] });
+  const draftImagesRef = useRef(draftImages);
+  draftImagesRef.current = draftImages;
   useGlobalLoading(busy);
+
+  useEffect(() => () => {
+    const current = draftImagesRef.current;
+    if (current.front) URL.revokeObjectURL(current.front.previewUrl);
+    current.gallery.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+  }, []);
+
+  async function finishCreation(created: AdminProduct) {
+    setBusy(true);
+    try {
+      if (draftImages.front) await uploadProductFrontImage(token, created.id, draftImages.front.file);
+      for (const image of draftImages.gallery) await uploadProductGalleryImage(token, created.id, image.file);
+      if (draftImages.front || draftImages.gallery.length) toast.success('Изображенията са качени и прикачени към продукта.');
+    } catch (error) {
+      toastError(error, 'Продуктът е създаден, но част от изображенията не можаха да се качат. Можете да опитате отново в редакцията.');
+    } finally {
+      navigate(`/products/${created.id}/edit`, { replace: true });
+    }
+  }
+
+  async function changeDeletedStatus() {
+    if (!product || !confirmStatus) return;
+    setBusy(true);
+    try {
+      if (confirmStatus === 'restore') {
+        const response = await restoreProduct(token, product.id);
+        setProduct(response.data.product);
+        toast.success(response.message || 'Продуктът е възстановен.');
+      } else {
+        const response = await deleteProduct(token, product.id);
+        const refreshed = await getProduct(token, product.id);
+        setProduct(refreshed.data.product);
+        toast.success(response.message || 'Продуктът е преместен в изтрити.');
+      }
+      setConfirmStatus(null);
+    } catch (error) {
+      toastError(error, confirmStatus === 'restore' ? 'Продуктът не можа да бъде възстановен.' : 'Продуктът не можа да бъде изтрит.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -933,7 +1034,7 @@ export function ProductEditPage() {
         title={isNew ? 'Нов продукт' : product ? `Редакция · ${product.name}` : 'Редакция'}
         help={
           isNew
-            ? 'Попълнете име и цена. След запис ще можете да добавите снимки, варианти и персонализация.'
+            ? 'Добавете изображения и попълнете основните данни. Снимките ще се качат автоматично след създаването.'
             : 'Всяка секция се записва отделно. Изображенията се качват веднага. Незапазените промени в другите секции не се пращат.'
         }
         crumbs={[
@@ -949,12 +1050,12 @@ export function ProductEditPage() {
         actions={
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             {!isNew ? (
-              <Button asChild variant="outline">
-                <Link to={`/products/${productId}`}>
-                  <Eye />
-                  Преглед
-                </Link>
-              </Button>
+              <>
+                {!product?.deleted_at ? <Button asChild variant="outline"><Link to={`/products/${productId}`}><Eye />Преглед</Link></Button> : null}
+                {product?.deleted_at
+                  ? <Button type="button" variant="outline" onClick={() => setConfirmStatus('restore')}><RotateCcw />Възстанови</Button>
+                  : <Button type="button" variant="destructive" onClick={() => setConfirmStatus('delete')}><Trash2 />Изтрий</Button>}
+              </>
             ) : null}
             <Button asChild variant="outline">
               <Link to={routes.products}>
@@ -980,12 +1081,15 @@ export function ProductEditPage() {
 
       {canEdit && isNew ? (
         <div className="flex min-w-0 max-w-full flex-col gap-3">
+          <SectionShell title="Изображения" icon={Images} help="Изберете основна снимка и галерия преди създаването на продукта.">
+            <DraftImagesEditor images={draftImages} setImages={setDraftImages} />
+          </SectionShell>
           <SectionShell title="Общи данни" icon={Shirt} help="Име, цена и статус. След запис се отваря пълната редакция.">
             <GeneralForm
               product={null}
               token={token}
               onSaved={setProduct}
-              onCreated={(created) => navigate(`/products/${created.id}/edit`, { replace: true })}
+              onCreated={finishCreation}
             />
           </SectionShell>
         </div>
@@ -1013,6 +1117,16 @@ export function ProductEditPage() {
           </SectionShell>
         </div>
       ) : null}
+
+      {confirmStatus ? <ConfirmDialog
+        title={confirmStatus === 'restore' ? 'Възстановяване на продукт' : 'Изтриване на продукт'}
+        message={confirmStatus === 'restore' ? 'Продуктът отново ще може да се редактира и публикува.' : 'Продуктът ще бъде скрит от магазина и преместен в „Изтрити“. Данните и изображенията му ще се запазят.'}
+        confirmLabel={confirmStatus === 'restore' ? 'Възстанови' : 'Изтрий'}
+        variant={confirmStatus === 'restore' ? 'default' : 'destructive'}
+        busy={busy}
+        onConfirm={() => void changeDeletedStatus()}
+        onCancel={() => setConfirmStatus(null)}
+      /> : null}
     </div>
   );
 }

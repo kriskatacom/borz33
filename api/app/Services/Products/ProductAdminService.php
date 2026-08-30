@@ -118,6 +118,18 @@ class ProductAdminService
         return $this->fresh($product);
     }
 
+    public function forceDelete(Product $product): void
+    {
+        if (!$product->trashed()) {
+            throw new ValidationException(['product' => ['Продуктът трябва първо да бъде преместен в изтрити.']]);
+        }
+
+        Capsule::connection()->transaction(function () use ($product): void {
+            $this->images->purgeForProduct($product);
+            $product->forceDelete();
+        });
+    }
+
     /**
      * @param array<string, mixed> $data
      * @return array{product: Product, updated_count: int}

@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { listCategoryTree } from '@/api/categories';
-import { listProducts, type ProductListItem } from '@/api/products';
+import { deleteProduct, forceDeleteProduct, listProducts, restoreProduct, type ProductListItem } from '@/api/products';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { DataTable, DATA_TABLE_PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/components/data-table/DataTable';
@@ -13,10 +13,13 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { getProductsColumns } from '@/features/products/productsColumns';
 import { flattenCategoryTree } from '@/features/categories/categoryTree';
 import { PageTreeSelect } from '@/features/pages/PageTreeSelect';
-import { toast } from '@/lib/toast';
+import { toast, toastError } from '@/lib/toast';
+
+type PendingProductAction = { product: ProductListItem; action: 'delete' | 'restore' | 'force' };
 
 function parsePageSize(raw: string | null): number {
   const value = Number(raw);
@@ -34,6 +37,9 @@ export function ProductsPage() {
   const [lastPage, setLastPage] = useState(1);
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingProductAction | null>(null);
+  const [acting, setActing] = useState(false);
+  const [revision, setRevision] = useState(0);
   useGlobalLoading(busy);
 
   const filters = useMemo(
@@ -47,7 +53,30 @@ export function ProductsPage() {
     [params]
   );
 
-  const columns = useMemo(() => getProductsColumns(), []);
+  const columns = useMemo(() => getProductsColumns({
+    onDelete: (product) => setPending({ product, action: 'delete' }),
+    onRestore: (product) => setPending({ product, action: 'restore' }),
+    onForceDelete: (product) => setPending({ product, action: 'force' }),
+  }), []);
+
+  async function confirmPending() {
+    if (!pending) return;
+    setActing(true);
+    try {
+      const response = pending.action === 'restore'
+        ? await restoreProduct(token, pending.product.id)
+        : pending.action === 'force'
+          ? await forceDeleteProduct(token, pending.product.id)
+          : await deleteProduct(token, pending.product.id);
+      toast.success(response.message || (pending.action === 'restore' ? 'Продуктът е възстановен.' : 'Продуктът е изтрит.'));
+      setPending(null);
+      setRevision((value) => value + 1);
+    } catch (error) {
+      toastError(error, 'Действието не беше успешно.');
+    } finally {
+      setActing(false);
+    }
+  }
 
   function updateParams(next: Record<string, string>, resetPage = true) {
     const merged = new URLSearchParams(params);
@@ -114,7 +143,7 @@ export function ProductsPage() {
     return () => {
       cancelled = true;
     };
-  }, [filters, token]);
+  }, [filters, token, revision]);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,6 +251,20 @@ export function ProductsPage() {
             updateParams({ per_page: pageSize === DEFAULT_PAGE_SIZE ? '' : String(pageSize) }),
         }}
       />
+
+      {pending ? <ConfirmDialog
+        title={pending.action === 'restore' ? 'Възстановяване на продукт' : pending.action === 'force' ? 'Окончателно изтриване' : 'Изтриване на продукт'}
+        message={pending.action === 'restore'
+          ? `Да възстановим ли „${pending.product.name}“?`
+          : pending.action === 'force'
+            ? `„${pending.product.name}“ ще бъде изтрит завинаги заедно със свързаните продуктови изображения. Това действие не може да бъде отменено.`
+            : `„${pending.product.name}“ ще бъде преместен в „Изтрити“ и може да бъде възстановен по-късно.`}
+        confirmLabel={pending.action === 'restore' ? 'Възстанови' : pending.action === 'force' ? 'Изтрий завинаги' : 'Изтрий'}
+        variant={pending.action === 'restore' ? 'default' : 'destructive'}
+        busy={acting}
+        onCancel={() => setPending(null)}
+        onConfirm={() => void confirmPending()}
+      /> : null}
     </div>
   );
 }
