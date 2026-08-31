@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Trash2, X } from 'lucide-react';
 import { useTable, type ColumnDef, type RowData, type SortingState } from '@tanstack/react-table';
 import {
@@ -82,6 +82,7 @@ type DataTableProps<TData extends RowData> = {
   caption?: string;
   pagination?: DataTablePagination;
   onBulkDelete?: (rows: TData[]) => Promise<void>;
+  renderBulkActions?: (context: { rows: TData[]; busy: boolean; run: (action: () => Promise<void>) => void; clear: () => void }) => ReactNode;
   isRowSelectable?: (row: TData) => boolean;
 };
 
@@ -100,12 +101,14 @@ export function DataTable<TData extends RowData>({
   caption,
   pagination,
   onBulkDelete,
+  renderBulkActions,
   isRowSelectable = () => true,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const bulkEnabled = Boolean(onBulkDelete || renderBulkActions);
   const table = useTable({
     features: dataTableFeatures,
     columns,
@@ -140,16 +143,25 @@ export function DataTable<TData extends RowData>({
     finally { setBulkBusy(false); }
   }
 
+  async function runBulkAction(action: () => Promise<void>) {
+    setBulkBusy(true);
+    try {
+      await action();
+      setSelected(new Set());
+    } catch (error) { toastError(error, 'Масовото действие не беше успешно.'); }
+    finally { setBulkBusy(false); }
+  }
+
   return (
     <div className="grid gap-3">
-      {onBulkDelete && selectedRows.length > 0 ? <div className="data-table-bulk-bar" role="toolbar" aria-label="Масови действия"><strong>{selectedRows.length} избрани</strong><div><Button type="button" variant="destructive" size="sm" disabled={bulkBusy} onClick={() => setConfirmBulkDelete(true)}><Trash2 />Изтрий избраните</Button><Button type="button" variant="ghost" size="sm" disabled={bulkBusy} onClick={() => setSelected(new Set())}><X />Откажи избора</Button></div></div> : null}
+      {bulkEnabled && selectedRows.length > 0 ? <div className="data-table-bulk-bar" role="toolbar" aria-label="Масови действия"><strong>{selectedRows.length} избрани</strong><div>{renderBulkActions?.({ rows: selectedRows.map((row) => row.original), busy: bulkBusy, run: (action) => void runBulkAction(action), clear: () => setSelected(new Set()) })}{onBulkDelete ? <Button type="button" variant="destructive" size="sm" disabled={bulkBusy} onClick={() => setConfirmBulkDelete(true)}><Trash2 />Изтрий избраните</Button> : null}<Button type="button" variant="ghost" size="sm" disabled={bulkBusy} onClick={() => setSelected(new Set())}><X />Откажи избора</Button></div></div> : null}
       <div className="overflow-hidden border border-border bg-card" aria-busy={loading}>
         <Table>
           {caption ? <caption className="sr-only">{caption}</caption> : null}
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                {onBulkDelete ? <TableHead className="w-12 bg-muted px-4 py-3"><SelectionCheckbox checked={allSelected} indeterminate={someSelected} disabled={selectableRows.length === 0 || loading} label="Избери всички записи на страницата" onChange={selectAll} /></TableHead> : null}
+                {bulkEnabled ? <TableHead className="w-12 bg-muted px-4 py-3"><SelectionCheckbox checked={allSelected} indeterminate={someSelected} disabled={selectableRows.length === 0 || loading} label="Избери всички записи на страницата" onChange={selectAll} /></TableHead> : null}
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta;
                   const canSort = header.column.getCanSort();
@@ -160,7 +172,7 @@ export function DataTable<TData extends RowData>({
                       key={header.id}
                       className={cn(
                         'bg-muted px-4 py-3 font-sans text-sm font-extrabold tracking-wide text-muted-foreground uppercase',
-                        meta?.sticky && `sticky ${onBulkDelete ? 'left-12' : 'left-0'} z-10 bg-muted`,
+                        meta?.sticky && `sticky ${bulkEnabled ? 'left-12' : 'left-0'} z-10 bg-muted`,
                         meta?.className
                       )}
                     >
@@ -215,14 +227,14 @@ export function DataTable<TData extends RowData>({
           <TableBody>
             {pageRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length + (onBulkDelete ? 1 : 0)} className="h-24 text-center font-sans text-muted-foreground">
+                <TableCell colSpan={columns.length + (bulkEnabled ? 1 : 0)} className="h-24 text-center font-sans text-muted-foreground">
                   {emptyMessage}
                 </TableCell>
               </TableRow>
             ) : (
               pageRows.map((row) => (
                 <TableRow key={row.id} className="group">
-                  {onBulkDelete ? <TableCell className="w-12 px-4 py-3"><SelectionCheckbox checked={selected.has(row.id)} disabled={!isRowSelectable(row.original) || loading || bulkBusy} label={`Избери запис ${row.id}`} onChange={(checked) => setSelected((current) => { const next = new Set(current); if (checked) next.add(row.id); else next.delete(row.id); return next; })} /></TableCell> : null}
+                  {bulkEnabled ? <TableCell className="w-12 px-4 py-3"><SelectionCheckbox checked={selected.has(row.id)} disabled={!isRowSelectable(row.original) || loading || bulkBusy} label={`Избери запис ${row.id}`} onChange={(checked) => setSelected((current) => { const next = new Set(current); if (checked) next.add(row.id); else next.delete(row.id); return next; })} /></TableCell> : null}
                   {row.getAllCells().map((cell) => {
                     const meta = cell.column.columnDef.meta;
 
@@ -231,7 +243,7 @@ export function DataTable<TData extends RowData>({
                         key={cell.id}
                         className={cn(
                           'px-4 py-3 font-sans',
-                          meta?.sticky && `sticky ${onBulkDelete ? 'left-12' : 'left-0'} z-10 bg-card group-hover:bg-muted`,
+                          meta?.sticky && `sticky ${bulkEnabled ? 'left-12' : 'left-0'} z-10 bg-card group-hover:bg-muted`,
                           meta?.className
                         )}
                       >

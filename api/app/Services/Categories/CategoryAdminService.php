@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Resources\CategoryResource;
 use App\Services\Media\MediaService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Support\Str;
 
 class CategoryAdminService
@@ -108,7 +109,12 @@ class CategoryAdminService
             throw new AuthException('Категорията вече е изтрита.');
         }
 
-        $category->delete();
+        Capsule::connection()->transaction(function () use ($category): void {
+            // Direct children become top-level categories. Their own descendants stay attached,
+            // preserving each deeper subtree under its newly promoted main category.
+            Category::query()->where('parent_id', $category->id)->update(['parent_id' => null]);
+            $category->delete();
+        });
     }
 
     public function restore(int $id): Category
@@ -122,6 +128,48 @@ class CategoryAdminService
         $category->restore();
 
         return $this->fresh($category);
+    }
+
+    /** @param list<int> $ids */
+    public function bulkSetParent(array $ids, mixed $parentValue): int
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+
+        if ($ids === []) {
+            throw new ValidationException(['ids' => ['Изберете поне една категория.']]);
+        }
+
+        if (count($ids) > 500) {
+            throw new ValidationException(['ids' => ['Може да промените до 500 категории наведнъж.']]);
+        }
+
+        $parentId = $this->nullableId($parentValue);
+
+        if ($parentValue !== null && $parentValue !== '' && $parentValue !== 0 && $parentValue !== '0' && $parentValue !== 'none' && $parentId === null) {
+            throw new ValidationException(['parent_id' => ['Изберете валидна родителска категория или „Без родител“.']]);
+        }
+
+        if ($parentId !== null && in_array($parentId, $ids, true)) {
+            throw new ValidationException(['parent_id' => ['Избраната родителска категория не може да бъде сред променяните категории.']]);
+        }
+
+        return Capsule::connection()->transaction(function () use ($ids, $parentId): int {
+            $categories = Category::query()->whereIn('id', $ids)->lockForUpdate()->get();
+
+            if ($categories->count() !== count($ids)) {
+                throw new ValidationException(['ids' => ['Някоя от избраните категории не съществува или е изтрита.']]);
+            }
+
+            if ($parentId !== null && !Category::query()->whereKey($parentId)->exists()) {
+                throw new ValidationException(['parent_id' => ['Избраната родителска категория не съществува или е изтрита.']]);
+            }
+
+            foreach ($categories as $category) {
+                $this->resolvedParentId($parentId, (int) $category->id);
+            }
+
+            return Category::query()->whereIn('id', $ids)->update(['parent_id' => $parentId]);
+        });
     }
 
     /** @param array<string, mixed> $filters */

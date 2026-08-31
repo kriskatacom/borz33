@@ -105,6 +105,7 @@ $router->post('/admin/banners/{id}/restore', [BannersController::class, 'restore
 $router->get('/admin/categories', [CategoriesController::class, 'index'], $admin);
 $router->post('/admin/categories', [CategoriesController::class, 'store'], $admin);
 $router->get('/admin/categories/tree', [CategoriesController::class, 'tree'], $admin);
+$router->patch('/admin/categories/bulk/parent', [CategoriesController::class, 'bulkParent'], $admin);
 $router->get('/admin/categories/{id}', [CategoriesController::class, 'show'], $admin);
 $router->put('/admin/categories/{id}', [CategoriesController::class, 'update'], $admin);
 $router->patch('/admin/categories/{id}', [CategoriesController::class, 'update'], $admin);

@@ -81,3 +81,11 @@ export function deleteCategory(token: string, id: number) {
 export function restoreCategory(token: string, id: number) {
   return apiRequest<{ category: AdminCategory }>(`/admin/categories/${id}/restore`, { method: 'POST', token });
 }
+
+export function bulkSetCategoryParent(token: string, ids: number[], parentId: number | null) {
+  return apiRequest<{ updated: number }>('/admin/categories/bulk/parent', {
+    method: 'PATCH',
+    token,
+    body: { ids, parent_id: parentId },
+  });
+}

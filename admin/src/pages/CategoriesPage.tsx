@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FolderPlus } from 'lucide-react';
+import { FolderInput, FolderPlus } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import {
   deleteCategory,
+  bulkSetCategoryParent,
   listCategories,
   listCategoryTree,
   restoreCategory,
@@ -43,6 +44,7 @@ export function CategoriesPage() {
   const [pending, setPending] = useState<CategoryListItem | null>(null);
   const [acting, setActing] = useState(false);
   const [treeTick, setTreeTick] = useState(0);
+  const [bulkParent, setBulkParent] = useState('none');
   useGlobalLoading(busy);
 
   const filters = useMemo(
@@ -283,6 +285,42 @@ export function CategoriesPage() {
         emptyMessage="Няма категории за избраните филтри."
         caption="Списък с категории"
         isRowSelectable={(category) => !category.deleted_at}
+        renderBulkActions={({ rows, busy: bulkBusy, run }) => {
+          const selectedIds = new Set(rows.map((category) => category.id));
+          const availableParents = treeOptions.filter((option) => !selectedIds.has(option.id));
+          const removeParent = bulkParent === 'none';
+
+          return <>
+            <Select value={bulkParent} disabled={bulkBusy} onValueChange={setBulkParent}>
+              <SelectTrigger className="min-h-9 w-[15rem] bg-card" aria-label="Нов родител на избраните категории">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Без родител</SelectItem>
+                {availableParents.map((option) => <SelectItem key={option.id} value={String(option.id)} className="whitespace-pre">{option.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={bulkBusy}
+              onClick={() => run(async () => {
+                const parentId = removeParent ? null : Number(bulkParent);
+                const response = await bulkSetCategoryParent(token, rows.map((category) => category.id), parentId);
+                const refreshed = await listCategories(token, { ...filters, parent: filters.parent === 'all' ? undefined : filters.parent });
+                setCategories(refreshed.data.categories);
+                setTotal(refreshed.data.pagination.total);
+                setLastPage(refreshed.data.pagination.last_page);
+                setTreeTick((current) => current + 1);
+                toast.success(response.message || (removeParent ? 'Родителят е премахнат.' : 'Родителят е зададен.'));
+              })}
+            >
+              <FolderInput />
+              {removeParent ? 'Премахни родителя' : 'Задай родител'}
+            </Button>
+          </>;
+        }}
         onBulkDelete={async (selected) => {
           await Promise.all(selected.map((category) => deleteCategory(token, category.id)));
           const ids = new Set(selected.map((category) => category.id));

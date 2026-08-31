@@ -28,6 +28,16 @@ class CategoriesController extends Controller
         $this->ok(['categories' => $this->categories->tree()], 'Дърво с категории.');
     }
 
+    public function bulkParent(): never
+    {
+        $input = Request::input();
+        $rawIds = is_array($input['ids'] ?? null) ? $input['ids'] : [];
+        $ids = array_values(array_filter(array_map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0, $rawIds), static fn (int $id): bool => $id > 0));
+        $updated = $this->categories->bulkSetParent($ids, $input['parent_id'] ?? null);
+
+        $this->ok(['updated' => $updated], $updated === 1 ? 'Родителят на категорията е обновен.' : 'Родителят на категориите е обновен.');
+    }
+
     public function show(string $id): never
     {
         $category = $this->categories->find($this->id($id), true);
