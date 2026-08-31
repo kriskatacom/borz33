@@ -12,6 +12,8 @@ use Store\Services\ProductPage;
 /** @var string $csrf */
 /** @var bool $acceptedTerms */
 /** @var bool $wantsInvoice */
+/** @var float $subtotalAmount */
+/** @var float $freeShippingThreshold */
 
 $lines = $lines ?? [];
 $form = $form ?? [];
@@ -23,15 +25,17 @@ $company = require dirname(__DIR__, 2) . '/config/company.php';
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $value = static fn (string $key): string => $escape($form[$key] ?? '');
 $error = static fn (string $key): ?string => isset($errors[$key]) ? (string) $errors[$key] : null;
-$delivery = in_array(($form['delivery_method'] ?? ''), ['address', 'office', 'machine'], true)
+$delivery = in_array(($form['delivery_method'] ?? ''), ['address', 'office'], true)
     ? (string) $form['delivery_method']
     : 'address';
-$payment = in_array(($form['payment_method'] ?? ''), ['cash_on_delivery', 'bank_transfer'], true)
-    ? (string) $form['payment_method']
-    : 'cash_on_delivery';
+$payment = 'cash_on_delivery';
 $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['qty'] ?? 0), $lines));
 $econt = (new \App\Services\Shipping\EcontConfigurationService())->publicConfiguration();
 $shippingPayer = in_array(($form['shipping_payer'] ?? ''), ['receiver', 'sender'], true) ? (string) $form['shipping_payer'] : 'receiver';
+$subtotalAmount = (float) ($subtotalAmount ?? 0);
+$freeShippingThreshold = (float) ($freeShippingThreshold ?? 0);
+$freeShippingEligible = $subtotalAmount > $freeShippingThreshold;
+if (!$freeShippingEligible) $shippingPayer = 'receiver';
 ?>
 <section class="store-checkout" data-checkout data-econt-locator-url="<?= $escape($econt['office_locator_url']) ?>" data-econt-environment="<?= $escape($econt['environment']) ?>">
     <header class="store-checkout-head">
@@ -113,12 +117,6 @@ $shippingPayer = in_array(($form['shipping_payer'] ?? ''), ['receiver', 'sender'
                             <i aria-hidden="true"></i>
                         </label>
                         <label>
-                            <input type="radio" name="delivery_method" value="machine" <?= $delivery === 'machine' ? 'checked' : '' ?> required>
-                            <span class="store-checkout-choice-icon" aria-hidden="true">▤</span>
-                            <span><strong>До Еконтомат</strong><small>Получаване от автоматична станция</small></span>
-                            <i aria-hidden="true"></i>
-                        </label>
-                        <label>
                             <input type="radio" name="delivery_method" value="office" <?= $delivery === 'office' ? 'checked' : '' ?> required>
                             <span class="store-checkout-choice-icon" aria-hidden="true">▣</span>
                             <span><strong>До офис на куриер</strong><small>Вземане от удобен офис</small></span>
@@ -129,10 +127,10 @@ $shippingPayer = in_array(($form['shipping_payer'] ?? ''), ['receiver', 'sender'
                 </fieldset>
                 <div class="store-checkout-fields">
                     <label class="<?= $error('address_line') ? 'has-error' : '' ?>">
-                        <span data-address-label><?= $delivery === 'machine' ? 'Еконтомат' : ($delivery === 'office' ? 'Офис на куриер' : 'Улица и номер') ?> <em>*</em></span>
-                        <input type="text" name="address_line" autocomplete="<?= $delivery === 'address' ? 'street-address' : 'off' ?>" value="<?= $value('address_line') ?>" maxlength="191" placeholder="<?= $delivery === 'machine' ? 'Изберете Еконтомат от картата' : ($delivery === 'office' ? 'Изберете офис от картата' : 'Улица, номер, вход, етаж и апартамент') ?>" required data-address-input<?= $delivery !== 'address' ? ' readonly' : '' ?><?= $error('address_line') ? ' aria-invalid="true" aria-describedby="address-error"' : '' ?>>
-                        <button type="button" class="store-checkout-office-button" data-econt-office-open<?= $delivery === 'address' ? ' hidden' : '' ?>><?= $delivery === 'machine' ? 'Избери Еконтомат' : 'Избери офис на Еконт' ?></button>
-                        <span class="store-checkout-field-hint" data-address-hint><?= $delivery === 'machine' ? 'Изберете автоматична пощенска станция (APS).' : ($delivery === 'office' ? 'Избраният офис определя точната цена на доставката.' : 'Добавете вход, етаж и апартамент, ако са приложими.') ?></span>
+                        <span data-address-label><?= $delivery === 'office' ? 'Офис на куриер' : 'Улица и номер' ?> <em>*</em></span>
+                        <input type="text" name="address_line" autocomplete="<?= $delivery === 'address' ? 'street-address' : 'off' ?>" value="<?= $value('address_line') ?>" maxlength="191" placeholder="<?= $delivery === 'office' ? 'Изберете офис от картата' : 'Улица, номер, вход, етаж и апартамент' ?>" required data-address-input<?= $delivery !== 'address' ? ' readonly' : '' ?><?= $error('address_line') ? ' aria-invalid="true" aria-describedby="address-error"' : '' ?>>
+                        <button type="button" class="store-checkout-office-button" data-econt-office-open<?= $delivery === 'address' ? ' hidden' : '' ?>>Избери офис на Еконт</button>
+                        <span class="store-checkout-field-hint" data-address-hint><?= $delivery === 'office' ? 'Избраният офис определя точната цена на доставката.' : 'Добавете вход, етаж и апартамент, ако са приложими.' ?></span>
                         <?php if ($error('address_line')): ?><small id="address-error"><?= $escape($error('address_line')) ?></small><?php endif; ?>
                     </label>
                     <div class="store-checkout-fields store-checkout-fields--city">
@@ -157,8 +155,11 @@ $shippingPayer = in_array(($form['shipping_payer'] ?? ''), ['receiver', 'sender'
                     <legend>Кой плаща доставката?</legend>
                     <div class="store-checkout-choices">
                         <label><input type="radio" name="shipping_payer" value="receiver" <?= $shippingPayer === 'receiver' ? 'checked' : '' ?> required><span class="store-checkout-choice-icon" aria-hidden="true">€</span><span><strong>Клиентът</strong><small>Цената се добавя към поръчката</small></span><i aria-hidden="true"></i></label>
-                        <label><input type="radio" name="shipping_payer" value="sender" <?= $shippingPayer === 'sender' ? 'checked' : '' ?> required><span class="store-checkout-choice-icon" aria-hidden="true">✓</span><span><strong>Магазинът</strong><small>Доставката е за сметка на изпращача</small></span><i aria-hidden="true"></i></label>
+                        <?php if ($freeShippingEligible): ?>
+                            <label><input type="radio" name="shipping_payer" value="sender" <?= $shippingPayer === 'sender' ? 'checked' : '' ?> required><span class="store-checkout-choice-icon" aria-hidden="true">✓</span><span><strong>Магазинът</strong><small>Безплатна доставка за поръчка над <?= $escape(ProductPage::money($freeShippingThreshold)) ?></small></span><i aria-hidden="true"></i></label>
+                        <?php endif; ?>
                     </div>
+                    <?php if (!$freeShippingEligible): ?><p class="store-checkout-field-hint">Безплатната доставка се активира при стойност на продуктите над <?= $escape(ProductPage::money($freeShippingThreshold)) ?>.</p><?php endif; ?>
                     <?php if ($error('shipping_payer')): ?><small class="store-checkout-group-error"><?= $escape($error('shipping_payer')) ?></small><?php endif; ?>
                 </fieldset>
             </section>
@@ -198,12 +199,6 @@ $shippingPayer = in_array(($form['shipping_payer'] ?? ''), ['receiver', 'sender'
                             <input type="radio" name="payment_method" value="cash_on_delivery" <?= $payment === 'cash_on_delivery' ? 'checked' : '' ?> required>
                             <span class="store-checkout-choice-icon" aria-hidden="true">€</span>
                             <span><strong>Наложен платеж</strong><small>Плащате на куриера при получаване</small></span>
-                            <i aria-hidden="true"></i>
-                        </label>
-                        <label>
-                            <input type="radio" name="payment_method" value="bank_transfer" <?= $payment === 'bank_transfer' ? 'checked' : '' ?> required>
-                            <span class="store-checkout-choice-icon" aria-hidden="true">↗</span>
-                            <span><strong>Банков превод</strong><small>Ще получите данни за превода</small></span>
                             <i aria-hidden="true"></i>
                         </label>
                     </div>
@@ -296,7 +291,7 @@ $shippingPayer = in_array(($form['shipping_payer'] ?? ''), ['receiver', 'sender'
         <div class="store-checkout-office-dialog-head">
             <div>
                 <p>Доставка с Еконт · demo режим</p>
-                <h2 id="econt-office-title">Изберете офис или Еконтомат</h2>
+                <h2 id="econt-office-title">Изберете офис на Еконт</h2>
             </div>
             <button type="button" aria-label="Затвори картата" data-econt-office-close>×</button>
         </div>

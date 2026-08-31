@@ -12,6 +12,7 @@ import { registerTooltip } from './tooltip.js';
 import { mountCatalogGrid } from './catalog.js';
 import { mountStoreCheckout } from './checkout.js';
 import { mountAccountMessages } from './account-messages.js';
+import { mountFreeShippingNotice } from './free-shipping-notice.js';
 import './app.css';
 
 window.Alpine = Alpine;
@@ -29,3 +30,4 @@ registerStoreFavorites();
 mountCatalogGrid();
 mountStoreCheckout();
 mountAccountMessages();
+mountFreeShippingNotice();

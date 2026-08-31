@@ -397,12 +397,16 @@ class ShopController extends Controller
 
         $user = \App\Core\Auth::user();
         $address = $user?->billingAddresses()->first();
+        $subtotal = $this->cartSubtotal($lines);
+        $freeShippingThreshold = $this->freeShippingThreshold();
 
         $this->view('checkout', [
             'title' => 'Детайли за поръчката · Borz33',
             'lines' => $lines,
             'total' => StoreCart::moneyTotal($lines),
             'totalWeight' => StoreCart::weightTotal($lines),
+            'subtotalAmount' => $subtotal,
+            'freeShippingThreshold' => $freeShippingThreshold,
             'form' => [
                 'first_name' => (string) ($address?->first_name ?: $user?->first_name),
                 'last_name' => (string) ($address?->last_name ?: $user?->last_name),
@@ -448,6 +452,8 @@ class ShopController extends Controller
 
         $errors = [];
         $wantsInvoice = \App\Core\Request::wantsTrue('invoice_requested');
+        $sum = $this->cartSubtotal($lines);
+        $freeShippingThreshold = $this->freeShippingThreshold();
 
         foreach ([
             'first_name' => 'Въведете име.',
@@ -488,7 +494,7 @@ class ShopController extends Controller
             $errors['phone'] = 'Въведете валиден телефонен номер.';
         }
 
-        if (!in_array($form['delivery_method'], ['address', 'office', 'machine'], true)) {
+        if (!in_array($form['delivery_method'], ['address', 'office'], true)) {
             $errors['delivery_method'] = 'Изберете начин на доставка.';
         }
 
@@ -496,15 +502,19 @@ class ShopController extends Controller
             $errors['postal_code'] = 'Въведете пощенски код за изчисляване на доставката.';
         }
 
-        if (in_array($form['delivery_method'], ['office', 'machine'], true) && $form['econt_office_code'] === '') {
-            $errors['address_line'] = $form['delivery_method'] === 'machine' ? 'Изберете Еконтомат от картата.' : 'Изберете офис от картата на Еконт.';
-        } elseif (in_array($form['delivery_method'], ['office', 'machine'], true) && preg_match('/^\d{1,20}$/', $form['econt_office_code']) !== 1) {
+        if ($form['delivery_method'] === 'office' && $form['econt_office_code'] === '') {
+            $errors['address_line'] = 'Изберете офис от картата на Еконт.';
+        } elseif ($form['delivery_method'] === 'office' && preg_match('/^\d{1,20}$/', $form['econt_office_code']) !== 1) {
             $errors['address_line'] = 'Избраната Econt локация е невалидна.';
         }
-        if (!in_array($form['shipping_payer'], ['receiver', 'sender'], true)) $errors['shipping_payer'] = 'Изберете кой плаща доставката.';
+        if (!in_array($form['shipping_payer'], ['receiver', 'sender'], true)) {
+            $errors['shipping_payer'] = 'Изберете кой плаща доставката.';
+        } elseif ($form['shipping_payer'] === 'sender' && $sum <= $freeShippingThreshold) {
+            $errors['shipping_payer'] = 'Безплатната доставка е достъпна само за поръчки над ' . ProductPage::money($freeShippingThreshold) . '.';
+        }
 
-        if (!in_array($form['payment_method'], ['cash_on_delivery', 'bank_transfer'], true)) {
-            $errors['payment_method'] = 'Изберете начин на плащане.';
+        if ($form['payment_method'] !== 'cash_on_delivery') {
+            $errors['payment_method'] = 'Поддържаният начин на плащане е наложен платеж.';
         }
 
         if (mb_strtolower($form['country']) !== 'българия') {
@@ -528,7 +538,6 @@ class ShopController extends Controller
             $errors['accept_terms'] = 'Потвърдете условията, за да завършите поръчката.';
         }
 
-        $sum = array_reduce($lines, static fn (float $carry, array $line): float => $carry + (float) $line['total'], 0.0);
         $shipping = null;
 
         if ($errors === []) {
@@ -543,6 +552,8 @@ class ShopController extends Controller
                 'lines' => $lines,
                 'total' => StoreCart::moneyTotal($lines),
                 'totalWeight' => StoreCart::weightTotal($lines),
+                'subtotalAmount' => $sum,
+                'freeShippingThreshold' => $freeShippingThreshold,
                 'form' => $form,
                 'errors' => $errors,
                 'acceptedTerms' => $acceptedTerms,
@@ -572,7 +583,7 @@ class ShopController extends Controller
                 'subtotal' => $sum,
                 'shipping_amount' => $shippingAmount,
                 'total' => $sum + $shippingAmount,
-                'econt_office_code' => in_array($form['delivery_method'], ['office', 'machine'], true) ? $form['econt_office_code'] : null,
+                'econt_office_code' => $form['delivery_method'] === 'office' ? $form['econt_office_code'] : null,
                 'econt_quote_snapshot' => $shipping,
                 'postal_code' => $form['postal_code'] !== '' ? $form['postal_code'] : null,
                 'notes' => $form['notes'] !== '' ? $form['notes'] : null,
@@ -639,13 +650,17 @@ class ShopController extends Controller
 
         $subtotal = array_reduce($lines, static fn (float $carry, array $line): float => $carry + (float) $line['total'], 0.0);
 
-        if (!in_array($deliveryMethod, ['address', 'office', 'machine'], true)) {
+        if (!in_array($deliveryMethod, ['address', 'office'], true)) {
             $this->json(['message' => 'Изберете начин на доставка.'], 422);
         }
         $form = [];
         foreach (['first_name','last_name','phone','delivery_method','shipping_payer','city','postal_code','address_line','econt_office_code','payment_method'] as $key) $form[$key] = trim((string) (\App\Core\Request::input($key) ?? ''));
         if ($form['first_name'] === '' || $form['last_name'] === '' || $form['phone'] === '' || $form['city'] === '' || $form['postal_code'] === '') $this->json(['message' => 'Попълнете име, телефон, населено място и пощенски код.'], 422);
-        if (in_array($deliveryMethod, ['office','machine'], true) && $form['econt_office_code'] === '') $this->json(['message' => 'Изберете Econt локация от картата.'], 422);
+        if ($deliveryMethod === 'office' && $form['econt_office_code'] === '') $this->json(['message' => 'Изберете офис на Econt от картата.'], 422);
+        if ($form['payment_method'] !== 'cash_on_delivery') $this->json(['message' => 'Поддържаният начин на плащане е наложен платеж.'], 422);
+        if (!in_array($form['shipping_payer'], ['receiver', 'sender'], true)) $this->json(['message' => 'Изберете кой плаща доставката.'], 422);
+        $freeShippingThreshold = $this->freeShippingThreshold();
+        if ($form['shipping_payer'] === 'sender' && $subtotal <= $freeShippingThreshold) $this->json(['message' => 'Безплатната доставка е достъпна само за поръчки над ' . ProductPage::money($freeShippingThreshold) . '.'], 422);
         try { $quote = $this->econtShipping()->quote($this->shippingQuoteInput($form, $lines, $subtotal)); }
         catch (\Throwable $exception) { $this->json(['message' => $exception->getMessage()], 422); }
 
@@ -669,8 +684,18 @@ class ShopController extends Controller
     {
         $grams = array_sum(array_map(static fn (array $line): int => (int) ($line['total_weight_grams'] ?? 0), $lines));
         if ($grams < 1) throw new \RuntimeException('Липсва тегло на продукт. Доставката не може да бъде изчислена.');
-        $payment = (string) ($form['payment_method'] ?? 'cash_on_delivery');
-        return ['delivery_method' => (string) $form['delivery_method'], 'shipping_payer' => (string) ($form['shipping_payer'] ?? 'receiver'), 'first_name' => (string) $form['first_name'], 'last_name' => (string) $form['last_name'], 'phone' => (string) $form['phone'], 'city' => (string) $form['city'], 'postal_code' => (string) $form['postal_code'], 'address_line' => (string) $form['address_line'], 'econt_office_code' => (string) ($form['econt_office_code'] ?? ''), 'weight_kg' => $grams / 1000, 'order_value' => $subtotal, 'cod_amount' => $payment === 'cash_on_delivery' ? $subtotal : 0.0];
+        return ['delivery_method' => (string) $form['delivery_method'], 'shipping_payer' => (string) ($form['shipping_payer'] ?? 'receiver'), 'first_name' => (string) $form['first_name'], 'last_name' => (string) $form['last_name'], 'phone' => (string) $form['phone'], 'city' => (string) $form['city'], 'postal_code' => (string) $form['postal_code'], 'address_line' => (string) $form['address_line'], 'econt_office_code' => (string) ($form['econt_office_code'] ?? ''), 'weight_kg' => $grams / 1000, 'order_value' => $subtotal, 'cod_amount' => $subtotal];
+    }
+
+    /** @param list<array<string,mixed>> $lines */
+    private function cartSubtotal(array $lines): float
+    {
+        return round(array_reduce($lines, static fn (float $carry, array $line): float => $carry + (float) $line['total'], 0.0), 2);
+    }
+
+    private function freeShippingThreshold(): float
+    {
+        return max(0, (float) \App\Models\SiteSetting::query()->firstOrCreate([])->free_shipping_threshold);
     }
 
     private function econtShipping(): EcontShippingService
@@ -722,7 +747,7 @@ class ShopController extends Controller
         $this->redirect('/cart');
     }
 
-    /** @return array{count: int, lines: list<array<string, mixed>>, total: string, totalWeight: string} */
+    /** @return array{count: int, lines: list<array<string, mixed>>, total: string, subtotal: float, totalWeight: string} */
     private function cartPayload(): array
     {
         $lines = StoreCart::lines();
@@ -731,6 +756,7 @@ class ShopController extends Controller
             'count' => StoreCart::count(),
             'lines' => $lines,
             'total' => StoreCart::moneyTotal($lines),
+            'subtotal' => $this->cartSubtotal($lines),
             'totalWeight' => StoreCart::weightTotal($lines),
         ];
     }

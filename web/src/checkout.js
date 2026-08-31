@@ -10,15 +10,14 @@ function updateDeliveryCopy(root, resetSelection = false) {
     return;
   }
 
-  const pickup = method === 'office' || method === 'machine';
-  const machine = method === 'machine';
-  label.firstChild.textContent = machine ? 'Еконтомат ' : pickup ? 'Офис на куриер ' : 'Улица и номер ';
-  input.placeholder = machine ? 'Изберете Еконтомат от картата' : pickup ? 'Изберете офис от картата' : 'Улица, номер, вход, етаж и апартамент';
+  const pickup = method === 'office';
+  label.firstChild.textContent = pickup ? 'Офис на куриер ' : 'Улица и номер ';
+  input.placeholder = pickup ? 'Изберете офис от картата' : 'Улица, номер, вход, етаж и апартамент';
   input.autocomplete = pickup ? 'off' : 'street-address';
   input.readOnly = pickup;
   officeButton?.toggleAttribute('hidden', !pickup);
-  if (officeButton) officeButton.textContent = machine ? 'Избери Еконтомат' : 'Избери офис на Еконт';
-  hint.textContent = machine ? 'Изберете автоматична пощенска станция (APS).' : pickup ? 'Избраният офис определя точната цена на доставката.' : 'Добавете вход, етаж и апартамент, ако са приложими.';
+  if (officeButton) officeButton.textContent = 'Избери офис на Еконт';
+  hint.textContent = pickup ? 'Избраният офис определя точната цена на доставката.' : 'Добавете вход, етаж и апартамент, ако са приложими.';
 
   if (resetSelection) {
     input.value = '';
@@ -110,7 +109,7 @@ export function mountStoreCheckout() {
     const data = new FormData(form);
     const method = String(data.get('delivery_method') ?? 'address');
 
-    if (!['address', 'office', 'machine'].includes(method)) {
+    if (!['address', 'office'].includes(method)) {
       if (showErrors) {
         invalidateQuote('Изберете начин на доставка.');
       }
@@ -176,7 +175,7 @@ export function mountStoreCheckout() {
     const params = new URLSearchParams({
       lang: 'bg',
       shopUrl: window.location.origin,
-      officeType: method === 'machine' ? 'aps' : 'office',
+      officeType: 'office',
     });
 
     if (city.trim() !== '') {
@@ -210,12 +209,8 @@ export function mountStoreCheckout() {
     }
 
     const selectedMethod = form.elements.delivery_method?.value ?? root.querySelector('input[name="delivery_method"]:checked')?.value;
-    if (selectedMethod === 'machine' && office.isAPS === false) {
-      invalidateQuote('Изберете Еконтомат, отбелязан като автоматична станция (APS).');
-      return;
-    }
     if (selectedMethod === 'office' && office.isAPS) {
-      invalidateQuote('За този избор посочете офис, който не е Еконтомат.');
+      invalidateQuote('Изберете стандартен офис на Еконт.');
       return;
     }
     officeCode.value = String(office.code);

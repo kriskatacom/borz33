@@ -28,6 +28,7 @@ class SettingsController extends Controller
         $validator = ValidatorFactory::make()->make(Request::input(), [
             'logo_media_file_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_files', 'id')],
             'vat_enabled' => ['sometimes', 'boolean'],
+            'free_shipping_threshold' => ['sometimes', 'numeric', 'min:0', 'max:999999.99'],
             'econt_environment' => ['sometimes', 'string', Rule::in(['demo', 'production'])],
             'econt_production_username' => ['sometimes', 'nullable', 'string', 'max:191'],
             'econt_production_password' => ['sometimes', 'nullable', 'string', 'min:4', 'max:191'],
@@ -50,6 +51,7 @@ class SettingsController extends Controller
         $settings = $this->settings();
         $settings->logo_media_file_id = $logoId !== null ? (int) $logoId : null;
         if (array_key_exists('vat_enabled', $data)) $settings->vat_enabled = (bool) $data['vat_enabled'];
+        if (array_key_exists('free_shipping_threshold', $data)) $settings->free_shipping_threshold = round((float) $data['free_shipping_threshold'], 2);
         $credentialsChanged = false;
         if (array_key_exists('econt_production_username', $data)) {
             $username = trim((string) ($data['econt_production_username'] ?? ''));
@@ -130,6 +132,7 @@ class SettingsController extends Controller
             'logo_media_file_id' => $settings->logo_media_file_id,
             'logo' => $settings->logo ? MediaFileResource::toArray($settings->logo) : null,
             'vat_enabled' => (bool) $settings->vat_enabled,
+            'free_shipping_threshold' => (float) $settings->free_shipping_threshold,
             'econt' => [
                 'environment' => in_array($settings->econt_environment, ['demo', 'production'], true) ? $settings->econt_environment : 'demo',
                 'production_username' => (string) ($settings->econt_production_username ?? ''),

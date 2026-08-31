@@ -8,6 +8,7 @@ declare(strict_types=1);
 /** @var array<string, mixed> $seo */
 /** @var bool $compactMainBottom */
 /** @var bool $flushMainTop */
+/** @var array{threshold:float,subtotal:float}|null $freeShippingNotice */
 
 $title = $title ?? 'Borz33';
 $currentPath = $currentPath ?? '/';
@@ -25,6 +26,16 @@ $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOT
 $currentUser = $currentUser ?? null;
 $accountTheme = null;
 $viteOrigin = \Store\Core\Vite::origin();
+$freeShippingNotice = $freeShippingNotice ?? null;
+$freeShippingUnlocked = $freeShippingNotice !== null && $freeShippingNotice['subtotal'] > $freeShippingNotice['threshold'];
+$freeShippingRemaining = $freeShippingNotice !== null ? max(0.01, round($freeShippingNotice['threshold'] + 0.01 - $freeShippingNotice['subtotal'], 2)) : 0.0;
+$freeShippingMessage = $freeShippingNotice === null
+    ? ''
+    : ($freeShippingUnlocked
+        ? 'Поздравления — отключихте безплатна доставка!'
+        : ($freeShippingNotice['subtotal'] <= 0
+            ? 'Безплатна доставка за поръчки над ' . \Store\Services\ProductPage::money($freeShippingNotice['threshold']) . '.'
+            : 'Добавете още ' . \Store\Services\ProductPage::money($freeShippingRemaining) . ', за да отключите безплатна доставка.'));
 
 if ($currentUser !== null) {
     $value = (string) $currentUser->theme;
@@ -141,6 +152,15 @@ function store_asset(string $path): string
         x-data='storeHeader(<?= json_encode((string) (\App\Core\Request::query('q') ?? ''), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP) ?>)'
         @keydown.escape.window="closeAll()"
     >
+        <?php if ($freeShippingNotice !== null): ?>
+            <aside class="store-free-shipping-notice<?= $freeShippingUnlocked ? ' is-unlocked' : '' ?>" data-free-shipping-notice data-threshold="<?= $escape(number_format($freeShippingNotice['threshold'], 2, '.', '')) ?>" data-subtotal="<?= $escape(number_format($freeShippingNotice['subtotal'], 2, '.', '')) ?>" aria-live="polite">
+                <a href="<?= $freeShippingUnlocked ? '/cart' : '/catalog' ?>">
+                    <span aria-hidden="true">✦</span>
+                    <strong data-free-shipping-message><?= $escape($freeShippingMessage) ?></strong>
+                    <span class="store-free-shipping-notice-link" data-free-shipping-action><?= $freeShippingUnlocked ? 'Към количката' : 'Разгледайте продуктите' ?></span>
+                </a>
+            </aside>
+        <?php endif; ?>
         <?php require dirname(__DIR__) . '/views/partials/header.php'; ?>
         <main id="content" class="mx-auto <?= str_starts_with($currentPath, '/account') ? 'w-[min(1440px,calc(100%-2rem))]' : 'w-[min(1120px,calc(100%-2rem))]' ?> flex-1 <?= $compactMainBottom ? 'pb-3' : 'pb-14' ?> <?= $flushMainTop ? 'pt-0' : ($currentPath === '/' ? 'pt-3' : 'pt-7') ?>">
             <?= $content ?>

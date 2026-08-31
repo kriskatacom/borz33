@@ -20,14 +20,14 @@ final class EcontShippingService
     public function quote(array $input): array
     {
         $method = (string) ($input['delivery_method'] ?? '');
-        if (!in_array($method, ['address', 'office', 'machine'], true)) throw new \InvalidArgumentException('Невалиден начин на доставка.');
+        if (!in_array($method, ['address', 'office'], true)) throw new \InvalidArgumentException('Невалиден начин на доставка.');
         $payer = (string) ($input['shipping_payer'] ?? 'receiver');
         if (!in_array($payer, ['sender', 'receiver'], true)) throw new \InvalidArgumentException('Невалидна страна, плащаща доставката.');
         $weight = round(max(0.01, (float) ($input['weight_kg'] ?? 0)), 3);
         $value = round(max(0, (float) ($input['order_value'] ?? 0)), 2);
         $cod = round(max(0, (float) ($input['cod_amount'] ?? 0)), 2);
         $officeCode = trim((string) ($input['econt_office_code'] ?? ''));
-        if ($method !== 'address' && $officeCode === '') throw new \InvalidArgumentException('Изберете офис или Еконтомат на Еконт.');
+        if ($method === 'office' && $officeCode === '') throw new \InvalidArgumentException('Изберете офис на Еконт.');
 
         $label = [
             'senderClient' => ['name' => $this->config['sender']['name'], 'phones' => [$this->config['sender']['phone']]],

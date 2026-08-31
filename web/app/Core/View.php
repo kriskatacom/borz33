@@ -23,6 +23,7 @@ class View
         $data['csrf'] = StoreAuth::csrf();
         $data['cartCount'] = StoreCart::count();
         $data['favoriteCount'] = StoreFavorites::count();
+        $data['freeShippingNotice'] = self::freeShippingNotice();
         $data['navCategories'] = self::navCategories();
         $data['siteLogo'] = self::siteLogo();
         $data['seo'] = Seo::build($data);
@@ -83,6 +84,23 @@ class View
                 'url' => '/' . ltrim((string) $logo->path, '/'),
                 'alt' => trim((string) $logo->alt),
             ];
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** @return array{threshold:float,subtotal:float}|null */
+    private static function freeShippingNotice(): ?array
+    {
+        try {
+            $threshold = max(0, (float) SiteSetting::query()->firstOrCreate([])->free_shipping_threshold);
+            $subtotal = round(array_reduce(
+                StoreCart::lines(),
+                static fn (float $sum, array $line): float => $sum + (float) ($line['total'] ?? 0),
+                0.0
+            ), 2);
+
+            return ['threshold' => $threshold, 'subtotal' => $subtotal];
         } catch (\Throwable) {
             return null;
         }
