@@ -69,8 +69,21 @@ export function mountStoreCheckout() {
   const officeFrame = root.querySelector('[data-econt-office-frame]');
   const officeCode = root.querySelector('[data-econt-office-code]');
   const addressInput = root.querySelector('[data-address-input]');
+  const invoiceToggle = root.querySelector('[data-invoice-toggle]');
+  const invoiceFields = root.querySelector('[data-invoice-fields]');
   let quoteTimer;
   let quoteRequest;
+
+  function updateInvoiceFields() {
+    if (!invoiceToggle || !invoiceFields) return;
+    invoiceFields.hidden = !invoiceToggle.checked;
+    invoiceFields.querySelectorAll('input').forEach((input) => {
+      input.required = invoiceToggle.checked && input.name !== 'invoice_vat_number';
+      input.disabled = !invoiceToggle.checked;
+    });
+  }
+  invoiceToggle?.addEventListener('change', updateInvoiceFields);
+  updateInvoiceFields();
 
   function invalidateQuote(message = 'Попълнете данните, за да получите актуална цена от Еконт.') {
     quoteRequest?.abort();

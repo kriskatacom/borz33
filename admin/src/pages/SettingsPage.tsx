@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FolderOpen, Image, Monitor, Moon, Palette, Sun, Trash2, Upload } from 'lucide-react';
+import { FolderOpen, Image, Landmark, Monitor, Moon, Palette, Sun, Trash2, Upload } from 'lucide-react';
 import { getSiteSettings, updateSiteSettings, type SiteSettings } from '@/api/settings';
 import { uploadMediaFile } from '@/api/media';
 import { routes } from '@/app/constants';
@@ -12,6 +12,7 @@ import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { HelpHint } from '@/components/ui/HelpHint';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
 import { toast, toastError } from '@/lib/toast';
 
@@ -25,7 +26,7 @@ export function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const uploadRef = useRef<HTMLInputElement>(null);
-  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null });
+  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, vat_enabled: true });
   const [busy, setBusy] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
   useGlobalLoading(busy);
@@ -43,7 +44,7 @@ export function SettingsPage() {
   async function saveLogo(id: number | null) {
     setBusy(true);
     try {
-      const response = await updateSiteSettings(token, id);
+      const response = await updateSiteSettings(token, { logo_media_file_id: id });
       setSettings(response.data.settings);
       toast.success(id === null ? 'Логото е премахнато.' : 'Логото е обновено.');
     } catch (error) {
@@ -59,7 +60,7 @@ export function SettingsPage() {
       const uploaded = await uploadMediaFile(token, file);
       const logo = uploaded.data.files[0];
       if (!logo) throw new Error('Файлът не беше качен.');
-      const response = await updateSiteSettings(token, logo.id);
+      const response = await updateSiteSettings(token, { logo_media_file_id: logo.id });
       setSettings(response.data.settings);
       toast.success('Логото е качено и приложено.');
     } catch (error) {
@@ -67,6 +68,19 @@ export function SettingsPage() {
     } finally {
       setBusy(false);
       if (uploadRef.current) uploadRef.current.value = '';
+    }
+  }
+
+  async function saveVatEnabled(vat_enabled: boolean) {
+    setBusy(true);
+    try {
+      const response = await updateSiteSettings(token, { vat_enabled });
+      setSettings(response.data.settings);
+      toast.success(vat_enabled ? 'ДДС е включено за новите поръчки.' : 'ДДС е изключено за новите поръчки.');
+    } catch (error) {
+      toastError(error, 'Настройката за ДДС не можа да се запази.');
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -92,6 +106,13 @@ export function SettingsPage() {
               </div>;
             })}
           </RadioGroup>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Данъчно облагане" icon={Landmark} persistKey="settings.vat" help="Важи за поръчки, създадени след промяната. Вече създадените поръчки и документи пазят използваната ставка.">
+          <div className="flex max-w-xl items-center justify-between gap-5 rounded-[6px] border border-border bg-card p-4">
+            <div><h3 className="m-0 text-base">Фирмата е регистрирана по ДДС</h3><p className="mt-1 mb-0 text-sm leading-relaxed text-muted-foreground">При „Да“ сумите се изчисляват автоматично по ставката от фирмените настройки. При „Не“ фактурите не начисляват ДДС.</p></div>
+            <Switch checked={settings.vat_enabled} disabled={busy} aria-label="Фирмата е регистрирана по ДДС" onCheckedChange={(checked) => void saveVatEnabled(checked)} />
+          </div>
         </CollapsibleSection>
 
         <CollapsibleSection title="Лого на сайта" icon={Image} persistKey="settings.logo" help="Показва се в header-а и footer-а. Без лого остава името на сайта.">

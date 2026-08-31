@@ -29,6 +29,7 @@ export type OrderItem = {
   qty: number;
   unit_price: string;
   total: string;
+  product_image_url: string | null;
 };
 
 export type AdminOrder = OrderListItem & {
@@ -37,6 +38,8 @@ export type AdminOrder = OrderListItem & {
   last_name: string;
   subtotal: string;
   shipping_amount: string;
+  vat_enabled: boolean;
+  vat_rate: string;
   address_line: string;
   city: string;
   postal_code: string | null;
@@ -47,6 +50,13 @@ export type AdminOrder = OrderListItem & {
   shipped_at: string | null;
   notes: string | null;
   items: OrderItem[];
+  invoice_requested: boolean;
+  invoice_company: string | null;
+  invoice_eik: string | null;
+  invoice_vat_number: string | null;
+  invoice_address: string | null;
+  invoice_mol: string | null;
+  invoices: Array<{id:number;number:string|null;type:string;status:string}>;
 };
 
 export type OrderFilters = {

@@ -19,6 +19,8 @@ import { MessageDetailsPage } from '@/pages/MessageDetailsPage';
 import { MessagesPage } from '@/pages/MessagesPage';
 import { OrderDetailsPage } from '@/pages/OrderDetailsPage';
 import { OrdersPage } from '@/pages/OrdersPage';
+import { InvoicesPage } from '@/pages/InvoicesPage';
+import { InvoiceDetailsPage } from '@/pages/InvoiceDetailsPage';
 import { PageFormPage } from '@/pages/PageFormPage';
 import { PagesPage } from '@/pages/PagesPage';
 import { ProductsPage } from '@/pages/ProductsPage';
@@ -59,6 +61,8 @@ export function App() {
               <Route path={routes.customers} element={<Navigate to={routes.users} replace />} />
               <Route path={routes.ordersShow} element={<OrderDetailsPage />} />
               <Route path={routes.orders} element={<OrdersPage />} />
+              <Route path={routes.invoicesShow} element={<InvoiceDetailsPage />} />
+              <Route path={routes.invoices} element={<InvoicesPage />} />
               <Route path={routes.productsNew} element={<ProductEditPage />} />
               <Route path={routes.productsEdit} element={<ProductEditPage />} />
               <Route path={routes.productsShow} element={<ProductViewPage />} />

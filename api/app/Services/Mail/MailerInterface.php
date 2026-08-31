@@ -10,4 +10,7 @@ interface MailerInterface
 
     /** @param array<string, mixed> $data */
     public function sendTemplate(string $to, string $subject, string $template, array $data, ?string $text = null): void;
+
+    /** @param list<array{path: string, name: string, content_type?: string}> $attachments */
+    public function sendTemplateWithAttachments(string $to, string $subject, string $template, array $data, array $attachments, ?string $text = null): void;
 }

@@ -10,6 +10,8 @@ use App\Models\ProductOption;
 use App\Models\Order;
 use App\Resources\ProductImageResource;
 use App\Services\Orders\OrderNotificationService;
+use App\Services\Invoices\InvoiceService;
+use App\Services\Invoices\InvoiceNotificationService;
 use App\Services\Shipping\EcontShippingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Capsule\Manager as Capsule;
@@ -25,7 +27,9 @@ class ShopController extends Controller
 {
     public function __construct(
         private readonly OrderNotificationService $orderNotifications = new OrderNotificationService(),
-        private readonly EcontShippingService $econtShipping = new EcontShippingService()
+        private readonly EcontShippingService $econtShipping = new EcontShippingService(),
+        private readonly InvoiceService $invoices = new InvoiceService(),
+        private readonly InvoiceNotificationService $invoiceNotifications = new InvoiceNotificationService()
     ) {
     }
 
@@ -412,9 +416,15 @@ class ShopController extends Controller
                 'country' => 'България',
                 'payment_method' => 'cash_on_delivery',
                 'notes' => '',
+                'invoice_company' => (string) ($address?->company_name ?? ''),
+                'invoice_eik' => (string) ($address?->eik ?? ''),
+                'invoice_vat_number' => (string) ($address?->vat_number ?? ''),
+                'invoice_address' => (string) ($address?->line1 ?? ''),
+                'invoice_mol' => (string) ($address?->mol ?? ''),
             ],
             'errors' => [],
             'acceptedTerms' => false,
+            'wantsInvoice' => false,
             'robots' => 'noindex, nofollow',
         ]);
     }
@@ -428,7 +438,7 @@ class ShopController extends Controller
             $this->redirect('/cart');
         }
 
-        $keys = ['first_name', 'last_name', 'email', 'phone', 'delivery_method', 'econt_office_code', 'address_line', 'city', 'postal_code', 'country', 'payment_method', 'notes'];
+        $keys = ['first_name', 'last_name', 'email', 'phone', 'delivery_method', 'econt_office_code', 'address_line', 'city', 'postal_code', 'country', 'payment_method', 'notes', 'invoice_company', 'invoice_eik', 'invoice_vat_number', 'invoice_address', 'invoice_mol'];
         $form = [];
 
         foreach ($keys as $key) {
@@ -436,6 +446,7 @@ class ShopController extends Controller
         }
 
         $errors = [];
+        $wantsInvoice = \App\Core\Request::wantsTrue('invoice_requested');
 
         foreach ([
             'first_name' => 'Въведете име.',
@@ -502,6 +513,13 @@ class ShopController extends Controller
             $errors['notes'] = 'Бележката може да бъде до 1000 символа.';
         }
 
+        if ($wantsInvoice) {
+            foreach (['invoice_company' => 'Въведете име на фирмата.', 'invoice_eik' => 'Въведете ЕИК.', 'invoice_address' => 'Въведете адрес за фактура.', 'invoice_mol' => 'Въведете МОЛ.'] as $key => $message) if ($form[$key] === '') $errors[$key] = $message;
+            if ($form['invoice_eik'] !== '' && preg_match('/^\d{9,13}$/', $form['invoice_eik']) !== 1) $errors['invoice_eik'] = 'ЕИК трябва да съдържа между 9 и 13 цифри.';
+            if ($form['invoice_vat_number'] !== '' && preg_match('/^BG\d{9,10}$/i', $form['invoice_vat_number']) !== 1) $errors['invoice_vat_number'] = 'ДДС номерът трябва да е във формат BG и 9 или 10 цифри.';
+            foreach (['invoice_company' => 191, 'invoice_eik' => 16, 'invoice_vat_number' => 20, 'invoice_address' => 255, 'invoice_mol' => 191] as $key => $limit) if (mb_strlen($form[$key]) > $limit) $errors[$key] = 'Полето може да бъде до ' . $limit . ' символа.';
+        }
+
         $acceptedTerms = \App\Core\Request::wantsTrue('accept_terms');
 
         if (!$acceptedTerms) {
@@ -528,6 +546,7 @@ class ShopController extends Controller
                 'form' => $form,
                 'errors' => $errors,
                 'acceptedTerms' => $acceptedTerms,
+                'wantsInvoice' => $wantsInvoice,
                 'status' => 422,
                 'robots' => 'noindex, nofollow',
             ]);
@@ -536,19 +555,32 @@ class ShopController extends Controller
         $shippingAmount = (float) $shipping['amount'];
         $user = \App\Core\Auth::user();
 
-        $order = Capsule::connection()->transaction(static function () use ($form, $lines, $sum, $shippingAmount, $user): Order {
+        $vatSettings = \App\Models\SiteSetting::query()->firstOrCreate([]);
+        $company = require dirname(__DIR__, 3) . '/config/company.php';
+        $vatEnabled = (bool) $vatSettings->vat_enabled;
+        $vatRate = $vatEnabled ? max(0, (float) $company['vat_rate']) : 0.0;
+
+        $order = Capsule::connection()->transaction(static function () use ($form, $lines, $sum, $shippingAmount, $user, $wantsInvoice, $vatEnabled, $vatRate): Order {
             $order = Order::query()->create([
                 ...$form,
                 'user_id' => $user?->id,
                 'number' => 'BZ-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3))),
                 'status' => 'pending',
                 'currency' => 'EUR',
+                'vat_enabled' => $vatEnabled,
+                'vat_rate' => $vatRate,
                 'subtotal' => $sum,
                 'shipping_amount' => $shippingAmount,
                 'total' => $sum + $shippingAmount,
                 'econt_office_code' => $form['delivery_method'] === 'office' ? $form['econt_office_code'] : null,
                 'postal_code' => $form['postal_code'] !== '' ? $form['postal_code'] : null,
                 'notes' => $form['notes'] !== '' ? $form['notes'] : null,
+                'invoice_requested' => $wantsInvoice,
+                'invoice_company' => $wantsInvoice ? $form['invoice_company'] : null,
+                'invoice_eik' => $wantsInvoice ? $form['invoice_eik'] : null,
+                'invoice_vat_number' => $wantsInvoice && $form['invoice_vat_number'] !== '' ? strtoupper($form['invoice_vat_number']) : null,
+                'invoice_address' => $wantsInvoice ? $form['invoice_address'] : null,
+                'invoice_mol' => $wantsInvoice ? $form['invoice_mol'] : null,
             ]);
 
             foreach ($lines as $line) {
@@ -569,6 +601,10 @@ class ShopController extends Controller
         });
 
         $order->load('items');
+        if ($wantsInvoice) {
+            $invoice = $this->invoices->createForOrder($order, true);
+            $this->invoiceNotifications->send($invoice);
+        }
         $mailStatus = $this->orderNotifications->send($order);
         StoreCart::clear();
         $_SESSION['store_last_order_id'] = (int) $order->id;

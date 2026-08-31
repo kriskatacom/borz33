@@ -4154,6 +4154,19 @@ body.store-quick-open { overflow: hidden; }
 
 .store-checkout-fields--two { grid-template-columns: 1fr 1fr; }
 .store-checkout-fields--city { grid-template-columns: 1fr minmax(8.5rem, 0.48fr); }
+.store-checkout-invoice-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.9rem;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--canvas) 88%, var(--soft));
+}
+.store-checkout-invoice-toggle input { margin-top: 0.2rem; accent-color: var(--accent); }
+.store-checkout-invoice-toggle span { display: grid; gap: 0.15rem; }
+.store-checkout-invoice-toggle small { color: var(--muted); font-size: 0.75rem; font-weight: 400; }
+.store-checkout-invoice-fields { margin-top: 1rem; }
+.store-checkout-invoice-fields[hidden] { display: none; }
 .store-checkout-fields label,
 .store-checkout-notes {
     display: grid;

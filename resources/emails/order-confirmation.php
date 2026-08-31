@@ -15,6 +15,9 @@ $address = implode(', ', array_filter([
     (string) ($order->postal_code ?? ''),
     (string) $order->country,
 ]));
+$vatEnabled = (bool) $order->vat_enabled;
+$vatRate = (float) $order->vat_rate;
+$vatAmount = $vatEnabled && $vatRate > 0 ? round((float) $order->total - (float) $order->total / (1 + $vatRate / 100), 2) : 0.0;
 ?>
 <p style="margin:0 0 8px;font-size:18px;">Здравейте, <?= $escape($order->first_name) ?>.</p>
 <p style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.7;color:#3f3a34;">
@@ -47,6 +50,10 @@ $address = implode(', ', array_filter([
     <tr>
         <td style="padding:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;">Доставка с Еконт</td>
         <td align="right" style="padding:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;"><?= $escape($money($order->shipping_amount)) ?></td>
+    </tr>
+    <tr>
+        <td style="padding:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;">ДДС<?= $vatEnabled ? ' (' . $escape(number_format($vatRate, 0)) . '%)' : '' ?></td>
+        <td align="right" style="padding:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;"><?= $vatEnabled ? $escape($money($vatAmount)) : 'Не се начислява' ?></td>
     </tr>
     <tr>
         <td style="padding:10px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">Общо</td>

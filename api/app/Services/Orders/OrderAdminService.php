@@ -59,7 +59,7 @@ class OrderAdminService
 
     public function find(int $id): Order
     {
-        $order = Order::query()->with('items')->withCount('items')->find($id);
+        $order = Order::query()->with(['items.product.frontImage', 'invoices'])->withCount('items')->find($id);
         if ($order === null) throw new AuthException('Поръчката не е намерена.', 404);
         return $order;
     }

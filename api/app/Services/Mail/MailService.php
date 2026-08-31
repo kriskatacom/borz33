@@ -49,4 +49,20 @@ class MailService implements MailerInterface
     {
         $this->send($to, $subject, $this->renderer->render($template, $data), $text);
     }
+
+    public function sendTemplateWithAttachments(string $to, string $subject, string $template, array $data, array $attachments, ?string $text = null): void
+    {
+        $email = (new Email())
+            ->from(new Address($this->fromAddress, $this->fromName))
+            ->to($to)
+            ->subject($subject)
+            ->html($this->renderer->render($template, $data));
+
+        if ($text !== null && $text !== '') $email->text($text);
+        foreach ($attachments as $attachment) {
+            if (!is_file($attachment['path'])) throw new \RuntimeException('Липсва файлът за прикачване: ' . $attachment['name']);
+            $email->attachFromPath($attachment['path'], $attachment['name'], $attachment['content_type'] ?? null);
+        }
+        $this->mailer->send($email);
+    }
 }

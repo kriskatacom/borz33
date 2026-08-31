@@ -11,11 +11,13 @@ use Store\Services\ProductPage;
 /** @var string $totalWeight */
 /** @var string $csrf */
 /** @var bool $acceptedTerms */
+/** @var bool $wantsInvoice */
 
 $lines = $lines ?? [];
 $form = $form ?? [];
 $errors = $errors ?? [];
 $acceptedTerms = (bool) ($acceptedTerms ?? false);
+$wantsInvoice = (bool) ($wantsInvoice ?? false);
 $totalWeight = $totalWeight ?? 'Не е изчислено';
 $company = require dirname(__DIR__, 2) . '/config/company.php';
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
@@ -145,9 +147,29 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
                 </div>
             </section>
 
-            <section class="store-checkout-card" aria-labelledby="checkout-payment-title">
+            <section class="store-checkout-card" aria-labelledby="checkout-invoice-title" data-invoice-section>
                 <div class="store-checkout-card-title">
                     <span aria-hidden="true">3</span>
+                    <div><h2 id="checkout-invoice-title">Фактура</h2><p>Фирмените данни се запазват към издадения документ.</p></div>
+                </div>
+                <label class="store-checkout-invoice-toggle">
+                    <input type="checkbox" name="invoice_requested" value="1" <?= $wantsInvoice ? 'checked' : '' ?> data-invoice-toggle>
+                    <span><strong>Желая фактура</strong><small>PDF фактурата ще бъде генерирана автоматично към поръчката.</small></span>
+                </label>
+                <div class="store-checkout-fields store-checkout-invoice-fields" data-invoice-fields<?= $wantsInvoice ? '' : ' hidden' ?>>
+                    <label class="<?= $error('invoice_company') ? 'has-error' : '' ?>"><span>Фирма <em>*</em></span><input type="text" name="invoice_company" autocomplete="organization" maxlength="191" value="<?= $value('invoice_company') ?>"><?php if ($error('invoice_company')): ?><small><?= $escape($error('invoice_company')) ?></small><?php endif; ?></label>
+                    <div class="store-checkout-fields store-checkout-fields--two">
+                        <label class="<?= $error('invoice_eik') ? 'has-error' : '' ?>"><span>ЕИК <em>*</em></span><input type="text" name="invoice_eik" inputmode="numeric" maxlength="16" value="<?= $value('invoice_eik') ?>"><?php if ($error('invoice_eik')): ?><small><?= $escape($error('invoice_eik')) ?></small><?php endif; ?></label>
+                        <label class="<?= $error('invoice_vat_number') ? 'has-error' : '' ?>"><span>ДДС №</span><input type="text" name="invoice_vat_number" maxlength="20" placeholder="BG123456789" value="<?= $value('invoice_vat_number') ?>"><?php if ($error('invoice_vat_number')): ?><small><?= $escape($error('invoice_vat_number')) ?></small><?php endif; ?></label>
+                    </div>
+                    <label class="<?= $error('invoice_address') ? 'has-error' : '' ?>"><span>Адрес <em>*</em></span><input type="text" name="invoice_address" maxlength="255" value="<?= $value('invoice_address') ?>"><?php if ($error('invoice_address')): ?><small><?= $escape($error('invoice_address')) ?></small><?php endif; ?></label>
+                    <label class="<?= $error('invoice_mol') ? 'has-error' : '' ?>"><span>МОЛ <em>*</em></span><input type="text" name="invoice_mol" maxlength="191" value="<?= $value('invoice_mol') ?>"><?php if ($error('invoice_mol')): ?><small><?= $escape($error('invoice_mol')) ?></small><?php endif; ?></label>
+                </div>
+            </section>
+
+            <section class="store-checkout-card" aria-labelledby="checkout-payment-title">
+                <div class="store-checkout-card-title">
+                    <span aria-hidden="true">4</span>
                     <div>
                         <h2 id="checkout-payment-title">Плащане</h2>
                         <p>Изберете предпочитания начин на плащане.</p>

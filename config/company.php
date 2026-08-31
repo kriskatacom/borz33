@@ -7,6 +7,8 @@ return [
     'legal_name' => getenv('COMPANY_LEGAL_NAME') ?: 'Борз 33 ЕООД',
     'eik' => getenv('COMPANY_EIK') ?: '000000000',
     'vat' => getenv('COMPANY_VAT') ?: '',
+    'mol' => getenv('COMPANY_MOL') ?: '',
+    'vat_rate' => (float) (getenv('INVOICE_VAT_RATE') ?: 20),
     'address' => getenv('COMPANY_ADDRESS') ?: 'ул. Примерна 1',
     'city' => getenv('COMPANY_CITY') ?: 'София',
     'postal_code' => getenv('COMPANY_POSTAL_CODE') ?: '1000',

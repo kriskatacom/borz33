@@ -11,6 +11,8 @@ export const routes = {
   home: '/',
   orders: '/orders',
   ordersShow: '/orders/:id',
+  invoices: '/invoices',
+  invoicesShow: '/invoices/:id',
   products: '/products',
   productsNew: '/products/new',
   productsShow: '/products/:id',

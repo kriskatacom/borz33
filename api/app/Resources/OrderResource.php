@@ -38,6 +38,8 @@ class OrderResource
             'last_name' => $order->last_name,
             'subtotal' => $order->subtotal,
             'shipping_amount' => $order->shipping_amount,
+            'vat_enabled' => (bool) $order->vat_enabled,
+            'vat_rate' => $order->vat_rate,
             'address_line' => $order->address_line,
             'city' => $order->city,
             'postal_code' => $order->postal_code,
@@ -47,6 +49,13 @@ class OrderResource
             'tracking_url' => self::trackingUrl((string) ($order->tracking_number ?? '')),
             'shipped_at' => $order->shipped_at?->toIso8601String(),
             'notes' => $order->notes,
+            'invoice_requested' => (bool) $order->invoice_requested,
+            'invoice_company' => $order->invoice_company,
+            'invoice_eik' => $order->invoice_eik,
+            'invoice_vat_number' => $order->invoice_vat_number,
+            'invoice_address' => $order->invoice_address,
+            'invoice_mol' => $order->invoice_mol,
+            'invoices' => $order->relationLoaded('invoices') ? $order->invoices->map(static fn ($invoice): array => ['id' => $invoice->id, 'number' => $invoice->number, 'type' => $invoice->type, 'status' => $invoice->status])->values()->all() : [],
             'items' => $order->items->map(static fn (OrderItem $item): array => [
                 'id' => $item->id,
                 'product_id' => $item->product_id,
@@ -58,6 +67,7 @@ class OrderResource
                 'qty' => $item->qty,
                 'unit_price' => $item->unit_price,
                 'total' => $item->total,
+                'product_image_url' => $item->product?->frontImage?->path ? '/' . ltrim((string) $item->product->frontImage->path, '/') : null,
             ])->values()->all(),
         ]);
     }
