@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Controllers\Admin\BannersController;
+use App\Controllers\Admin\AccountingController;
 use App\Controllers\Admin\DashboardController;
 use App\Controllers\Admin\CategoriesController;
 use App\Controllers\Admin\MediaController;
@@ -83,6 +84,14 @@ $router->patch('/admin/messages/{id}', [MessagesController::class, 'update'], $a
 $router->post('/admin/messages/{id}/replies', [MessagesController::class, 'reply'], $admin);
 $router->get('/admin/reports', [ReportsController::class, 'index'], $admin);
 $router->post('/admin/reports', [ReportsController::class, 'store'], $admin);
+$router->get('/admin/accounting', [AccountingController::class, 'dashboard'], $admin);
+$router->get('/admin/accounting/reports/{type}', [AccountingController::class, 'report'], $admin);
+$router->get('/admin/accounting/export/{type}/{format}', [AccountingController::class, 'export'], $admin);
+$router->post('/admin/accounting/transactions', [AccountingController::class, 'transaction'], $admin);
+$router->post('/admin/accounting/econt-reconciliation', [AccountingController::class, 'reconcile'], $admin);
+$router->post('/admin/accounting/package', [AccountingController::class, 'package'], $admin);
+$router->post('/admin/accounting/close', [AccountingController::class, 'close'], $admin);
+$router->get('/admin/accounting/closures/{id}/download', [AccountingController::class, 'downloadClosure'], $admin);
 
 $router->get('/admin/pages', [PagesController::class, 'index'], $admin);
 $router->post('/admin/pages', [PagesController::class, 'store'], $admin);

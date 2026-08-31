@@ -1,0 +1,11 @@
+import { apiRequest } from '@/api/client';
+
+export type AccountingFilters={date_from:string;date_to:string;order_status:string;payment_method:string;invoiced:string;paid:string};
+export type AccountingSummary={turnover:number;tax_base:number;vat:number;paid_orders:number;unpaid_orders:number;refunded_amount:number;credit_notes_count:number;credit_notes_amount:number;orders_count:number;currency:string};
+export type AccountingDashboard={filters:AccountingFilters;summary:AccountingSummary;payment_methods:Record<string,number>;closures:Array<{id:number;period:string;status:string;closed_at:string;has_package:boolean}>;audit_log:Array<{id:number;action:string;entity_type:string;entity_id:number|null;created_at:string}>};
+export const getAccounting=(token:string,filters:AccountingFilters)=>apiRequest<AccountingDashboard>('/admin/accounting',{token,query:filters});
+export const getAccountingReport=(token:string,type:string,filters:AccountingFilters)=>apiRequest<{type:string;rows:Array<Record<string,unknown>>}>(`/admin/accounting/reports/${type}`,{token,query:filters});
+export const createAccountingTransaction=(token:string,body:Record<string,unknown>)=>apiRequest<{transaction:unknown}>('/admin/accounting/transactions',{method:'POST',token,body});
+export const reconcileEcont=(token:string,body:Record<string,unknown>)=>apiRequest<{reconciliation:unknown}>('/admin/accounting/econt-reconciliation',{method:'POST',token,body});
+export const closeAccountingPeriod=(token:string,period:string)=>apiRequest<{closure:unknown}>('/admin/accounting/close',{method:'POST',token,body:{period}});
+export async function downloadAccounting(token:string,path:string,fileName:string,body?:unknown){const response=await fetch(path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${token}`,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});if(!response.ok){const data=await response.json().catch(()=>null);throw new Error(data?.message||'Файлът не можа да бъде създаден.');}const url=URL.createObjectURL(await response.blob());const link=document.createElement('a');link.href=url;link.download=fileName;link.click();URL.revokeObjectURL(url);}

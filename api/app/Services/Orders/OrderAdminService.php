@@ -8,11 +8,15 @@ use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Models\Order;
 use App\Resources\OrderResource;
+use App\Services\Accounting\AccountingAuditService;
+use App\Services\Accounting\AccountingPeriodLock;
 use Illuminate\Database\Eloquent\Builder;
 
 class OrderAdminService
 {
     public const STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+    public function __construct(private readonly AccountingPeriodLock $periodLock = new AccountingPeriodLock(), private readonly AccountingAuditService $audit = new AccountingAuditService()) {}
 
     /** @param array<string, mixed> $filters */
     public function paginate(array $filters): array
@@ -66,6 +70,8 @@ class OrderAdminService
 
     public function updateFulfillment(Order $order, mixed $status, mixed $trackingNumber): Order
     {
+        $this->periodLock->assertUnlocked($order->created_at);
+        $before = ['status' => $order->status, 'tracking_number' => $order->tracking_number];
         $status = is_string($status) ? trim($status) : '';
         if (!in_array($status, self::STATUSES, true)) {
             throw new ValidationException(['status' => ['Изберете валиден статус на поръчката.']]);
@@ -79,6 +85,10 @@ class OrderAdminService
         $order->tracking_number = $trackingNumber !== '' ? $trackingNumber : null;
         if ($order->shipped_at === null && in_array($status, ['shipped', 'delivered'], true)) $order->shipped_at = new \DateTimeImmutable();
         $order->save();
-        return $this->find((int) $order->id);
+        $fresh = $this->find((int) $order->id);
+        if ($before !== ['status' => $fresh->status, 'tracking_number' => $fresh->tracking_number]) {
+            $this->audit->write('order.fulfillment_changed', 'order', (int) $order->id, $before, ['status' => $fresh->status, 'tracking_number' => $fresh->tracking_number]);
+        }
+        return $fresh;
     }
 }

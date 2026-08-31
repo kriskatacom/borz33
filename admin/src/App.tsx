@@ -31,6 +31,8 @@ import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { ReportsPage } from '@/pages/ReportsPage';
+import { AccountingPage } from '@/pages/AccountingPage';
+import { AccountingGuidePage } from '@/pages/AccountingGuidePage';
 import { UserFormPage } from '@/pages/UserFormPage';
 import { UsersPage } from '@/pages/UsersPage';
 
@@ -83,6 +85,8 @@ export function App() {
               <Route path={routes.messagesShow} element={<MessageDetailsPage />} />
               <Route path={routes.messages} element={<MessagesPage />} />
               <Route path={routes.reports} element={<ReportsPage />} />
+              <Route path={routes.accounting} element={<AccountingPage />} />
+              <Route path={routes.accountingGuide} element={<AccountingGuidePage />} />
               <Route path={routes.settings} element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<Navigate to={routes.login} replace />} />

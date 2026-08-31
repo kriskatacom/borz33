@@ -37,5 +37,7 @@ export const routes = {
   messages: '/messages',
   messagesShow: '/messages/:id',
   reports: '/reports',
+  accounting: '/accounting',
+  accountingGuide: '/accounting/guide',
   settings: '/settings',
 } as const;

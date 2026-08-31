@@ -8,16 +8,19 @@ use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Services\Accounting\AccountingAuditService;
+use App\Services\Accounting\AccountingPeriodLock;
 use Illuminate\Database\Capsule\Manager as Capsule;
 
 final class InvoiceService
 {
     public const STATUSES = ['draft', 'issued', 'cancelled', 'credited'];
 
-    public function __construct(private readonly InvoicePdfService $pdf = new InvoicePdfService()) {}
+    public function __construct(private readonly InvoicePdfService $pdf = new InvoicePdfService(), private readonly AccountingPeriodLock $periodLock = new AccountingPeriodLock(), private readonly AccountingAuditService $audit = new AccountingAuditService()) {}
 
     public function createForOrder(Order $order, bool $issue = true, ?int $createdBy = null): Invoice
     {
+        if ($issue) $this->periodLock->assertUnlocked(date('Y-m-d'));
         $order->loadMissing(['items', 'invoices']);
         $existing = $order->invoices->firstWhere('type', 'invoice');
         if ($existing !== null) return $existing;
@@ -32,25 +35,34 @@ final class InvoiceService
             return $issue ? $this->issueInsideTransaction($invoice) : $invoice;
         });
 
-        return $issue ? $this->persistPdf($invoice) : $invoice;
+        if (!$issue) return $invoice;
+        $invoice = $this->persistPdf($invoice);
+        $this->audit->write('invoice.issued', 'invoice', (int) $invoice->id, null, $invoice->toArray());
+        return $invoice;
     }
 
     public function issue(Invoice $invoice): Invoice
     {
+        $this->periodLock->assertUnlocked(date('Y-m-d'));
         if ($invoice->status !== 'draft') throw new ValidationException(['status' => ['Само чернова може да бъде издадена.']]);
         $invoice = Capsule::connection()->transaction(fn (): Invoice => $this->issueInsideTransaction($invoice));
-        return $this->persistPdf($invoice);
+        $invoice = $this->persistPdf($invoice);
+        $this->audit->write('invoice.issued', 'invoice', (int) $invoice->id, null, $invoice->toArray());
+        return $invoice;
     }
 
     /** @param list<array{index: int, qty: int}> $selections */
     public function creditItems(Invoice $invoice, string $reason, array $selections, bool $refundShipping, ?int $createdBy = null): Invoice
     {
+        $this->periodLock->assertUnlocked(date('Y-m-d'));
         $credit = Capsule::connection()->transaction(function () use ($invoice, $reason, $selections, $refundShipping, $createdBy): Invoice {
             $lockedInvoice = Invoice::query()->whereKey($invoice->id)->lockForUpdate()->first();
             if ($lockedInvoice === null) throw new AuthException('Фактурата не е намерена.', 404);
             return $this->creditItemsLocked($lockedInvoice, $reason, $selections, $refundShipping, $createdBy);
         });
-        return $this->persistPdf($credit);
+        $credit = $this->persistPdf($credit);
+        $this->audit->write('credit_note.issued', 'invoice', (int) $credit->id, null, $credit->toArray(), ['parent_invoice_id' => $invoice->id]);
+        return $credit;
     }
 
     /** @param list<array{index: int, qty: int}> $selections */
@@ -115,9 +127,12 @@ final class InvoiceService
 
     public function cancel(Invoice $invoice, string $reason): Invoice
     {
+        $this->periodLock->assertUnlocked($invoice->issue_date ?? date('Y-m-d'));
         if (!in_array($invoice->status, ['draft', 'issued'], true)) throw new ValidationException(['status' => ['Документът не може да бъде анулиран в текущия статус.']]);
         $invoice->status = 'cancelled'; $invoice->reason = trim($reason) ?: 'Анулиран от администратор'; $invoice->cancelled_at = new \DateTimeImmutable(); $invoice->save();
-        return $invoice->fresh(['order', 'parentInvoice', 'creditNotes']);
+        $fresh = $invoice->fresh(['order', 'parentInvoice', 'creditNotes']);
+        $this->audit->write('invoice.cancelled', 'invoice', (int) $invoice->id, null, $fresh->toArray());
+        return $fresh;
     }
 
     public function find(int $id): Invoice

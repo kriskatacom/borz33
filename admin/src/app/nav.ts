@@ -26,6 +26,7 @@ export const navItems: NavItem[] = [
   { to: routes.campaigns, label: 'Кампании', hint: 'Промоции и купони' },
   { to: routes.messages, label: 'Съобщения', hint: 'Писма и известия' },
   { to: routes.reports, label: 'Отчети', hint: 'Продажби и счетоводни данни' },
+  { to: routes.accounting, label: 'Счетоводство', hint: 'Плащания, справки и месечно приключване' },
   { to: routes.settings, label: 'Настройки', hint: 'Магазин, екип и достъп' },
 ];
 
@@ -35,7 +36,7 @@ export const navSections: NavSection[] = [
   { label: 'Каталог', items: navItems.filter((item) => new Set<string>([routes.products, routes.categories, routes.media]).has(item.to)) },
   { label: 'Съдържание', items: navItems.filter((item) => new Set<string>([routes.pages, routes.banners, routes.campaigns]).has(item.to)) },
   { label: 'Комуникация', items: navItems.filter((item) => item.to === routes.messages) },
-  { label: 'Анализи и настройки', items: navItems.filter((item) => new Set<string>([routes.reports, routes.users, routes.settings]).has(item.to)) },
+  { label: 'Анализи и настройки', items: navItems.filter((item) => new Set<string>([routes.reports, routes.accounting, routes.users, routes.settings]).has(item.to)) },
 ];
 
 export function navItemByPath(path: string): NavItem | undefined {
@@ -47,6 +48,7 @@ export function navItemByPath(path: string): NavItem | undefined {
     return navItems.find((item) => item.to === routes.products);
   }
   if (path.startsWith(`${routes.invoices}/`) || path === routes.invoices) return navItems.find((item) => item.to === routes.invoices);
+  if (path.startsWith(`${routes.accounting}/`) || path === routes.accounting) return navItems.find((item) => item.to === routes.accounting);
 
   if (path.startsWith(`${routes.categories}/`) || path === routes.categories) {
     return navItems.find((item) => item.to === routes.categories);
