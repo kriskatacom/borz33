@@ -77,7 +77,7 @@ declare(strict_types=1);
     </div>
 
     <div class="store-profile-copy min-w-0">
-        <h1 class="store-profile-name"><?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?></h1>
+        <strong class="store-profile-name"><?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?></strong>
         <p class="store-profile-email"><?= htmlspecialchars($user->email, ENT_QUOTES, 'UTF-8') ?></p>
         <div class="store-profile-tags">
             <span class="store-profile-tag"><?= $user->hasVerifiedEmail() ? 'Потвърден имейл' : 'Имейлът очаква потвърждение' ?></span>

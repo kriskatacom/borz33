@@ -42,31 +42,75 @@ final class InvoiceService
         return $this->persistPdf($invoice);
     }
 
-    public function credit(Invoice $invoice, string $reason, ?float $amount = null, ?int $createdBy = null): Invoice
+    /** @param list<array{index: int, qty: int}> $selections */
+    public function creditItems(Invoice $invoice, string $reason, array $selections, bool $refundShipping, ?int $createdBy = null): Invoice
     {
-        if ($invoice->type !== 'invoice' || !in_array($invoice->status, ['issued', 'credited'], true)) throw new ValidationException(['invoice' => ['Кредитно известие може да се издаде само към издадена фактура.']]);
-        $reason = trim($reason);
-        if (mb_strlen($reason) < 3 || mb_strlen($reason) > 500) throw new ValidationException(['reason' => ['Въведете основание между 3 и 500 знака.']]);
-        $alreadyCredited = abs((float) $invoice->creditNotes()->where('status', '!=', 'cancelled')->sum('total_gross'));
-        $remaining = round((float) $invoice->total_gross - $alreadyCredited, 2);
-        $creditGross = $amount === null ? $remaining : round($amount, 2);
-        if ($creditGross <= 0 || $creditGross > $remaining) throw new ValidationException(['amount' => ['Сумата трябва да бъде положителна и не по-голяма от оставащите ' . number_format($remaining, 2, '.', '') . ' EUR.']]);
-        $ratio = $creditGross / (float) $invoice->total_gross;
-
-        $credit = Capsule::connection()->transaction(function () use ($invoice, $reason, $creditGross, $ratio, $createdBy, $remaining): Invoice {
-            $credit = Invoice::query()->create([
-                'order_id' => $invoice->order_id, 'parent_invoice_id' => $invoice->id, 'type' => 'credit_note', 'status' => 'draft',
-                'currency' => $invoice->currency, 'seller_snapshot' => $invoice->seller_snapshot, 'buyer_snapshot' => $invoice->buyer_snapshot, 'payment_snapshot' => $invoice->payment_snapshot,
-                'items_snapshot' => array_map(static function (array $item) use ($ratio): array { foreach (['net_total', 'tax', 'gross_total'] as $key) $item[$key] = -round((float) ($item[$key] ?? 0) * $ratio, 2); return $item; }, $invoice->items_snapshot),
-                'subtotal_net' => -round((float) $invoice->subtotal_net * $ratio, 2), 'discount_net' => -round((float) $invoice->discount_net * $ratio, 2),
-                'shipping_net' => -round((float) $invoice->shipping_net * $ratio, 2), 'tax_amount' => -round((float) $invoice->tax_amount * $ratio, 2),
-                'total_gross' => -$creditGross, 'reason' => $reason, 'created_by' => $createdBy,
-            ]);
-            $credit = $this->issueInsideTransaction($credit);
-            if (abs($creditGross - $remaining) < 0.01) { $invoice->status = 'credited'; $invoice->save(); }
-            return $credit;
+        $credit = Capsule::connection()->transaction(function () use ($invoice, $reason, $selections, $refundShipping, $createdBy): Invoice {
+            $lockedInvoice = Invoice::query()->whereKey($invoice->id)->lockForUpdate()->first();
+            if ($lockedInvoice === null) throw new AuthException('Фактурата не е намерена.', 404);
+            return $this->creditItemsLocked($lockedInvoice, $reason, $selections, $refundShipping, $createdBy);
         });
         return $this->persistPdf($credit);
+    }
+
+    /** @param list<array{index: int, qty: int}> $selections */
+    private function creditItemsLocked(Invoice $invoice, string $reason, array $selections, bool $refundShipping, ?int $createdBy): Invoice
+    {
+        if ($invoice->type !== 'invoice' || $invoice->status !== 'issued') throw new ValidationException(['invoice' => ['Кредитно известие може да се издаде само към некредитирана издадена фактура.']]);
+        $reason = trim($reason);
+        if (mb_strlen($reason) < 3 || mb_strlen($reason) > 500) throw new ValidationException(['reason' => ['Опишете точно основанието за избраните позиции.']]);
+
+        $activeCredits = $invoice->creditNotes()->where('status', '!=', 'cancelled')->get();
+        $creditedQuantities = [];
+        $shippingAlreadyCredited = false;
+        foreach ($activeCredits as $activeCredit) {
+            $shippingAlreadyCredited = $shippingAlreadyCredited || abs((float) $activeCredit->shipping_net) >= 0.01;
+            foreach ($activeCredit->items_snapshot as $creditedItem) {
+                if (!array_key_exists('source_index', $creditedItem)) throw new ValidationException(['items' => ['Съществува по-старо кредитно известие без връзка към конкретни позиции. Не може безопасно да се издаде ново частично известие.']]);
+                $sourceIndex = (int) $creditedItem['source_index'];
+                $creditedQuantities[$sourceIndex] = ($creditedQuantities[$sourceIndex] ?? 0) + abs((int) ($creditedItem['qty'] ?? 0));
+            }
+        }
+
+        $selectedQuantities = [];
+        $items = [];
+        foreach ($selections as $selection) {
+            $index = (int) ($selection['index'] ?? -1);
+            $qty = (int) ($selection['qty'] ?? 0);
+            $source = $invoice->items_snapshot[$index] ?? null;
+            if (isset($selectedQuantities[$index])) throw new ValidationException(['items' => ['Една позиция не може да бъде добавена два пъти.']]);
+            $remainingQty = is_array($source) ? max(0, (int) ($source['qty'] ?? 0) - (int) ($creditedQuantities[$index] ?? 0)) : 0;
+            if (!is_array($source) || $qty < 1 || $qty > $remainingQty) throw new ValidationException(['items' => ['Избраното количество надвишава оставащото за кредитиране.']]);
+            $selectedQuantities[$index] = $qty;
+            $rate = max(0.0, (float) ($source['tax_rate'] ?? 0));
+            $divisor = 1 + $rate / 100;
+            $gross = round((float) ($source['unit_gross'] ?? 0) * $qty, 2); $net = round($gross / $divisor, 2); $tax = round($gross - $net, 2);
+            $items[] = ['source_index' => $index, 'name' => (string) $source['name'], 'sku' => (string) ($source['sku'] ?? ''), 'qty' => -$qty, 'unit_gross' => -round((float) ($source['unit_gross'] ?? 0), 2), 'net_total' => -$net, 'tax_rate' => $rate, 'tax' => -$tax, 'gross_total' => -$gross];
+        }
+        if ($items === [] && !$refundShipping) throw new ValidationException(['items' => ['Изберете продукт или възстановяване на доставка.']]);
+        if ($refundShipping && $shippingAlreadyCredited) throw new ValidationException(['refund_shipping' => ['Доставката вече е кредитирана.']]);
+
+        $shippingRate = max(0.0, (float) ($invoice->seller_snapshot['vat_rate'] ?? 0));
+        $shippingNet = $refundShipping ? -round((float) $invoice->shipping_net, 2) : 0.0;
+        $shippingTax = $refundShipping ? -round(abs($shippingNet) * $shippingRate / 100, 2) : 0.0;
+        $subtotalNet = round(array_sum(array_column($items, 'net_total')), 2);
+        $taxAmount = round(array_sum(array_column($items, 'tax')) + $shippingTax, 2);
+        $totalGross = round($subtotalNet + $shippingNet + $taxAmount, 2);
+
+        $allItemsCredited = true;
+        foreach ($invoice->items_snapshot as $index => $source) {
+            $totalCreditedQty = (int) ($creditedQuantities[$index] ?? 0) + (int) ($selectedQuantities[$index] ?? 0);
+            if ($totalCreditedQty < (int) ($source['qty'] ?? 0)) { $allItemsCredited = false; break; }
+        }
+        $shippingFullyCredited = abs((float) $invoice->shipping_net) < 0.01 || $shippingAlreadyCredited || $refundShipping;
+
+        $credit = Capsule::connection()->transaction(function () use ($invoice, $reason, $items, $subtotalNet, $shippingNet, $taxAmount, $totalGross, $createdBy, $allItemsCredited, $shippingFullyCredited): Invoice {
+            $credit = Invoice::query()->create(['order_id' => $invoice->order_id, 'parent_invoice_id' => $invoice->id, 'type' => 'credit_note', 'status' => 'draft', 'currency' => $invoice->currency, 'seller_snapshot' => $invoice->seller_snapshot, 'buyer_snapshot' => $invoice->buyer_snapshot, 'payment_snapshot' => $invoice->payment_snapshot, 'items_snapshot' => $items, 'subtotal_net' => $subtotalNet, 'discount_net' => 0, 'shipping_net' => $shippingNet, 'tax_amount' => $taxAmount, 'total_gross' => $totalGross, 'reason' => $reason, 'created_by' => $createdBy]);
+            $credit = $this->issueInsideTransaction($credit);
+            if ($allItemsCredited && $shippingFullyCredited) { $invoice->status = 'credited'; $invoice->save(); }
+            return $credit;
+        });
+        return $credit;
     }
 
     public function cancel(Invoice $invoice, string $reason): Invoice

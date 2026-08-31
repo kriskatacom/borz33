@@ -168,7 +168,7 @@ $navGroups = [
         </aside>
 
         <div class="store-account-panel">
-            <p class="store-account-kicker"><?= htmlspecialchars(AccountController::SECTIONS[$section] ?? 'Акаунт', ENT_QUOTES, 'UTF-8') ?></p>
+            <h1 class="store-account-kicker"><?= htmlspecialchars(AccountController::SECTIONS[$section] ?? 'Акаунт', ENT_QUOTES, 'UTF-8') ?></h1>
 
             <?php if ($message): ?>
                 <p class="mb-5 border border-line bg-canvas px-3 py-2.5 <?= $isError ? 'border-ink font-medium' : '' ?>" role="status"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></p>

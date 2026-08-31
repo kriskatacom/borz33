@@ -315,8 +315,18 @@ class AccountController extends Controller
             ? (bool) $extra['isError']
             : (bool) ($flash['error'] ?? false);
         $orderCount = $user->orders()->count();
+        $ordersPerPage = 10;
+        $ordersPage = max(1, (int) Request::query('page', 1));
+        $orderStatus = (string) Request::query('status', 'all');
+        $validOrderStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+        if (!in_array($orderStatus, $validOrderStatuses, true)) $orderStatus = 'all';
+        $ordersQuery = $user->orders()->with('items');
+        if ($orderStatus !== 'all') $ordersQuery->where('status', $orderStatus);
+        $filteredOrderCount = $section === 'orders' ? $ordersQuery->count() : 0;
+        $ordersLastPage = max(1, (int) ceil($filteredOrderCount / $ordersPerPage));
+        $ordersPage = min($ordersPage, $ordersLastPage);
         $orders = $section === 'orders'
-            ? $user->orders()->with('items')->limit(50)->get()
+            ? $ordersQuery->forPage($ordersPage, $ordersPerPage)->get()
             : collect();
         $contactMessages = $section === 'messages'
             ? ContactMessage::query()->where('user_id', $user->id)->with(['attachments.file', 'replies.admin', 'replies.sender', 'replies.attachments.file'])->orderByDesc('created_at')->orderByDesc('id')->get()
@@ -347,6 +357,7 @@ class AccountController extends Controller
             'addressErrors' => $extra['addressErrors'] ?? [],
             'orders' => $orders,
             'orderCount' => $orderCount,
+            'ordersPagination' => ['page' => $ordersPage, 'lastPage' => $ordersLastPage, 'status' => $orderStatus, 'filteredCount' => $filteredOrderCount],
             'contactMessages' => $contactMessages,
             'activeContactMessage' => $activeContactMessage,
             'conversationStarted' => $conversationStarted,

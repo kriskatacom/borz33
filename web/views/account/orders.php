@@ -8,9 +8,15 @@ use App\Resources\OrderResource;
 
 /** @var \Illuminate\Support\Collection<int, \App\Models\Order> $orders */
 /** @var int $orderCount */
+/** @var array{page?: int, lastPage?: int, status?: string, filteredCount?: int} $ordersPagination */
 
 $orders = $orders ?? collect();
 $orderCount = (int) ($orderCount ?? $orders->count());
+$ordersPagination = $ordersPagination ?? ['page' => 1, 'lastPage' => 1];
+$page = max(1, (int) ($ordersPagination['page'] ?? 1));
+$lastPage = max(1, (int) ($ordersPagination['lastPage'] ?? 1));
+$selectedStatus = (string) ($ordersPagination['status'] ?? 'all');
+$filteredCount = (int) ($ordersPagination['filteredCount'] ?? $orderCount);
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $statuses = [
     'pending' => 'Очаква обработка',
@@ -21,25 +27,37 @@ $statuses = [
     'cancelled' => 'Отказана',
 ];
 ?>
+<div class="store-account-orders-head">
+    <p><?= $filteredCount ?> <?= $filteredCount === 1 ? 'поръчка' : 'поръчки' ?><?= $selectedStatus === 'all' ? ' в историята' : ' с избрания статус' ?></p>
+    <a href="/catalog">Нова поръчка</a>
+</div>
+<form class="store-account-order-filter" method="get">
+    <label for="account-order-status">Статус</label>
+    <select id="account-order-status" name="status" onchange="this.form.submit()">
+        <option value="all"<?= $selectedStatus === 'all' ? ' selected' : '' ?>>Всички</option>
+        <?php foreach ($statuses as $value => $label): ?><option value="<?= $escape($value) ?>"<?= $selectedStatus === $value ? ' selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?>
+    </select>
+    <noscript><button type="submit">Филтрирай</button></noscript>
+</form>
+
 <?php if ($orders->isEmpty()): ?>
-    <article class="store-card">
+    <article class="store-card store-account-orders-empty" role="status">
         <div class="flex items-start gap-3">
             <span class="store-shortcut-icon"><?= Html::iconSvg('package') ?></span>
             <div>
-                <h2>Все още няма поръчки</h2>
-                <p class="m-0 text-sm text-muted">Когато поръчате, историята и статусите ще се показват тук.</p>
-                <p class="mb-0 mt-4"><a class="font-semibold" href="/catalog">Към каталога</a></p>
+                <?php if ($orderCount === 0): ?>
+                    <strong class="store-account-orders-empty-title">Все още нямате поръчки</strong>
+                    <p class="m-0 text-sm text-muted">Когато направите поръчка, нейните детайли и статус ще се показват тук.</p>
+                    <p class="mb-0 mt-4"><a class="font-semibold" href="/catalog">Разгледайте каталога</a></p>
+                <?php else: ?>
+                    <strong class="store-account-orders-empty-title">Няма поръчки със статус „<?= $escape($statuses[$selectedStatus] ?? 'Избран') ?>“</strong>
+                    <p class="m-0 text-sm text-muted">Изберете друг статус или вижте всички поръчки.</p>
+                    <p class="mb-0 mt-4"><a class="font-semibold" href="/account/orders?status=all">Покажи всички поръчки</a></p>
+                <?php endif; ?>
             </div>
         </div>
     </article>
 <?php else: ?>
-    <div class="store-account-orders-head">
-        <div>
-            <h2>Вашите поръчки</h2>
-            <p><?= $orderCount ?> <?= $orderCount === 1 ? 'поръчка' : 'поръчки' ?> в историята<?= $orderCount > 50 ? ' · показани са последните 50' : '' ?></p>
-        </div>
-        <a href="/catalog">Нова поръчка</a>
-    </div>
 
     <div class="store-account-orders">
         <?php foreach ($orders as $order): ?>
@@ -96,4 +114,13 @@ $statuses = [
             </article>
         <?php endforeach; ?>
     </div>
+    <?php if ($lastPage > 1): ?>
+        <nav class="store-account-pagination" aria-label="Страници с поръчки">
+            <?php if ($page > 1): ?><a href="/account/orders?page=<?= $page - 1 ?>&amp;status=<?= $escape($selectedStatus) ?>" aria-label="Предишна страница">←</a><?php endif; ?>
+            <?php foreach (range(max(1, $page - 2), min($lastPage, $page + 2)) as $number): ?>
+                <?php if ($number === $page): ?><span aria-current="page"><?= $number ?></span><?php else: ?><a href="/account/orders?page=<?= $number ?>&amp;status=<?= $escape($selectedStatus) ?>"><?= $number ?></a><?php endif; ?>
+            <?php endforeach; ?>
+            <?php if ($page < $lastPage): ?><a href="/account/orders?page=<?= $page + 1 ?>&amp;status=<?= $escape($selectedStatus) ?>" aria-label="Следваща страница">→</a><?php endif; ?>
+        </nav>
+    <?php endif; ?>
 <?php endif; ?>

@@ -36,8 +36,9 @@ final class InvoicesController extends Controller
     public function credit(string $id): never
     {
         $input = Request::input();
-        $amount = isset($input['amount']) && $input['amount'] !== '' ? (float) $input['amount'] : null;
-        $credit = $this->invoices->credit($this->invoices->find($this->id($id)), (string) ($input['reason'] ?? ''), $amount);
+        $items = is_array($input['items'] ?? null) ? $input['items'] : [];
+        $invoice = $this->invoices->find($this->id($id));
+        $credit = $this->invoices->creditItems($invoice, (string) ($input['reason'] ?? ''), $items, (bool) ($input['refund_shipping'] ?? false));
         $sent = $this->notifications->send($credit);
         $this->created(['invoice' => InvoiceResource::toArray($credit), 'email_sent' => $sent], $sent ? 'Кредитното известие е издадено и изпратено на клиента.' : 'Кредитното известие е издадено, но имейлът не можа да бъде изпратен.');
     }
