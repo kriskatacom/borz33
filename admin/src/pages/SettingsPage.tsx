@@ -26,7 +26,7 @@ export function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const uploadRef = useRef<HTMLInputElement>(null);
-  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, vat_enabled: true, free_shipping_threshold: 0, econt: { environment: 'demo', production_username: '', production_password_configured: false, production_password_masked: '', production_verified_at: null } });
+  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, vat_enabled: true, free_shipping_threshold: 0, econt_operations_enabled: true, econt: { environment: 'demo', production_username: '', production_password_configured: false, production_password_masked: '', production_verified_at: null } });
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('');
   const [econtForm, setEcontForm] = useState({ environment: 'demo' as 'demo' | 'production', username: '', password: '' });
   const [busy, setBusy] = useState(true);
@@ -81,6 +81,19 @@ export function SettingsPage() {
       toast.success(vat_enabled ? 'ДДС е включено за новите поръчки.' : 'ДДС е изключено за новите поръчки.');
     } catch (error) {
       toastError(error, 'Настройката за ДДС не можа да се запази.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveEcontOperationsEnabled(econt_operations_enabled: boolean) {
+    setBusy(true);
+    try {
+      const response = await updateSiteSettings(token, { econt_operations_enabled });
+      setSettings(response.data.settings);
+      toast.success(econt_operations_enabled ? 'Товарителниците и заявяването на куриер са разрешени.' : 'Товарителниците и заявяването на куриер са заключени.');
+    } catch (error) {
+      toastError(error, 'Настройката за товарителници и куриер не можа да се запази.');
     } finally {
       setBusy(false);
     }
@@ -175,6 +188,13 @@ export function SettingsPage() {
           <div className="grid max-w-xl gap-3 rounded-[6px] border border-border bg-card p-4">
             <Label htmlFor="free-shipping-threshold" className="grid gap-2 font-sans"><span>Праг за безплатна доставка (€)</span><input id="free-shipping-threshold" type="number" min="0" max="999999.99" step="0.01" className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" value={freeShippingThreshold} onChange={(event) => setFreeShippingThreshold(event.target.value)} /><small className="leading-relaxed text-muted-foreground">Магазинът може да плати доставката само когато стойността на продуктите е строго над този праг.</small></Label>
             <div><Button type="button" disabled={busy} onClick={() => void saveFreeShippingThreshold()}><PackageCheck />Запази прага</Button></div>
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Товарителници и куриер" icon={Truck} persistKey="settings.econt-operations" help="Разрешава създаването на товарителници и заявяването на куриер от онлайн магазина. Когато е изключено, свързаните Econt действия в счетоводството са заключени.">
+          <div className="flex max-w-xl items-center justify-between gap-5 rounded-[6px] border border-border bg-card p-4">
+            <div><h3 className="m-0 text-base">Създаване на товарителници и заявяване на куриер</h3><p className="mt-1 mb-0 text-sm leading-relaxed text-muted-foreground">Изключете опцията, когато магазинът не трябва да създава товарителници или да изпраща заявки към куриер. Данните от вече издадени документи се запазват.</p></div>
+            <Switch checked={settings.econt_operations_enabled} disabled={busy} aria-label="Създаване на товарителници и заявяване на куриер" onCheckedChange={(checked) => void saveEcontOperationsEnabled(checked)} />
           </div>
         </CollapsibleSection>
 

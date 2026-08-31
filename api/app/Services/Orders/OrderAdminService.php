@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class OrderAdminService
 {
-    public const STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    public const STATUSES = ['pending', 'confirmed', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
 
     public function __construct(private readonly AccountingPeriodLock $periodLock = new AccountingPeriodLock(), private readonly AccountingAuditService $audit = new AccountingAuditService()) {}
 

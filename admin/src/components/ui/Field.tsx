@@ -2,6 +2,8 @@ import type { ChangeEvent, InputHTMLAttributes, ReactNode } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { HelpHint } from '@/components/ui/HelpHint';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { MonthPicker } from '@/components/ui/MonthPicker';
 
 type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
   id: string;
@@ -146,6 +148,20 @@ export function Field({
 
   function clearField() {
     emit('');
+  }
+
+  if (!multiline && inputType === 'date') {
+    return <div className={`field ${className}`.trim()}><div className="flex items-center gap-1"><label htmlFor={id}>{label}</label>{help ? <HelpHint label={label}>{help}</HelpHint> : null}</div><DatePicker id={id} label={label} value={current} min={typeof input.min === 'string' ? input.min : undefined} max={typeof input.max === 'string' ? input.max : undefined} onChange={emit} /></div>;
+  }
+
+  if (!multiline && inputType === 'month') {
+    return <div className={`field ${className}`.trim()}><div className="flex items-center gap-1"><label htmlFor={id}>{label}</label>{help ? <HelpHint label={label}>{help}</HelpHint> : null}</div><MonthPicker id={id} value={current} max={typeof input.max === 'string' ? input.max : undefined} onChange={emit} /></div>;
+  }
+
+  if (!multiline && inputType === 'datetime-local') {
+    const date = current.slice(0, 10);
+    const time = current.slice(11, 16) || '00:00';
+    return <div className={`field ${className}`.trim()}><div className="flex items-center gap-1"><label htmlFor={id}>{label}</label>{help ? <HelpHint label={label}>{help}</HelpHint> : null}</div><div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2"><DatePicker id={id} label={label} value={date} onChange={(value) => emit(`${value}T${time}`)} /><input type="time" aria-label={`${label} — час`} value={time} onChange={(event) => emit(`${date || new Date().toISOString().slice(0, 10)}T${event.target.value}`)} /></div></div>;
   }
 
   return (

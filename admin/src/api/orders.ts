@@ -1,6 +1,6 @@
 import { apiRequest } from '@/api/client';
 
-export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus = 'pending' | 'confirmed' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
 export type OrderListItem = {
   id: number;

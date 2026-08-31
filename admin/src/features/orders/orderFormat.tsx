@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 export const ORDER_STATUSES: Array<{ value: OrderStatus; label: string }> = [
   { value: 'pending', label: 'Нова' },
   { value: 'confirmed', label: 'Потвърдена' },
+  { value: 'paid', label: 'Платена' },
   { value: 'processing', label: 'Обработва се' },
   { value: 'shipped', label: 'Изпратена' },
   { value: 'delivered', label: 'Доставена' },
@@ -15,7 +16,7 @@ export function orderStatusLabel(status: string): string {
 }
 
 export function OrderStatusBadge({ status }: { status: string }) {
-  return <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-bold', status === 'cancelled' ? 'bg-destructive/12 text-destructive' : status === 'delivered' ? 'bg-primary/12 text-primary' : status === 'pending' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : 'bg-muted text-foreground')}>{orderStatusLabel(status)}</span>;
+  return <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-bold', status === 'cancelled' ? 'bg-destructive/12 text-destructive' : status === 'delivered' || status === 'paid' ? 'bg-primary/12 text-primary' : status === 'pending' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : 'bg-muted text-foreground')}>{orderStatusLabel(status)}</span>;
 }
 
 export function deliveryLabel(value: string): string {

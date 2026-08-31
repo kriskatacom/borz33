@@ -10,6 +10,7 @@ use App\Models\AccountingPeriodClosure;
 use App\Models\AccountingTransaction;
 use App\Models\EcontReconciliation;
 use App\Models\Invoice;
+use App\Models\SiteSetting;
 use App\Models\Order;
 use Illuminate\Support\Collection;
 
@@ -26,7 +27,7 @@ final class AccountingService
         $from = $this->date((string) ($input['date_from'] ?? $first), 'date_from');
         $to = $this->date((string) ($input['date_to'] ?? $last), 'date_to');
         if ($from > $to) throw new ValidationException(['date_to'=>['Крайната дата трябва да е след началната.']]);
-        return ['date_from'=>$from,'date_to'=>$to,'order_status'=>$this->choice($input['order_status'] ?? 'all', ['all','pending','confirmed','processing','shipped','delivered','cancelled']), 'payment_method'=>$this->choice($input['payment_method'] ?? 'all', array_merge(['all'], self::METHODS)), 'invoiced'=>$this->choice($input['invoiced'] ?? 'all', ['all','yes','no']), 'paid'=>$this->choice($input['paid'] ?? 'all', ['all','yes','no'])];
+        return ['date_from'=>$from,'date_to'=>$to,'order_status'=>$this->choice($input['order_status'] ?? 'all', ['all','pending','confirmed','paid','processing','shipped','delivered','cancelled']), 'payment_method'=>$this->choice($input['payment_method'] ?? 'all', array_merge(['all'], self::METHODS)), 'invoiced'=>$this->choice($input['invoiced'] ?? 'all', ['all','yes','no']), 'paid'=>$this->choice($input['paid'] ?? 'all', ['all','yes','no'])];
     }
 
     public function dashboard(array $input): array
@@ -87,6 +88,9 @@ final class AccountingService
 
     public function reconcileEcont(array $input): EcontReconciliation
     {
+        if (!(bool) (SiteSetting::query()->firstOrCreate([])->econt_operations_enabled)) {
+            throw new ValidationException(['econt' => ['Товарителниците и заявяването на куриер са изключени от Настройки.']]);
+        }
         $order=Order::query()->find((int)($input['order_id']??0)); if(!$order) throw new ValidationException(['order_id'=>['Изберете валидна поръчка.']]);
         $this->lock->assertUnlocked($order->created_at); $status=$this->choice($input['shipment_status']??'',self::SHIPMENT_STATUSES);
         $before=EcontReconciliation::query()->where('order_id',$order->id)->first(); $beforeData=$before?->toArray();

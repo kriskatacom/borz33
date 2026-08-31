@@ -21,6 +21,7 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
 $statuses = [
     'pending' => 'Очаква обработка',
     'confirmed' => 'Потвърдена',
+    'paid' => 'Платена',
     'processing' => 'Обработва се',
     'shipped' => 'Изпратена',
     'delivered' => 'Доставена',

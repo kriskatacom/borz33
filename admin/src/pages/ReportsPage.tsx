@@ -11,7 +11,7 @@ import { formatDateTime, formatMoney } from '@/lib/format';
 import { toast, toastError } from '@/lib/toast';
 
 const monthFormatter = new Intl.DateTimeFormat('bg-BG', { month: 'long', year: 'numeric' });
-const statusLabels: Record<string, string> = { pending: 'Чакащи', confirmed: 'Потвърдени', processing: 'Обработват се', shipped: 'Изпратени', delivered: 'Доставени', cancelled: 'Отказани' };
+const statusLabels: Record<string, string> = { pending: 'Чакащи', confirmed: 'Потвърдени', paid: 'Платени', processing: 'Обработват се', shipped: 'Изпратени', delivered: 'Доставени', cancelled: 'Отказани' };
 function monthLabel(report: MonthlyRevenueReport) { return monthFormatter.format(new Date(report.year, report.month - 1, 1)); }
 function currentPeriod() { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`; }
 

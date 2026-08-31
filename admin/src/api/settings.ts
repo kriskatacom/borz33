@@ -9,13 +9,13 @@ export type EcontSettings = {
   production_verified_at: string | null;
 };
 
-export type SiteSettings = { logo_media_file_id: number | null; logo: MediaFile | null; vat_enabled: boolean; free_shipping_threshold: number; econt: EcontSettings };
+export type SiteSettings = { logo_media_file_id: number | null; logo: MediaFile | null; vat_enabled: boolean; free_shipping_threshold: number; econt_operations_enabled: boolean; econt: EcontSettings };
 
 export function getSiteSettings(token: string) {
   return apiRequest<{ settings: SiteSettings }>('/admin/settings', { token });
 }
 
-export function updateSiteSettings(token: string, body: { logo_media_file_id?: number | null; vat_enabled?: boolean; free_shipping_threshold?: number; econt_environment?: 'demo' | 'production'; econt_production_username?: string; econt_production_password?: string }) {
+export function updateSiteSettings(token: string, body: { logo_media_file_id?: number | null; vat_enabled?: boolean; free_shipping_threshold?: number; econt_operations_enabled?: boolean; econt_environment?: 'demo' | 'production'; econt_production_username?: string; econt_production_password?: string }) {
   return apiRequest<{ settings: SiteSettings }>('/admin/settings', { method: 'PATCH', token, body });
 }
 
