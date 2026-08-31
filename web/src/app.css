@@ -4246,12 +4246,14 @@ body.store-quick-open { overflow: hidden; }
     padding: 0;
     border: 0;
 }
+.store-checkout-choice-group > legend:not(.store-sr-only) { margin-bottom: 0.55rem; color: var(--ink); font-size: 0.78rem; font-weight: 700; }
 
 .store-checkout-choices {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.7rem;
 }
+.store-checkout-choices--delivery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 .store-checkout-choices label {
     position: relative;
@@ -4888,7 +4890,8 @@ body.store-quick-open { overflow: hidden; }
     }
     .store-checkout-fields--two,
     .store-checkout-fields--city,
-    .store-checkout-choices { grid-template-columns: 1fr; }
+    .store-checkout-choices,
+    .store-checkout-choices--delivery { grid-template-columns: 1fr; }
     .store-checkout-alert { align-items: start; flex-direction: column; }
     .store-checkout-card,
     .store-checkout-summary {

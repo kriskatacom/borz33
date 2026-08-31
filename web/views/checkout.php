@@ -23,15 +23,17 @@ $company = require dirname(__DIR__, 2) . '/config/company.php';
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $value = static fn (string $key): string => $escape($form[$key] ?? '');
 $error = static fn (string $key): ?string => isset($errors[$key]) ? (string) $errors[$key] : null;
-$delivery = in_array(($form['delivery_method'] ?? ''), ['address', 'office'], true)
+$delivery = in_array(($form['delivery_method'] ?? ''), ['address', 'office', 'machine'], true)
     ? (string) $form['delivery_method']
     : 'address';
 $payment = in_array(($form['payment_method'] ?? ''), ['cash_on_delivery', 'bank_transfer'], true)
     ? (string) $form['payment_method']
     : 'cash_on_delivery';
 $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['qty'] ?? 0), $lines));
+$econt = require dirname(__DIR__, 2) . '/config/econt.php';
+$shippingPayer = in_array(($form['shipping_payer'] ?? ''), ['receiver', 'sender'], true) ? (string) $form['shipping_payer'] : 'receiver';
 ?>
-<section class="store-checkout" data-checkout>
+<section class="store-checkout" data-checkout data-econt-locator-url="<?= $escape($econt['office_locator_url']) ?>" data-econt-environment="<?= $escape($econt['environment']) ?>">
     <header class="store-checkout-head">
         <a href="/cart" class="store-checkout-back" aria-label="Обратно към количката">
             <span aria-hidden="true">←</span> Количка
@@ -103,11 +105,17 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
                 </div>
                 <fieldset class="store-checkout-choice-group<?= $error('delivery_method') ? ' has-error' : '' ?>">
                     <legend class="store-sr-only">Начин на доставка</legend>
-                    <div class="store-checkout-choices">
+                    <div class="store-checkout-choices store-checkout-choices--delivery">
                         <label>
                             <input type="radio" name="delivery_method" value="address" <?= $delivery === 'address' ? 'checked' : '' ?> required>
                             <span class="store-checkout-choice-icon" aria-hidden="true">⌂</span>
                             <span><strong>До личен адрес</strong><small>Куриер до посочения адрес</small></span>
+                            <i aria-hidden="true"></i>
+                        </label>
+                        <label>
+                            <input type="radio" name="delivery_method" value="machine" <?= $delivery === 'machine' ? 'checked' : '' ?> required>
+                            <span class="store-checkout-choice-icon" aria-hidden="true">▤</span>
+                            <span><strong>До Еконтомат</strong><small>Получаване от автоматична станция</small></span>
                             <i aria-hidden="true"></i>
                         </label>
                         <label>
@@ -121,10 +129,10 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
                 </fieldset>
                 <div class="store-checkout-fields">
                     <label class="<?= $error('address_line') ? 'has-error' : '' ?>">
-                        <span data-address-label><?= $delivery === 'office' ? 'Офис на куриер' : 'Улица и номер' ?> <em>*</em></span>
-                        <input type="text" name="address_line" autocomplete="<?= $delivery === 'office' ? 'off' : 'street-address' ?>" value="<?= $value('address_line') ?>" maxlength="191" placeholder="<?= $delivery === 'office' ? 'Изберете офис от картата' : 'Улица, номер, вход, етаж и апартамент' ?>" required data-address-input<?= $delivery === 'office' ? ' readonly' : '' ?><?= $error('address_line') ? ' aria-invalid="true" aria-describedby="address-error"' : '' ?>>
-                        <button type="button" class="store-checkout-office-button" data-econt-office-open<?= $delivery !== 'office' ? ' hidden' : '' ?>>Избери офис на Еконт</button>
-                        <span class="store-checkout-field-hint" data-address-hint><?= $delivery === 'office' ? 'Избраният офис определя точната цена на доставката.' : 'Добавете вход, етаж и апартамент, ако са приложими.' ?></span>
+                        <span data-address-label><?= $delivery === 'machine' ? 'Еконтомат' : ($delivery === 'office' ? 'Офис на куриер' : 'Улица и номер') ?> <em>*</em></span>
+                        <input type="text" name="address_line" autocomplete="<?= $delivery === 'address' ? 'street-address' : 'off' ?>" value="<?= $value('address_line') ?>" maxlength="191" placeholder="<?= $delivery === 'machine' ? 'Изберете Еконтомат от картата' : ($delivery === 'office' ? 'Изберете офис от картата' : 'Улица, номер, вход, етаж и апартамент') ?>" required data-address-input<?= $delivery !== 'address' ? ' readonly' : '' ?><?= $error('address_line') ? ' aria-invalid="true" aria-describedby="address-error"' : '' ?>>
+                        <button type="button" class="store-checkout-office-button" data-econt-office-open<?= $delivery === 'address' ? ' hidden' : '' ?>><?= $delivery === 'machine' ? 'Избери Еконтомат' : 'Избери офис на Еконт' ?></button>
+                        <span class="store-checkout-field-hint" data-address-hint><?= $delivery === 'machine' ? 'Изберете автоматична пощенска станция (APS).' : ($delivery === 'office' ? 'Избраният офис определя точната цена на доставката.' : 'Добавете вход, етаж и апартамент, ако са приложими.') ?></span>
                         <?php if ($error('address_line')): ?><small id="address-error"><?= $escape($error('address_line')) ?></small><?php endif; ?>
                     </label>
                     <div class="store-checkout-fields store-checkout-fields--city">
@@ -145,6 +153,14 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
                         <?php if ($error('country')): ?><small id="country-error"><?= $escape($error('country')) ?></small><?php endif; ?>
                     </label>
                 </div>
+                <fieldset class="store-checkout-choice-group<?= $error('shipping_payer') ? ' has-error' : '' ?>">
+                    <legend>Кой плаща доставката?</legend>
+                    <div class="store-checkout-choices">
+                        <label><input type="radio" name="shipping_payer" value="receiver" <?= $shippingPayer === 'receiver' ? 'checked' : '' ?> required><span class="store-checkout-choice-icon" aria-hidden="true">€</span><span><strong>Клиентът</strong><small>Цената се добавя към поръчката</small></span><i aria-hidden="true"></i></label>
+                        <label><input type="radio" name="shipping_payer" value="sender" <?= $shippingPayer === 'sender' ? 'checked' : '' ?> required><span class="store-checkout-choice-icon" aria-hidden="true">✓</span><span><strong>Магазинът</strong><small>Доставката е за сметка на изпращача</small></span><i aria-hidden="true"></i></label>
+                    </div>
+                    <?php if ($error('shipping_payer')): ?><small class="store-checkout-group-error"><?= $escape($error('shipping_payer')) ?></small><?php endif; ?>
+                </fieldset>
             </section>
 
             <section class="store-checkout-card" aria-labelledby="checkout-invoice-title" data-invoice-section>
@@ -242,7 +258,7 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
             </div>
             <p class="store-checkout-delivery-note<?= $error('shipping') ? ' has-error' : '' ?>" data-shipping-status>
                 <span class="store-checkout-delivery-note-icon" aria-hidden="true">i</span>
-                <span data-shipping-message><?= $error('shipping') ? $escape($error('shipping')) : 'Използва се фиксирана цена според избрания начин на доставка.' ?></span>
+                <span data-shipping-message><?= $error('shipping') ? $escape($error('shipping')) : 'Цената се изчислява в тестовата среда на Econt според адреса, теглото, стойността и плащането.' ?></span>
             </p>
             <button type="button" class="store-checkout-quote-button" data-shipping-quote>Изчисли доставката</button>
             <div class="store-checkout-legal<?= $error('accept_terms') ? ' has-error' : '' ?>">
@@ -279,11 +295,11 @@ $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['q
     <dialog class="store-checkout-office-dialog" data-econt-office-dialog aria-labelledby="econt-office-title">
         <div class="store-checkout-office-dialog-head">
             <div>
-                <p>Доставка с Еконт</p>
-                <h2 id="econt-office-title">Изберете удобен офис</h2>
+                <p>Доставка с Еконт · demo режим</p>
+                <h2 id="econt-office-title">Изберете офис или Еконтомат</h2>
             </div>
             <button type="button" aria-label="Затвори картата" data-econt-office-close>×</button>
         </div>
-        <iframe title="Карта с офиси на Еконт" allow="geolocation 'self' https://offices.econt.com/" data-econt-office-frame></iframe>
+        <iframe title="Карта с офиси на Еконт" allow="geolocation" data-econt-office-frame></iframe>
     </dialog>
 </section>

@@ -204,7 +204,7 @@ class OrderNotificationService
 
     private function deliveryLabel(Order $order): string
     {
-        return $order->delivery_method === 'office' ? 'До офис на куриер' : 'До личен адрес';
+        return match ($order->delivery_method) { 'office' => 'До офис на куриер', 'machine' => 'До Еконтомат', default => 'До личен адрес' };
     }
 
     private function money(mixed $amount): string

@@ -409,6 +409,7 @@ class ShopController extends Controller
                 'email' => (string) ($user?->email ?? ''),
                 'phone' => (string) ($user?->phone ?? ''),
                 'delivery_method' => 'address',
+                'shipping_payer' => 'receiver',
                 'econt_office_code' => '',
                 'address_line' => (string) ($address?->line1 ?? ''),
                 'city' => (string) ($address?->city ?? ''),
@@ -438,7 +439,7 @@ class ShopController extends Controller
             $this->redirect('/cart');
         }
 
-        $keys = ['first_name', 'last_name', 'email', 'phone', 'delivery_method', 'econt_office_code', 'address_line', 'city', 'postal_code', 'country', 'payment_method', 'notes', 'invoice_company', 'invoice_eik', 'invoice_vat_number', 'invoice_address', 'invoice_mol'];
+        $keys = ['first_name', 'last_name', 'email', 'phone', 'delivery_method', 'shipping_payer', 'econt_office_code', 'address_line', 'city', 'postal_code', 'country', 'payment_method', 'notes', 'invoice_company', 'invoice_eik', 'invoice_vat_number', 'invoice_address', 'invoice_mol'];
         $form = [];
 
         foreach ($keys as $key) {
@@ -487,7 +488,7 @@ class ShopController extends Controller
             $errors['phone'] = 'Въведете валиден телефонен номер.';
         }
 
-        if (!in_array($form['delivery_method'], ['address', 'office'], true)) {
+        if (!in_array($form['delivery_method'], ['address', 'office', 'machine'], true)) {
             $errors['delivery_method'] = 'Изберете начин на доставка.';
         }
 
@@ -495,11 +496,12 @@ class ShopController extends Controller
             $errors['postal_code'] = 'Въведете пощенски код за изчисляване на доставката.';
         }
 
-        if ($form['delivery_method'] === 'office' && $form['econt_office_code'] === '') {
-            $errors['address_line'] = 'Изберете офис от картата на Еконт.';
-        } elseif ($form['delivery_method'] === 'office' && preg_match('/^\d{1,20}$/', $form['econt_office_code']) !== 1) {
-            $errors['address_line'] = 'Избраният офис на Еконт е невалиден.';
+        if (in_array($form['delivery_method'], ['office', 'machine'], true) && $form['econt_office_code'] === '') {
+            $errors['address_line'] = $form['delivery_method'] === 'machine' ? 'Изберете Еконтомат от картата.' : 'Изберете офис от картата на Еконт.';
+        } elseif (in_array($form['delivery_method'], ['office', 'machine'], true) && preg_match('/^\d{1,20}$/', $form['econt_office_code']) !== 1) {
+            $errors['address_line'] = 'Избраната Econt локация е невалидна.';
         }
+        if (!in_array($form['shipping_payer'], ['receiver', 'sender'], true)) $errors['shipping_payer'] = 'Изберете кой плаща доставката.';
 
         if (!in_array($form['payment_method'], ['cash_on_delivery', 'bank_transfer'], true)) {
             $errors['payment_method'] = 'Изберете начин на плащане.';
@@ -530,11 +532,9 @@ class ShopController extends Controller
         $shipping = null;
 
         if ($errors === []) {
-            $shipping = $this->econtShipping->quote($form['delivery_method']);
-
-            if ($shipping['currency'] !== 'EUR') {
-                $errors['shipping'] = 'Цената за доставка трябва да бъде в EUR.';
-            }
+            try { $shipping = $this->econtShipping->quote($this->shippingQuoteInput($form, $lines, $sum)); }
+            catch (\Throwable $exception) { $errors['shipping'] = $exception->getMessage(); }
+            if ($shipping !== null && $shipping['currency'] !== 'EUR') $errors['shipping'] = 'Цената за доставка трябва да бъде в EUR.';
         }
 
         if ($errors !== []) {
@@ -560,7 +560,7 @@ class ShopController extends Controller
         $vatEnabled = (bool) $vatSettings->vat_enabled;
         $vatRate = $vatEnabled ? max(0, (float) $company['vat_rate']) : 0.0;
 
-        $order = Capsule::connection()->transaction(static function () use ($form, $lines, $sum, $shippingAmount, $user, $wantsInvoice, $vatEnabled, $vatRate): Order {
+        $order = Capsule::connection()->transaction(static function () use ($form, $lines, $sum, $shippingAmount, $shipping, $user, $wantsInvoice, $vatEnabled, $vatRate): Order {
             $order = Order::query()->create([
                 ...$form,
                 'user_id' => $user?->id,
@@ -572,7 +572,8 @@ class ShopController extends Controller
                 'subtotal' => $sum,
                 'shipping_amount' => $shippingAmount,
                 'total' => $sum + $shippingAmount,
-                'econt_office_code' => $form['delivery_method'] === 'office' ? $form['econt_office_code'] : null,
+                'econt_office_code' => in_array($form['delivery_method'], ['office', 'machine'], true) ? $form['econt_office_code'] : null,
+                'econt_quote_snapshot' => $shipping,
                 'postal_code' => $form['postal_code'] !== '' ? $form['postal_code'] : null,
                 'notes' => $form['notes'] !== '' ? $form['notes'] : null,
                 'invoice_requested' => $wantsInvoice,
@@ -638,11 +639,15 @@ class ShopController extends Controller
 
         $subtotal = array_reduce($lines, static fn (float $carry, array $line): float => $carry + (float) $line['total'], 0.0);
 
-        if (!in_array($deliveryMethod, ['address', 'office'], true)) {
+        if (!in_array($deliveryMethod, ['address', 'office', 'machine'], true)) {
             $this->json(['message' => 'Изберете начин на доставка.'], 422);
         }
-
-        $quote = $this->econtShipping->quote($deliveryMethod);
+        $form = [];
+        foreach (['first_name','last_name','phone','delivery_method','shipping_payer','city','postal_code','address_line','econt_office_code','payment_method'] as $key) $form[$key] = trim((string) (\App\Core\Request::input($key) ?? ''));
+        if ($form['first_name'] === '' || $form['last_name'] === '' || $form['phone'] === '' || $form['city'] === '' || $form['postal_code'] === '') $this->json(['message' => 'Попълнете име, телефон, населено място и пощенски код.'], 422);
+        if (in_array($deliveryMethod, ['office','machine'], true) && $form['econt_office_code'] === '') $this->json(['message' => 'Изберете Econt локация от картата.'], 422);
+        try { $quote = $this->econtShipping->quote($this->shippingQuoteInput($form, $lines, $subtotal)); }
+        catch (\Throwable $exception) { $this->json(['message' => $exception->getMessage()], 422); }
 
         if ($quote['currency'] !== 'EUR') {
             $this->json(['message' => 'Цената за доставка трябва да бъде в EUR.'], 500);
@@ -652,8 +657,20 @@ class ShopController extends Controller
             'amount' => $quote['amount'],
             'currency' => $quote['currency'],
             'formatted' => ProductPage::money($quote['amount']),
+            'carrier_formatted' => ProductPage::money($quote['carrier_amount']),
             'grand_total_formatted' => ProductPage::money($subtotal + $quote['amount']),
+            'environment' => $quote['environment'],
+            'expected_delivery_date' => $quote['expected_delivery_date'],
         ]]);
+    }
+
+    /** @param array<string,string> $form @param list<array<string,mixed>> $lines @return array<string,mixed> */
+    private function shippingQuoteInput(array $form, array $lines, float $subtotal): array
+    {
+        $grams = array_sum(array_map(static fn (array $line): int => (int) ($line['total_weight_grams'] ?? 0), $lines));
+        if ($grams < 1) throw new \RuntimeException('Липсва тегло на продукт. Доставката не може да бъде изчислена.');
+        $payment = (string) ($form['payment_method'] ?? 'cash_on_delivery');
+        return ['delivery_method' => (string) $form['delivery_method'], 'shipping_payer' => (string) ($form['shipping_payer'] ?? 'receiver'), 'first_name' => (string) $form['first_name'], 'last_name' => (string) $form['last_name'], 'phone' => (string) $form['phone'], 'city' => (string) $form['city'], 'postal_code' => (string) $form['postal_code'], 'address_line' => (string) $form['address_line'], 'econt_office_code' => (string) ($form['econt_office_code'] ?? ''), 'weight_kg' => $grams / 1000, 'order_value' => $subtotal, 'cod_amount' => $payment === 'cash_on_delivery' ? $subtotal : 0.0];
     }
 
     public function cartData(): never

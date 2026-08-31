@@ -64,7 +64,7 @@ $statuses = [
             <?php
             $status = $statuses[(string) $order->status] ?? 'В обработка';
             $date = $order->created_at?->timezone('Europe/Sofia')->format('d.m.Y, H:i') ?? '';
-            $delivery = $order->delivery_method === 'office' ? 'До офис на куриер' : 'До личен адрес';
+            $delivery = match ($order->delivery_method) { 'office' => 'До офис на куриер', 'machine' => 'До Еконтомат', default => 'До личен адрес' };
             ?>
             <article class="store-account-order">
                 <header>

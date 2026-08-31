@@ -45,6 +45,8 @@ export type AdminOrder = OrderListItem & {
   postal_code: string | null;
   country: string;
   econt_office_code: string | null;
+  shipping_payer: 'sender' | 'receiver';
+  econt_quote_snapshot: { carrier_amount?: number; amount?: number; environment?: string; weight_kg?: number; order_value?: number; cod_amount?: number } | null;
   tracking_number: string | null;
   tracking_url: string | null;
   shipped_at: string | null;

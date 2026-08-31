@@ -10,15 +10,15 @@ function updateDeliveryCopy(root, resetSelection = false) {
     return;
   }
 
-  const office = method === 'office';
-  label.firstChild.textContent = office ? 'Офис на куриер ' : 'Улица и номер ';
-  input.placeholder = office ? 'Изберете офис от картата' : 'Улица, номер, вход, етаж и апартамент';
-  input.autocomplete = office ? 'off' : 'street-address';
-  input.readOnly = office;
-  officeButton?.toggleAttribute('hidden', !office);
-  hint.textContent = office
-    ? 'Избраният офис определя точната цена на доставката.'
-    : 'Добавете вход, етаж и апартамент, ако са приложими.';
+  const pickup = method === 'office' || method === 'machine';
+  const machine = method === 'machine';
+  label.firstChild.textContent = machine ? 'Еконтомат ' : pickup ? 'Офис на куриер ' : 'Улица и номер ';
+  input.placeholder = machine ? 'Изберете Еконтомат от картата' : pickup ? 'Изберете офис от картата' : 'Улица, номер, вход, етаж и апартамент';
+  input.autocomplete = pickup ? 'off' : 'street-address';
+  input.readOnly = pickup;
+  officeButton?.toggleAttribute('hidden', !pickup);
+  if (officeButton) officeButton.textContent = machine ? 'Избери Еконтомат' : 'Избери офис на Еконт';
+  hint.textContent = machine ? 'Изберете автоматична пощенска станция (APS).' : pickup ? 'Избраният офис определя точната цена на доставката.' : 'Добавете вход, етаж и апартамент, ако са приложими.';
 
   if (resetSelection) {
     input.value = '';
@@ -110,7 +110,7 @@ export function mountStoreCheckout() {
     const data = new FormData(form);
     const method = String(data.get('delivery_method') ?? 'address');
 
-    if (!['address', 'office'].includes(method)) {
+    if (!['address', 'office', 'machine'].includes(method)) {
       if (showErrors) {
         invalidateQuote('Изберете начин на доставка.');
       }
@@ -140,7 +140,10 @@ export function mountStoreCheckout() {
 
       shippingPrice.textContent = payload.data.formatted;
       grandTotal.textContent = payload.data.grand_total_formatted;
-      shippingMessage.textContent = 'Фиксирана цена за избрания начин на доставка.';
+      const payer = String(data.get('shipping_payer') ?? 'receiver');
+      shippingMessage.textContent = payer === 'sender'
+        ? `Магазинът поема изчислената от Econt доставка (${payload.data.carrier_formatted}).`
+        : `Цена от тестовата среда на Econt${payload.data.expected_delivery_date ? ` · очаквана доставка ${payload.data.expected_delivery_date}` : ''}.`;
     } catch (error) {
       if (error.name === 'AbortError') {
         return;
@@ -160,19 +163,29 @@ export function mountStoreCheckout() {
 
   quoteButton?.addEventListener('click', () => void requestQuote(true));
 
+  root.querySelectorAll('input[name="shipping_payer"], input[name="payment_method"]').forEach((input) => {
+    input.addEventListener('change', scheduleQuote);
+  });
+  root.querySelectorAll('input[name="first_name"], input[name="last_name"], input[name="phone"], input[name="city"], input[name="postal_code"], input[name="address_line"]').forEach((input) => {
+    input.addEventListener('input', scheduleQuote);
+  });
+
   root.querySelector('[data-econt-office-open]')?.addEventListener('click', () => {
     const city = form.elements.city?.value ?? '';
+    const method = form.elements.delivery_method?.value ?? 'office';
     const params = new URLSearchParams({
       lang: 'bg',
-      country: 'bg',
-      source_url: window.location.origin,
+      shopUrl: window.location.origin,
+      officeType: method === 'machine' ? 'aps' : 'office',
     });
 
     if (city.trim() !== '') {
       params.set('city', city.trim());
     }
 
-    officeFrame.src = `https://offices.econt.com/?${params.toString()}`;
+    const locatorUrl = root.dataset.econtLocatorUrl;
+    if (!locatorUrl) return;
+    officeFrame.src = `${locatorUrl}/?${params.toString()}`;
     officeDialog.showModal();
   });
 
@@ -184,7 +197,8 @@ export function mountStoreCheckout() {
   });
 
   window.addEventListener('message', (event) => {
-    if (event.origin !== 'https://offices.econt.com' || !event.data?.office || !officeDialog?.open) {
+    const locatorOrigin = root.dataset.econtLocatorUrl ? new URL(root.dataset.econtLocatorUrl).origin : '';
+    if (event.origin !== locatorOrigin || !event.data?.office || !officeDialog?.open) {
       return;
     }
 
@@ -195,6 +209,15 @@ export function mountStoreCheckout() {
       return;
     }
 
+    const selectedMethod = form.elements.delivery_method?.value ?? root.querySelector('input[name="delivery_method"]:checked')?.value;
+    if (selectedMethod === 'machine' && office.isAPS === false) {
+      invalidateQuote('Изберете Еконтомат, отбелязан като автоматична станция (APS).');
+      return;
+    }
+    if (selectedMethod === 'office' && office.isAPS) {
+      invalidateQuote('За този избор посочете офис, който не е Еконтомат.');
+      return;
+    }
     officeCode.value = String(office.code);
     addressInput.value = `${office.name || 'Еконт'} — ${office.address?.fullAddress || `офис ${office.code}`}`.slice(0, 191);
     form.elements.city.value = city.name;

@@ -10,7 +10,7 @@ use Store\Services\ProductPage;
 $customerEmailSent = (bool) ($customerEmailSent ?? false);
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $payment = $order->payment_method === 'bank_transfer' ? 'Банков превод' : 'Наложен платеж';
-$delivery = $order->delivery_method === 'office' ? 'До офис на куриер' : 'До личен адрес';
+$delivery = match ($order->delivery_method) { 'office' => 'До офис на куриер', 'machine' => 'До Еконтомат', default => 'До личен адрес' };
 $address = implode(', ', array_filter([
     (string) $order->address_line,
     (string) $order->city,
@@ -92,7 +92,7 @@ $address = implode(', ', array_filter([
         </p>
     <?php endif; ?>
 
-    <p class="store-order-success-shipping">Към поръчката е добавена фиксираната цена за избрания начин на доставка.</p>
+    <p class="store-order-success-shipping"><?= $order->shipping_payer === 'sender' ? 'Магазинът поема изчислената цена за доставка.' : 'Към поръчката е добавена цената, изчислена в тестовата среда на Econt.' ?></p>
     <div class="store-order-success-actions">
         <a href="/catalog">Продължете пазаруването</a>
         <?php if ($order->user_id): ?>

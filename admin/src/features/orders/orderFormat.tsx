@@ -20,6 +20,7 @@ export function OrderStatusBadge({ status }: { status: string }) {
 
 export function deliveryLabel(value: string): string {
   if (value === 'office') return 'Офис на Еконт';
+  if (value === 'machine') return 'Еконтомат';
   if (value === 'address') return 'До адрес';
   return value || '—';
 }

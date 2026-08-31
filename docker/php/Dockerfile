@@ -1,7 +1,7 @@
 FROM php:8.4-fpm-alpine
 
-RUN apk add --no-cache icu-dev libzip-dev git unzip \
-    && docker-php-ext-install -j$(nproc) pdo pdo_mysql opcache zip
+RUN apk add --no-cache icu-dev libzip-dev curl-dev git unzip \
+    && docker-php-ext-install -j$(nproc) pdo pdo_mysql opcache zip curl
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

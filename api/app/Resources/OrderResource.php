@@ -45,6 +45,8 @@ class OrderResource
             'postal_code' => $order->postal_code,
             'country' => $order->country,
             'econt_office_code' => $order->econt_office_code,
+            'shipping_payer' => $order->shipping_payer,
+            'econt_quote_snapshot' => $order->econt_quote_snapshot,
             'tracking_number' => $order->tracking_number,
             'tracking_url' => self::trackingUrl((string) ($order->tracking_number ?? '')),
             'shipped_at' => $order->shipped_at?->toIso8601String(),
