@@ -30,7 +30,7 @@ $payment = in_array(($form['payment_method'] ?? ''), ['cash_on_delivery', 'bank_
     ? (string) $form['payment_method']
     : 'cash_on_delivery';
 $itemCount = array_sum(array_map(static fn (array $line): int => (int) ($line['qty'] ?? 0), $lines));
-$econt = require dirname(__DIR__, 2) . '/config/econt.php';
+$econt = (new \App\Services\Shipping\EcontConfigurationService())->publicConfiguration();
 $shippingPayer = in_array(($form['shipping_payer'] ?? ''), ['receiver', 'sender'], true) ? (string) $form['shipping_payer'] : 'receiver';
 ?>
 <section class="store-checkout" data-checkout data-econt-locator-url="<?= $escape($econt['office_locator_url']) ?>" data-econt-environment="<?= $escape($econt['environment']) ?>">
@@ -258,7 +258,7 @@ $shippingPayer = in_array(($form['shipping_payer'] ?? ''), ['receiver', 'sender'
             </div>
             <p class="store-checkout-delivery-note<?= $error('shipping') ? ' has-error' : '' ?>" data-shipping-status>
                 <span class="store-checkout-delivery-note-icon" aria-hidden="true">i</span>
-                <span data-shipping-message><?= $error('shipping') ? $escape($error('shipping')) : 'Цената се изчислява в тестовата среда на Econt според адреса, теглото, стойността и плащането.' ?></span>
+                <span data-shipping-message><?= $error('shipping') ? $escape($error('shipping')) : 'Цената се изчислява в избраната Econt среда според адреса, теглото, стойността и плащането.' ?></span>
             </p>
             <button type="button" class="store-checkout-quote-button" data-shipping-quote>Изчисли доставката</button>
             <div class="store-checkout-legal<?= $error('accept_terms') ? ' has-error' : '' ?>">

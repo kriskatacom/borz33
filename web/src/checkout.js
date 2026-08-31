@@ -143,7 +143,7 @@ export function mountStoreCheckout() {
       const payer = String(data.get('shipping_payer') ?? 'receiver');
       shippingMessage.textContent = payer === 'sender'
         ? `Магазинът поема изчислената от Econt доставка (${payload.data.carrier_formatted}).`
-        : `Цена от тестовата среда на Econt${payload.data.expected_delivery_date ? ` · очаквана доставка ${payload.data.expected_delivery_date}` : ''}.`;
+        : `Цена от ${payload.data.environment === 'production' ? 'Production' : 'Demo'} средата на Econt${payload.data.expected_delivery_date ? ` · очаквана доставка ${payload.data.expected_delivery_date}` : ''}.`;
     } catch (error) {
       if (error.name === 'AbortError') {
         return;

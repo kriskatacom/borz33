@@ -92,7 +92,7 @@ $address = implode(', ', array_filter([
         </p>
     <?php endif; ?>
 
-    <p class="store-order-success-shipping"><?= $order->shipping_payer === 'sender' ? 'Магазинът поема изчислената цена за доставка.' : 'Към поръчката е добавена цената, изчислена в тестовата среда на Econt.' ?></p>
+    <p class="store-order-success-shipping"><?= $order->shipping_payer === 'sender' ? 'Магазинът поема изчислената цена за доставка.' : 'Към поръчката е добавена актуалната цена, изчислена от Econt.' ?></p>
     <div class="store-order-success-actions">
         <a href="/catalog">Продължете пазаруването</a>
         <?php if ($order->user_id): ?>

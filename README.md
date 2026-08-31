@@ -370,6 +370,29 @@ Vite приложението е в `admin/` (React 19, Redux Toolkit, React Rou
 docker compose up -d
 ```
 
+#### Econt Demo / Production
+
+Активната Econt среда се управлява от **Настройки → Econt** в администрацията.
+Demo credentials и двата набора endpoints се подават през `.env`, а избраната
+среда и криптираните Production credentials се пазят в `site_settings`.
+
+Преди първо запазване на Production password генерирайте постоянен ключ:
+
+```bash
+openssl rand -base64 32
+```
+
+Запишете резултата само в `.env` като `APP_ENCRYPTION_KEY=base64:<резултат>` и
+не сменяйте ключа след записване на credentials. Production операциите остават
+блокирани, докато бутонът **Тествай връзката** не потвърди credentials. Паролата
+не се връща от API и в администрацията се показва само маскиран placeholder.
+
+Локалните конфигурационни тестове се пускат без заявка към Econt:
+
+```bash
+docker compose exec php php tests/econt_configuration_test.php
+```
+
 Адрес: http://localhost:5173. Браузърът говори само с Vite; `/auth` и `/health` се проксират към API (`http://nginx:8080` в Docker, или `http://127.0.0.1:8080` при `npm run dev` на хоста).
 
 Има работещ вход, забравена парола, табло и пълно управление на потребителите. Регистрация в админ панела няма.

@@ -30,6 +30,7 @@
         "migrate:status": "phinx status",
         "seed": "phinx seed:run",
         "seed:users": "phinx seed:run -s UserSeeder",
-        "seed:products": "phinx seed:run -s ProductSeeder"
+        "seed:products": "phinx seed:run -s ProductSeeder",
+        "test:econt": "php tests/econt_configuration_test.php"
     }
 }

@@ -50,6 +50,7 @@ $admin = [Authenticate::class, RequireAdmin::class];
 $router->get('/admin/dashboard', [DashboardController::class, 'show'], $admin);
 $router->get('/admin/settings', [SettingsController::class, 'show'], $admin);
 $router->patch('/admin/settings', [SettingsController::class, 'update'], $admin);
+$router->post('/admin/settings/econt/test', [SettingsController::class, 'testEcont'], $admin);
 $router->get('/admin/users', [UsersController::class, 'index'], $admin);
 $router->post('/admin/users', [UsersController::class, 'store'], $admin);
 $router->get('/admin/users/avatar-presets', [UsersController::class, 'avatarPresets'], $admin);

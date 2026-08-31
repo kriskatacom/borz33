@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { FolderOpen, Image, Landmark, Monitor, Moon, Palette, Sun, Trash2, Upload } from 'lucide-react';
-import { getSiteSettings, updateSiteSettings, type SiteSettings } from '@/api/settings';
+import { AlertTriangle, FolderOpen, Image, Landmark, Monitor, Moon, Palette, PlugZap, Sun, Trash2, Truck, Upload } from 'lucide-react';
+import { getSiteSettings, testEcontConnection, updateSiteSettings, type SiteSettings } from '@/api/settings';
 import { uploadMediaFile } from '@/api/media';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
@@ -26,7 +26,8 @@ export function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const uploadRef = useRef<HTMLInputElement>(null);
-  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, vat_enabled: true });
+  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, vat_enabled: true, econt: { environment: 'demo', production_username: '', production_password_configured: false, production_password_masked: '', production_verified_at: null } });
+  const [econtForm, setEcontForm] = useState({ environment: 'demo' as 'demo' | 'production', username: '', password: '' });
   const [busy, setBusy] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
   useGlobalLoading(busy);
@@ -35,7 +36,7 @@ export function SettingsPage() {
     let cancelled = false;
     setBusy(true);
     void getSiteSettings(token)
-      .then((response) => { if (!cancelled) setSettings(response.data.settings); })
+      .then((response) => { if (!cancelled) { setSettings(response.data.settings); setEcontForm({ environment: response.data.settings.econt.environment, username: response.data.settings.econt.production_username, password: '' }); } })
       .catch((error) => { if (!cancelled) toastError(error, 'Настройките не можаха да се заредят.'); })
       .finally(() => { if (!cancelled) setBusy(false); });
     return () => { cancelled = true; };
@@ -84,6 +85,41 @@ export function SettingsPage() {
     }
   }
 
+  async function saveEcont() {
+    setBusy(true);
+    try {
+      const response = await updateSiteSettings(token, {
+        econt_environment: econtForm.environment,
+        econt_production_username: econtForm.username,
+        ...(econtForm.password ? { econt_production_password: econtForm.password } : {}),
+      });
+      setSettings(response.data.settings);
+      setEcontForm((value) => ({ ...value, password: '' }));
+      toast.success(econtForm.environment === 'production' ? 'Production средата е избрана. Тествайте връзката преди реална операция.' : 'Demo средата е активирана.');
+    } catch (error) {
+      toastError(error, 'Econt настройките не можаха да се запазят.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function testEcont() {
+    setBusy(true);
+    try {
+      const response = await testEcontConnection(token, {
+        environment: econtForm.environment,
+        ...(econtForm.environment === 'production' ? { username: econtForm.username, ...(econtForm.password ? { password: econtForm.password } : {}) } : {}),
+      });
+      setSettings(response.data.settings);
+      setEcontForm((value) => ({ ...value, password: '' }));
+      toast.success(`Връзката с Econt ${econtForm.environment === 'production' ? 'Production' : 'Demo'} е успешна.`);
+    } catch (error) {
+      toastError(error, 'Връзката с Econt е неуспешна.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="page">
       <PageHeader title="Настройки" help="Външен вид на администрацията и визуална идентичност на магазина." crumbs={[{ label: 'Табло', to: routes.home }, { label: 'Настройки' }]} />
@@ -112,6 +148,38 @@ export function SettingsPage() {
           <div className="flex max-w-xl items-center justify-between gap-5 rounded-[6px] border border-border bg-card p-4">
             <div><h3 className="m-0 text-base">Фирмата е регистрирана по ДДС</h3><p className="mt-1 mb-0 text-sm leading-relaxed text-muted-foreground">При „Да“ сумите се изчисляват автоматично по ставката от фирмените настройки. При „Не“ фактурите не начисляват ДДС.</p></div>
             <Switch checked={settings.vat_enabled} disabled={busy} aria-label="Фирмата е регистрирана по ДДС" onCheckedChange={(checked) => void saveVatEnabled(checked)} />
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Econt" icon={Truck} persistKey="settings.econt" help="Избира средата и credentials, използвани централизирано от всички Econt операции.">
+          <div className="grid max-w-3xl gap-5">
+            <RadioGroup value={econtForm.environment} onValueChange={(value) => setEcontForm((current) => ({ ...current, environment: value as 'demo' | 'production' }))} className="grid gap-3 sm:grid-cols-2" aria-label="Econt среда">
+              <Label htmlFor="econt-demo" className="flex cursor-pointer items-start gap-3 rounded-[6px] border border-border bg-card p-4 font-sans text-foreground">
+                <RadioGroupItem id="econt-demo" value="demo" />
+                <span><strong className="block">Demo</strong><small className="mt-1 block leading-relaxed text-muted-foreground">Тестови endpoints и demo credentials. Не създава реални пратки.</small></span>
+              </Label>
+              <Label htmlFor="econt-production" className="flex cursor-pointer items-start gap-3 rounded-[6px] border border-border bg-card p-4 font-sans text-foreground">
+                <RadioGroupItem id="econt-production" value="production" />
+                <span><strong className="block">Production</strong><small className="mt-1 block leading-relaxed text-muted-foreground">Реалният фирмен Econt акаунт и production endpoints.</small></span>
+              </Label>
+            </RadioGroup>
+
+            {econtForm.environment === 'production' ? <>
+              <div className="flex items-start gap-3 border border-amber-500/50 bg-amber-500/10 p-4 text-sm leading-relaxed text-foreground" role="alert">
+                <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600" />
+                <div><strong className="block">Внимание: реална Econt среда</strong><span>Калкулациите и създадените товарителници са реални. Действията могат да променят и таксуват реалния Econt акаунт на фирмата.</span></div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Label htmlFor="econt-username" className="grid gap-2 font-sans"><span>Username</span><input id="econt-username" className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" autoComplete="off" value={econtForm.username} onChange={(event) => setEcontForm((current) => ({ ...current, username: event.target.value }))} /></Label>
+                <Label htmlFor="econt-password" className="grid gap-2 font-sans"><span>Password</span><input id="econt-password" type="password" className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" autoComplete="new-password" placeholder={settings.econt.production_password_configured ? settings.econt.production_password_masked : 'Въведете Production парола'} value={econtForm.password} onChange={(event) => setEcontForm((current) => ({ ...current, password: event.target.value }))} /><small className="text-muted-foreground">Оставете празно, за да запазите вече криптираната парола.</small></Label>
+              </div>
+              <p className="m-0 text-sm text-muted-foreground">Статус: {settings.econt.production_verified_at ? `Проверена връзка · ${new Date(settings.econt.production_verified_at).toLocaleString('bg-BG')}` : 'Връзката още не е проверена. Реалните операции са блокирани.'}</p>
+            </> : <div className="border border-border bg-muted/50 p-4 text-sm leading-relaxed text-muted-foreground">Demo credentials се зареждат от сървърната конфигурация и не се показват или редактират в администрацията.</div>}
+
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" disabled={busy} onClick={() => void saveEcont()}><Truck />Запази Econt настройките</Button>
+              <Button type="button" variant="outline" disabled={busy || (econtForm.environment === 'production' && (!econtForm.username || (!econtForm.password && !settings.econt.production_password_configured)))} onClick={() => void testEcont()}><PlugZap />Тествай връзката</Button>
+            </div>
           </div>
         </CollapsibleSection>
 

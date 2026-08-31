@@ -79,6 +79,6 @@ class OrderResource
         $number = trim($number);
         if ($number === '') return null;
 
-        return 'https://ee.econt.com/load_direct.php?lang=bg&shipment_num=' . rawurlencode($number) . '&target=EeActivityTraceParcell';
+        return (new \App\Services\Shipping\EcontConfigurationService())->trackingUrl($number);
     }
 }

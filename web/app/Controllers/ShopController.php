@@ -27,7 +27,7 @@ class ShopController extends Controller
 {
     public function __construct(
         private readonly OrderNotificationService $orderNotifications = new OrderNotificationService(),
-        private readonly EcontShippingService $econtShipping = new EcontShippingService(),
+        private ?EcontShippingService $econtShipping = null,
         private readonly InvoiceService $invoices = new InvoiceService(),
         private readonly InvoiceNotificationService $invoiceNotifications = new InvoiceNotificationService()
     ) {
@@ -532,7 +532,7 @@ class ShopController extends Controller
         $shipping = null;
 
         if ($errors === []) {
-            try { $shipping = $this->econtShipping->quote($this->shippingQuoteInput($form, $lines, $sum)); }
+            try { $shipping = $this->econtShipping()->quote($this->shippingQuoteInput($form, $lines, $sum)); }
             catch (\Throwable $exception) { $errors['shipping'] = $exception->getMessage(); }
             if ($shipping !== null && $shipping['currency'] !== 'EUR') $errors['shipping'] = 'Цената за доставка трябва да бъде в EUR.';
         }
@@ -646,7 +646,7 @@ class ShopController extends Controller
         foreach (['first_name','last_name','phone','delivery_method','shipping_payer','city','postal_code','address_line','econt_office_code','payment_method'] as $key) $form[$key] = trim((string) (\App\Core\Request::input($key) ?? ''));
         if ($form['first_name'] === '' || $form['last_name'] === '' || $form['phone'] === '' || $form['city'] === '' || $form['postal_code'] === '') $this->json(['message' => 'Попълнете име, телефон, населено място и пощенски код.'], 422);
         if (in_array($deliveryMethod, ['office','machine'], true) && $form['econt_office_code'] === '') $this->json(['message' => 'Изберете Econt локация от картата.'], 422);
-        try { $quote = $this->econtShipping->quote($this->shippingQuoteInput($form, $lines, $subtotal)); }
+        try { $quote = $this->econtShipping()->quote($this->shippingQuoteInput($form, $lines, $subtotal)); }
         catch (\Throwable $exception) { $this->json(['message' => $exception->getMessage()], 422); }
 
         if ($quote['currency'] !== 'EUR') {
@@ -671,6 +671,11 @@ class ShopController extends Controller
         if ($grams < 1) throw new \RuntimeException('Липсва тегло на продукт. Доставката не може да бъде изчислена.');
         $payment = (string) ($form['payment_method'] ?? 'cash_on_delivery');
         return ['delivery_method' => (string) $form['delivery_method'], 'shipping_payer' => (string) ($form['shipping_payer'] ?? 'receiver'), 'first_name' => (string) $form['first_name'], 'last_name' => (string) $form['last_name'], 'phone' => (string) $form['phone'], 'city' => (string) $form['city'], 'postal_code' => (string) $form['postal_code'], 'address_line' => (string) $form['address_line'], 'econt_office_code' => (string) ($form['econt_office_code'] ?? ''), 'weight_kg' => $grams / 1000, 'order_value' => $subtotal, 'cod_amount' => $payment === 'cash_on_delivery' ? $subtotal : 0.0];
+    }
+
+    private function econtShipping(): EcontShippingService
+    {
+        return $this->econtShipping ??= new EcontShippingService();
     }
 
     public function cartData(): never
