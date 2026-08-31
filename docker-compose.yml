@@ -75,6 +75,8 @@ services:
       ADMIN_PUBLIC_URL: ${ADMIN_PUBLIC_URL}
       WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:8082}
       STORE_VITE_DEV_URL: ${STORE_VITE_DEV_URL:-http://localhost:5174}
+      STORE_VITE_PUBLIC_ORIGIN: ${STORE_VITE_PUBLIC_ORIGIN:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
       HOST_UID: ${HOST_UID:-1000}
     volumes:
       - .:/var/www
@@ -140,6 +142,18 @@ services:
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5174"
     ports:
       - "${STORE_VITE_PORT:-5174}:5174"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["public"]
+    restart: unless-stopped
+    environment:
+      CLOUDFLARE_WEB_HOST: ${CLOUDFLARE_WEB_HOST:-}
+      CLOUDFLARE_API_HOST: ${CLOUDFLARE_API_HOST:-}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-missing-token}
+    depends_on:
+      - nginx
+      - store
 
 volumes:
   mysql_data:

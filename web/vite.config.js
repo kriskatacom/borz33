@@ -46,9 +46,6 @@ export default defineConfig(({ command }) => {
         usePolling: true,
         interval: 300,
       },
-      hmr: {
-        clientPort: 5174,
-      },
     },
     build: {
       outDir: 'public/build',

@@ -241,7 +241,7 @@ docker compose exec php composer migrate
 docker compose up -d
 ```
 
-Първото пускане билдва PHP образа и при нужда инсталира Composer зависимостите. След това сайтът с плановете е на `:8000`, API-то на `:8080`, phpMyAdmin на `:8081`, Mailpit на `:8026`.
+Първото пускане билдва PHP образа и при нужда инсталира Composer зависимостите. След това магазинът е на `http://localhost:8082`, API-то на `http://localhost:8080`, администрацията на `http://localhost:5173`, сайтът с плановете на `:8000`, phpMyAdmin на `:8081`, а Mailpit на `:8026`.
 
 Статус:
 
@@ -254,6 +254,86 @@ docker compose ps
 ```bash
 docker compose logs -f
 docker compose logs -f nginx php
+```
+
+### Публична development среда с Cloudflare Tunnel
+
+Cloudflare Tunnel е допълнителен Compose profile. Обикновеното
+`docker compose up -d` не го стартира и текущата локална среда остава
+непроменена. Връзката е изходяща от `cloudflared` към Cloudflare — не
+пренасочвайте и не отваряйте портове на рутера.
+
+#### 1. Създаване на tunnel и domain routes
+
+1. Добавете домейна си в Cloudflare и отворете **Zero Trust → Networks → Tunnels**.
+2. Създайте remotely-managed tunnel, например `borz33-dev`, и копирайте connector token-а.
+3. В **Routes → Published application** добавете:
+   - `dev.example.com` → `http://nginx:8082`;
+   - `api-dev.example.com` → `http://nginx:8080` (само ако API-то трябва да бъде достъпно отделно).
+4. Cloudflare създава proxy DNS записите за тези hostnames и обслужва HTTPS сертификатите на edge-а. Origin връзката остава вътрешна в Docker мрежата.
+
+Копирайте `.env.example` като `.env` и заменете примерните стойности:
+
+```dotenv
+CLOUDFLARE_TUNNEL_TOKEN=<connector-token-from-cloudflare>
+CLOUDFLARE_WEB_HOST=dev.example.com
+CLOUDFLARE_API_HOST=api-dev.example.com
+STORE_VITE_PUBLIC_ORIGIN=https://dev.example.com
+WEB_PUBLIC_URL=https://dev.example.com
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8082,https://dev.example.com
+```
+
+`CLOUDFLARE_TUNNEL_TOKEN` е секрет: не го commit-вайте. API CORS допуска само
+точните origin-и от `CORS_ALLOWED_ORIGINS`; не използвайте `*` за development
+tunnel с вход в акаунт. Vite модулите и HMR WebSocket-ът минават през същия
+публичен HTTPS/WSS hostname, без отделен публичен порт.
+
+#### 2. Стартиране
+
+Цялата development среда плюс tunnel-а се стартира с една команда:
+
+```bash
+docker compose --profile public up -d --build
+```
+
+Проверка на връзката и логовете:
+
+```bash
+docker compose --profile public ps
+docker compose logs -f cloudflared
+```
+
+Локалните адреси продължават да работят едновременно с публичните:
+
+- `http://localhost:8082` — магазин;
+- `http://localhost:8080` — API;
+- `http://localhost:5173` — администрация.
+
+#### 3. Ограничаване с Cloudflare Access
+
+За development hostname е препоръчително да включите **Zero Trust → Access
+controls → Applications → Self-hosted** и да добавите `dev.example.com` и,
+ако се използва, `api-dev.example.com`. Създайте Allow policy само за
+разрешените имейли, група или identity provider. Създайте Access правилата
+преди да споделяте hostname-а — без тях всеки, който знае URL адреса, може да
+достъпи development приложението.
+
+При автоматизирани клиенти към защитеното API използвайте Cloudflare Access
+service token вместо публична Bypass policy.
+
+#### 4. Спиране
+
+Спиране и премахване на публичната и локалната среда, без изтриване на MySQL
+тома:
+
+```bash
+docker compose --profile public down
+```
+
+Само tunnel-ът може да бъде спрян с:
+
+```bash
+docker compose stop cloudflared
 ```
 
 ### Спиране

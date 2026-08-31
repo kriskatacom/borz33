@@ -26,6 +26,15 @@ class Vite
             return $configured;
         }
 
+        $publicOrigin = rtrim((string) (getenv('STORE_VITE_PUBLIC_ORIGIN') ?: ''), '/');
+
+        if ($publicOrigin !== ''
+            && parse_url($publicOrigin, PHP_URL_SCHEME) === 'https'
+            && parse_url($publicOrigin, PHP_URL_HOST) === $host
+        ) {
+            return $publicOrigin;
+        }
+
         $scheme = parse_url($configured, PHP_URL_SCHEME) ?: 'http';
         $port = parse_url($configured, PHP_URL_PORT);
 
