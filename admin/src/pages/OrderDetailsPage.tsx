@@ -9,6 +9,7 @@ import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
+import { PageLoadingState } from '@/components/page-loading-state';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Field } from '@/components/ui/Field';
@@ -94,7 +95,7 @@ export function OrderDetailsPage() {
   }
 
   if (message) return <div className="page"><PageHeader title="Поръчка" crumbs={[{ label: 'Табло', to: routes.home }, { label: 'Поръчки', to: routes.orders }, { label: 'Детайли' }]} /><p className="form-message is-error">{message}</p><Button asChild variant="outline"><Link to={routes.orders}><ArrowLeft />Към поръчките</Link></Button></div>;
-  if (!order) return <div className="page" aria-busy="true" />;
+  if (!order) return <PageLoadingState label="Зареждане на поръчката…" />;
 
   return (
     <div className="page order-details-page">

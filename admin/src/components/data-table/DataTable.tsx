@@ -34,6 +34,26 @@ function goToPage(pagination: DataTablePagination, page: number) {
 }
 
 const EMPTY_DATA: never[] = [];
+const TABLE_SKELETON_ROWS = 6;
+const SKELETON_WIDTHS = ['w-16', 'w-28', 'w-40', 'w-24', 'w-20'] as const;
+
+function TableLoadingRows({ columnCount, bulkEnabled }: { columnCount: number; bulkEnabled: boolean }) {
+  return (
+    <>
+      <tr className="sr-only"><td colSpan={columnCount + (bulkEnabled ? 1 : 0)}>Зареждане на таблицата…</td></tr>
+      {Array.from({ length: TABLE_SKELETON_ROWS }, (_, rowIndex) => (
+        <TableRow key={`loading-${rowIndex}`} aria-hidden>
+          {bulkEnabled ? <TableCell className="w-12 px-4 py-3"><span className="data-table-skeleton block size-4" /></TableCell> : null}
+          {Array.from({ length: columnCount }, (_, cellIndex) => (
+            <TableCell key={cellIndex} className="px-4 py-3">
+              <span className={cn('data-table-skeleton block h-4', SKELETON_WIDTHS[(cellIndex + rowIndex) % SKELETON_WIDTHS.length])} />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
+}
 
 function getPageItems(page: number, lastPage: number): Array<number | 'ellipsis'> {
   const total = Math.max(1, lastPage);
@@ -225,7 +245,9 @@ export function DataTable<TData extends RowData>({
             ))}
           </TableHeader>
           <TableBody>
-            {pageRows.length === 0 ? (
+            {loading ? (
+              <TableLoadingRows columnCount={columns.length} bulkEnabled={bulkEnabled} />
+            ) : pageRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length + (bulkEnabled ? 1 : 0)} className="h-24 text-center font-sans text-muted-foreground">
                   {emptyMessage}

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
-import { AltField, ImageLightbox } from '@/features/products/ProductImagesSection';
+import { AltField, ImageLightbox, ProductImageAsset } from '@/features/products/ProductImagesSection';
 import { toast, toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
@@ -227,7 +227,7 @@ export function VariantImageField({
           onDrop={onDrop}
         >
           {shown ? (
-            <img src={shown} alt={image?.alt || 'Вариант'} className="size-full object-cover" />
+            <ProductImageAsset src={shown} alt={image?.alt || 'Вариант'} className="size-full object-cover" />
           ) : (
             <span className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
               <ImagePlus className="size-5" aria-hidden />

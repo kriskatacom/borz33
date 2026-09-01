@@ -39,7 +39,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { TextEditor } from '@/components/ui/TextEditor';
 import { toast, toastError } from '@/lib/toast';
-import { ProductImagesEditor } from '@/features/products/ProductImagesSection';
+import { ProductImageAsset, ProductImagesEditor } from '@/features/products/ProductImagesSection';
+import { ProductLoadingSections } from '@/features/products/ProductLoadingSections';
 import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
 import { flattenCategoryTree } from '@/features/categories/categoryTree';
 import { PageTreeSelect } from '@/features/pages/PageTreeSelect';
@@ -421,7 +422,7 @@ function AttachedImagesAiPicker({
         aria-pressed={selected.has(image.id)}
         onClick={() => toggle(image.id)}
       >
-        <img src={image.url} alt={image.alt || image.original_name} className="h-full w-full object-cover" loading="lazy" />
+        <ProductImageAsset src={image.url} alt={image.alt || image.original_name} className="h-full w-full object-cover" loading="lazy" />
         <span className="absolute left-2 top-2 grid size-7 place-items-center bg-background shadow-sm">
           <input className="pointer-events-none size-4 accent-primary" type="checkbox" checked={selected.has(image.id)} readOnly tabIndex={-1} aria-hidden="true" />
         </span>
@@ -1510,7 +1511,7 @@ export function ProductEditPage() {
         ]}
         actions={
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-            {!isNew ? (
+            {!isNew && product ? (
               <>
                 {!product?.deleted_at ? <Button asChild variant="outline"><Link to={`/products/${productId}`}><Eye />Преглед</Link></Button> : null}
                 {product?.deleted_at
@@ -1539,6 +1540,8 @@ export function ProductEditPage() {
           Изтрит продукт не се редактира. Възстановете го от списъка.
         </p>
       ) : null}
+
+      {!isNew && !product && !message ? <ProductLoadingSections mode="edit" /> : null}
 
       {canEdit && isNew ? (
         <div className="flex min-w-0 max-w-full flex-col gap-3">

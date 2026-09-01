@@ -12,7 +12,8 @@ import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatMoney } from '@/lib/format';
 import { toast } from '@/lib/toast';
-import { ImageLightbox, ProductImagesPreview } from '@/features/products/ProductImagesSection';
+import { ImageLightbox, ProductImageAsset, ProductImagesPreview } from '@/features/products/ProductImagesSection';
+import { ProductLoadingSections } from '@/features/products/ProductLoadingSections';
 
 function DetailTable({ children, caption }: { children: ReactNode; caption: string }) {
   return (
@@ -81,7 +82,7 @@ function VariantImageThumb({ image, label }: { image: ProductImage | null; label
         className="flex size-12 cursor-zoom-in items-center justify-center overflow-hidden rounded-[6px] border border-border bg-muted p-0 outline-none transition-opacity hover:opacity-90 focus-visible:ring-[3px] focus-visible:ring-ring/50"
         onClick={() => setOpen(true)}
       >
-        <img src={image.url} alt={label} className="size-full object-cover" />
+        <ProductImageAsset src={image.url} alt={label} className="size-full object-cover" />
       </button>
       {open ? <ImageLightbox images={[image]} index={0} onIndex={() => undefined} onClose={() => setOpen(false)} /> : null}
     </>
@@ -174,6 +175,8 @@ export function ProductViewPage() {
           {message}
         </p>
       ) : null}
+
+      {!message && !product ? <ProductLoadingSections mode="view" /> : null}
 
       {product ? (
         <div className="flex min-w-0 max-w-full flex-col gap-3">

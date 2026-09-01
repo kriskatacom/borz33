@@ -14,6 +14,7 @@ import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
+import { AdminPageSkeleton } from '@/components/admin-page-skeleton';
 import { Button } from '@/components/ui/Button';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Field } from '@/components/ui/Field';
@@ -297,7 +298,7 @@ export function BannerFormPage() {
         </p>
       ) : null}
 
-      {canEdit ? (
+      {!isNew && busy && !form.title ? <AdminPageSkeleton sections={2} /> : canEdit ? (
         <form className="banner-form-with-preview" onSubmit={(event) => void onSubmit(event)} noValidate>
           <div className="flex min-w-0 max-w-full flex-col gap-3">
           <CollapsibleSection

@@ -7,6 +7,7 @@ import { routes } from '@/app/constants';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
+import { AdminPageSkeleton } from '@/components/admin-page-skeleton';
 import { Button } from '@/components/ui/Button';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Field } from '@/components/ui/Field';
@@ -245,7 +246,7 @@ export function UserFormPage() {
         </p>
       ) : null}
 
-      <div className="flex min-w-0 max-w-full flex-col gap-3">
+      {!isNew && busy && !form.email ? <AdminPageSkeleton sections={4} /> : <div className="flex min-w-0 max-w-full flex-col gap-3">
         <CollapsibleSection
           title="Профил"
           icon={UserRound}
@@ -409,7 +410,7 @@ export function UserFormPage() {
             />
           </SectionForm>
         </CollapsibleSection>
-      </div>
+      </div>}
     </div>
   );
 }

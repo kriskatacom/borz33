@@ -29,6 +29,7 @@ import { useAppSelector } from '@/app/hooks';
 import { DATA_TABLE_PAGE_SIZES, DEFAULT_PAGE_SIZE, scrollPageToTop } from '@/components/data-table/DataTable';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
+import { MediaGridSkeleton } from '@/components/admin-page-skeleton';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Field } from '@/components/ui/Field';
@@ -439,7 +440,7 @@ export function MediaPage() {
         </p>
       ) : null}
 
-      {files.length === 0 && !busy ? (
+      {busy && files.length === 0 ? <MediaGridSkeleton /> : files.length === 0 ? (
         <p className="muted-line">Няма файлове за избраните филтри.</p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">

@@ -5,6 +5,7 @@ import { cancelInvoice, createCreditNote, downloadInvoice, getInvoice, type Invo
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { PageHeader } from '@/components/page-header';
+import { InvoiceDetailsSkeleton } from '@/components/admin-page-skeleton';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Field } from '@/components/ui/Field';
@@ -44,7 +45,7 @@ export function InvoiceDetailsPage() {
     return { net: -net, tax: -tax, gross: -gross };
   }, [invoice, refundShipping, selected]);
 
-  if (!invoice) return <div className="page" aria-busy="true" />;
+  if (!invoice) return <InvoiceDetailsSkeleton />;
   const invoiceId = invoice.id;
 
   function remainingQty(index: number) { return invoice?.creditable_items.find((item) => item.index === index)?.remaining_qty ?? 0; }

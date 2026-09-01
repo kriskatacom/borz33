@@ -70,28 +70,28 @@ export function DashboardPage() {
       />
 
       <section className="stat-grid" aria-label="Обобщение">
-        <Link to={routes.orders} className="stat-card"><p>Поръчки днес</p><strong>{busy ? '—' : summary.orders_today}</strong></Link>
-        <Link to={routes.orders} className="stat-card"><p>Поръчки този месец</p><strong>{busy ? '—' : summary.orders_month}</strong></Link>
-        <Link to={routes.accounting} className="stat-card"><p>Оборот този месец</p><strong>{busy ? '—' : formatMoney(summary.revenue_month)}</strong></Link>
-        <Link to={routes.orders} className={`stat-card${summary.pending_orders > 0 ? ' accent' : ''}`}><p>Чакащи поръчки</p><strong>{busy ? '—' : summary.pending_orders}</strong></Link>
-        <Link to={routes.invoices} className="stat-card"><p>Фактури този месец</p><strong>{busy ? '—' : summary.invoices_month}</strong></Link>
+        <Link to={routes.orders} className="stat-card"><p>Поръчки днес</p><strong className={busy ? 'admin-skeleton-text w-14' : ''}>{busy ? '' : summary.orders_today}</strong></Link>
+        <Link to={routes.orders} className="stat-card"><p>Поръчки този месец</p><strong className={busy ? 'admin-skeleton-text w-14' : ''}>{busy ? '' : summary.orders_month}</strong></Link>
+        <Link to={routes.accounting} className="stat-card"><p>Оборот този месец</p><strong className={busy ? 'admin-skeleton-text w-24' : ''}>{busy ? '' : formatMoney(summary.revenue_month)}</strong></Link>
+        <Link to={routes.orders} className={`stat-card${summary.pending_orders > 0 ? ' accent' : ''}`}><p>Чакащи поръчки</p><strong className={busy ? 'admin-skeleton-text w-14' : ''}>{busy ? '' : summary.pending_orders}</strong></Link>
+        <Link to={routes.invoices} className="stat-card"><p>Фактури този месец</p><strong className={busy ? 'admin-skeleton-text w-14' : ''}>{busy ? '' : summary.invoices_month}</strong></Link>
         <Link to={routes.products} className="stat-card">
           <p>Активни продукти</p>
-          <strong>{busy ? '—' : summary.products_active}</strong>
+          <strong className={busy ? 'admin-skeleton-text w-14' : ''}>{busy ? '' : summary.products_active}</strong>
         </Link>
         <Link to={routes.products} className={`stat-card${summary.low_stock > 0 ? ' accent' : ''}`}>
           <p>Ниски наличности</p>
-          <strong>{busy ? '—' : summary.low_stock}</strong>
+          <strong className={busy ? 'admin-skeleton-text w-14' : ''}>{busy ? '' : summary.low_stock}</strong>
         </Link>
         <Link to={routes.banners} className="stat-card">
           <p>Активни банери</p>
-          <strong>{busy ? '—' : summary.banners_active}</strong>
+          <strong className={busy ? 'admin-skeleton-text w-14' : ''}>{busy ? '' : summary.banners_active}</strong>
         </Link>
       </section>
 
       <section className="dashboard-recent">
         <div className="flex items-center justify-between gap-3"><h2 className="section-label">Последни поръчки</h2><Link to={routes.orders}>Всички поръчки</Link></div>
-        {busy ? <p className="dashboard-empty">Зареждане на последните поръчки…</p> : summary.recent_orders.length === 0 ? <p className="dashboard-empty">Все още няма поръчки.</p> : <div className="dashboard-order-list">{summary.recent_orders.map((order) => <Link key={order.id} to={`/orders/${order.id}`} className="dashboard-order-row"><span><strong>#{order.number}</strong><small>{order.customer} · {formatDateTime(order.created_at)}</small></span><span className="text-right"><strong>{formatMoney(order.total)}</strong><OrderStatusBadge status={order.status} /></span></Link>)}</div>}
+        {busy ? <div className="dashboard-order-list dashboard-order-list--skeleton" aria-label="Зареждане на последните поръчки" aria-busy="true">{Array.from({ length: 4 }, (_, index) => <div className="dashboard-order-row" key={index}><span><i className="admin-skeleton-text w-20" /><i className="admin-skeleton-text mt-2 w-40" /></span><span><i className="admin-skeleton-text w-16" /><i className="admin-skeleton-text mt-2 w-20" /></span></div>)}</div> : summary.recent_orders.length === 0 ? <p className="dashboard-empty">Все още няма поръчки.</p> : <div className="dashboard-order-list">{summary.recent_orders.map((order) => <Link key={order.id} to={`/orders/${order.id}`} className="dashboard-order-row"><span><strong>#{order.number}</strong><small>{order.customer} · {formatDateTime(order.created_at)}</small></span><span className="text-right"><strong>{formatMoney(order.total)}</strong><OrderStatusBadge status={order.status} /></span></Link>)}</div>}
       </section>
 
       <section>

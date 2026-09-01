@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-const MIN_VISIBLE_MS = 500;
-const HIDE_AFTER_MS = 220;
+const SHOW_AFTER_MS = 120;
+const MIN_VISIBLE_MS = 300;
+const HIDE_AFTER_MS = 120;
 
 type LoadingContextValue = {
   start: () => void;
@@ -14,6 +15,7 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   const [count, setCount] = useState(0);
   const [visible, setVisible] = useState(false);
   const shownAtRef = useRef<number | null>(null);
+  const showTimerRef = useRef<number | null>(null);
   const hideTimerRef = useRef<number | null>(null);
   const start = useCallback(() => setCount((current) => current + 1), []);
   const stop = useCallback(() => setCount((current) => Math.max(0, current - 1)), []);
@@ -26,12 +28,20 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
         hideTimerRef.current = null;
       }
 
-      if (!visible) {
-        shownAtRef.current = Date.now();
-        setVisible(true);
+      if (!visible && showTimerRef.current === null) {
+        showTimerRef.current = window.setTimeout(() => {
+          showTimerRef.current = null;
+          shownAtRef.current = Date.now();
+          setVisible(true);
+        }, SHOW_AFTER_MS);
       }
 
       return;
+    }
+
+    if (showTimerRef.current !== null) {
+      window.clearTimeout(showTimerRef.current);
+      showTimerRef.current = null;
     }
 
     if (!visible) {
@@ -54,6 +64,15 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
       }
     };
   }, [count, visible]);
+
+  useEffect(() => () => {
+    if (showTimerRef.current !== null) {
+      window.clearTimeout(showTimerRef.current);
+    }
+    if (hideTimerRef.current !== null) {
+      window.clearTimeout(hideTimerRef.current);
+    }
+  }, []);
 
   return (
     <LoadingContext.Provider value={value}>

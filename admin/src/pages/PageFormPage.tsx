@@ -32,6 +32,7 @@ import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
+import { AdminPageSkeleton } from '@/components/admin-page-skeleton';
 import { Button } from '@/components/ui/Button';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Field } from '@/components/ui/Field';
@@ -422,7 +423,7 @@ export function PageFormPage() {
         </p>
       ) : null}
 
-      {canEdit ? (
+      {!isNew && busy && !form.title ? <AdminPageSkeleton sections={3} /> : canEdit ? (
         <form className="flex min-w-0 max-w-full flex-col gap-3" onSubmit={(event) => void onSubmit(event)} noValidate>
           <CollapsibleSection
             title="Страница"

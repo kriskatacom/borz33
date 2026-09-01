@@ -5,6 +5,7 @@ import {
   FolderOpen,
   ImagePlus,
   Images,
+  LoaderCircle,
   Star,
   TextCursorInput,
   Trash2,
@@ -744,6 +745,46 @@ function imageAltText(image: ProductImage): string {
   return image.alt?.trim() ?? '';
 }
 
+export function ProductImageAsset({
+  src,
+  alt,
+  className,
+  loading = 'eager',
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  loading?: 'eager' | 'lazy';
+}) {
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    setLoaded(Boolean(imageRef.current?.complete));
+  }, [src]);
+
+  return (
+    <span className="relative block overflow-hidden bg-muted" aria-busy={!loaded}>
+      {!loaded ? (
+        <span className="absolute inset-0 z-10 grid place-items-center bg-muted text-muted-foreground">
+          <LoaderCircle className="size-5 animate-spin" aria-hidden />
+          <span className="sr-only">Зареждане на изображение</span>
+        </span>
+      ) : null}
+      <img
+        ref={imageRef}
+        src={src}
+        alt={alt}
+        className={cn('block transition-opacity duration-150', loaded ? 'opacity-100' : 'opacity-0', className)}
+        loading={loading}
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+      />
+    </span>
+  );
+}
+
 function ImagePreview({
   image,
   onOpen,
@@ -762,7 +803,7 @@ function ImagePreview({
         className="w-full cursor-zoom-in overflow-hidden rounded-[6px] border border-border bg-muted p-0 outline-none transition-opacity hover:opacity-90 focus-visible:ring-[3px] focus-visible:ring-ring/50"
         onClick={onOpen}
       >
-        <img src={image.url} alt={alt} className="aspect-square size-full object-cover" />
+        <ProductImageAsset src={image.url} alt={alt} className="aspect-square size-full object-cover" />
       </button>
       {alt ? <figcaption className="mt-2 text-base text-muted-foreground">{alt}</figcaption> : null}
     </figure>
@@ -818,7 +859,7 @@ function ImageTile({
 }) {
   const body = (
     <>
-      <img src={src} alt={alt} className="aspect-square size-full object-cover" />
+      <ProductImageAsset src={src} alt={alt} className="aspect-square size-full object-cover" />
       {badge ? (
         <span className="pointer-events-none absolute top-2 left-2 inline-flex items-center rounded-[6px] bg-[#173f32] px-3 py-1.5 text-base font-extrabold tracking-wide text-[#f3efe6] shadow-lg">
           {badge}
@@ -905,7 +946,7 @@ function GalleryCard({
         onDragEnd={onDragEnd}
       >
         <div className="relative">
-          <img src={image.url} alt={image.alt || productName} className="aspect-square size-full object-cover" />
+          <ProductImageAsset src={image.url} alt={image.alt || productName} className="aspect-square size-full object-cover" />
           <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-gradient-to-t from-foreground/70 to-transparent p-1.5">
             <Button type="button" size="icon" variant="secondary" className="size-8" aria-label="Преглед" onClick={onOpen}>
               <ZoomIn />

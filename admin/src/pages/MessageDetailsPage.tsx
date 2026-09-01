@@ -7,6 +7,7 @@ import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
+import { PageLoadingState } from '@/components/page-loading-state';
 import { Button } from '@/components/ui/Button';
 import { formatDateTime } from '@/lib/format';
 import { toast, toastError } from '@/lib/toast';
@@ -65,7 +66,7 @@ export function MessageDetailsPage() {
   }
 
   if (error) return <div className="page"><p className="form-message is-error">{error}</p></div>;
-  if (!message) return <div className="page" aria-busy="true" />;
+  if (!message) return <PageLoadingState label="Зареждане на съобщението…" />;
 
   return <div className="page">
     <PageHeader title={message.subject} help={`Разговор с ${message.name} · започнат ${formatDateTime(message.created_at)}`} crumbs={[{ label: 'Табло', to: routes.home }, { label: 'Съобщения', to: routes.messages }, { label: 'Разговор' }]} actions={<Button asChild variant="outline"><Link to={routes.messages}><ArrowLeft />Назад</Link></Button>} />
