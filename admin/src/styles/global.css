@@ -958,6 +958,8 @@ a.sidebar-user-row:focus-visible .sidebar-user-name {
   width: 100%;
 }
 
+.order-details-page section { height: fit-content; }
+
 .page-head .muted {
   margin-bottom: 0;
   max-width: 52ch;

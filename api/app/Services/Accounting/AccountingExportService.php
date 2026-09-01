@@ -3,12 +3,13 @@ declare(strict_types=1);
 namespace App\Services\Accounting;
 
 use App\Models\Invoice;
+use App\Services\Invoices\InvoicePdfService;
 use RuntimeException;
 use ZipArchive;
 
 final class AccountingExportService
 {
-    public function __construct(private readonly AccountingService $accounting = new AccountingService()) {}
+    public function __construct(private readonly AccountingService $accounting = new AccountingService(), private readonly InvoicePdfService $pdf = new InvoicePdfService()) {}
 
     public function csv(array $rows): string
     {
@@ -38,7 +39,7 @@ final class AccountingExportService
         $path=$dir.'/accounting-'.$label.'-'.date('Ymd-His').'-'.bin2hex(random_bytes(4)).'.zip';$tmp=tempnam($dir,'accounting-package-');if($tmp===false)throw new RuntimeException('Временният файл за счетоводния пакет не може да бъде създаден.');$zip=new ZipArchive();if($zip->open($tmp,ZipArchive::CREATE|ZipArchive::OVERWRITE)!==true){@unlink($tmp);throw new RuntimeException('Счетоводният пакет не може да бъде създаден.');}
         foreach(['sales','invoices','credit_notes','payments','refunds','deliveries'] as $type){$report=$this->accounting->report($type,['date_from'=>$from,'date_to'=>$to]);if(!$zip->addFromString('reports/'.$type.'.csv',$this->csv($report['rows']))){$zip->close();@unlink($tmp);throw new RuntimeException('Справката не може да бъде добавена в архива.');}}
         $dashboard=$this->accounting->dashboard(['date_from'=>$from,'date_to'=>$to]);$summary=[];foreach($dashboard['summary'] as $key=>$value)$summary[]=['metric'=>$key,'value'=>$value];if(!$zip->addFromString('summary.csv',$this->csv($summary))){$zip->close();@unlink($tmp);throw new RuntimeException('Обобщението не може да бъде добавено в архива.');}
-        $documents=Invoice::query()->whereIn('status',['issued','credited'])->whereBetween('issue_date',[$from,$to])->get();foreach($documents as $doc){$pdf=$doc->pdf_path?$root.'/'.ltrim($doc->pdf_path,'/'):'';if($pdf!==''&&is_file($pdf)&&!$zip->addFile($pdf,($doc->type==='credit_note'?'credit-notes/':'invoices/').basename($pdf))){$zip->close();@unlink($tmp);throw new RuntimeException('Документът не може да бъде добавен в архива.');}}
+        $documents=Invoice::query()->whereIn('status',['issued','credited'])->whereBetween('issue_date',[$from,$to])->get();foreach($documents as $doc){$pdf=$this->ensurePdf($doc,$root);if(!$zip->addFile($pdf,($doc->type==='credit_note'?'credit-notes/':'invoices/').basename($pdf))){$zip->close();@unlink($tmp);throw new RuntimeException('Документът не може да бъде добавен в архива.');}}
         $this->finalizeArchive($zip,$tmp,$path,'Счетоводният пакет');return ltrim(str_replace($root,'',$path),'/');
     }
 
@@ -46,7 +47,7 @@ final class AccountingExportService
     {
         $root=dirname(__DIR__,4);$dir=$root.'/storage/accounting/packages';if(!is_dir($dir)&&!mkdir($dir,0775,true)&&!is_dir($dir))throw new RuntimeException('Папката за счетоводни пакети не може да бъде създадена.');
         $path=$dir.'/invoices-'.$label.'-'.date('Ymd-His').'-'.bin2hex(random_bytes(4)).'.zip';$tmp=tempnam($dir,'invoices-pdf-');if($tmp===false)throw new RuntimeException('Временният файл за фактурите не може да бъде създаден.');$zip=new ZipArchive();if($zip->open($tmp,ZipArchive::CREATE|ZipArchive::OVERWRITE)!==true){@unlink($tmp);throw new RuntimeException('Архивът с фактури не може да бъде създаден.');}
-        $documents=Invoice::query()->where('type','invoice')->whereNotNull('pdf_path')->whereBetween('issue_date',[$from,$to])->get();foreach($documents as $document){$pdf=$root.'/'.ltrim((string)$document->pdf_path,'/');$entry='invoices/invoice-'.(string)$document->number.'.pdf';if(is_file($pdf)&&!$zip->addFile($pdf,$entry)){$zip->close();@unlink($tmp);throw new RuntimeException('Фактура не може да бъде добавена в архива.');}}
+        $documents=Invoice::query()->where('type','invoice')->whereBetween('issue_date',[$from,$to])->get();foreach($documents as $document){$pdf=$this->ensurePdf($document,$root);$entry='invoices/invoice-'.(string)$document->number.'.pdf';if(!$zip->addFile($pdf,$entry)){$zip->close();@unlink($tmp);throw new RuntimeException('Фактура не може да бъде добавена в архива.');}}
         $this->finalizeArchive($zip,$tmp,$path,'Архивът с фактури');return ltrim(str_replace($root,'',$path),'/');
     }
 
@@ -55,6 +56,15 @@ final class AccountingExportService
         if(!$zip->close()){@unlink($tmp);throw new RuntimeException($label.' не може да бъде финализиран.');}
         $check=new ZipArchive();if($check->open($tmp)!==true){@unlink($tmp);throw new RuntimeException($label.' е невалиден.');}$check->close();
         if(!rename($tmp,$path)){@unlink($tmp);throw new RuntimeException($label.' не може да бъде записан.');}
+    }
+
+    private function ensurePdf(Invoice $document,string $root): string
+    {
+        $relative=(string)($document->pdf_path??'');
+        $path=$relative===''?'':$root.'/'.ltrim($relative,'/');
+        if($path===''||!is_file($path)){$document->pdf_path=$this->pdf->generate($document);$document->save();$path=$root.'/'.ltrim((string)$document->pdf_path,'/');}
+        if(!is_file($path))throw new RuntimeException('PDF файлът за документ №'.(string)$document->number.' не може да бъде намерен.');
+        return $path;
     }
 
     private function headers(array $rows): array { return $rows===[]?['info']:array_keys($rows[0]); }
