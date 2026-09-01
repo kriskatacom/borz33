@@ -29,6 +29,7 @@ import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { TextEditor } from '@/components/ui/TextEditor';
 import { toast, toastError } from '@/lib/toast';
 import { ProductImagesEditor } from '@/features/products/ProductImagesSection';
 import { flattenCategoryTree } from '@/features/categories/categoryTree';
@@ -247,8 +248,8 @@ function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
         <Field id="weight_grams" label="Тегло (грама)" type="number" step="1" min="1" help="Нетно тегло на един продукт в грамове." value={weightGrams} onChange={(event) => setWeightGrams(event.target.value)} error={errors.weight_grams} />
         <SwitchField id="is_active" label="Активен" help="Неактивен продукт е скрит от каталога." checked={isActive} onCheckedChange={setIsActive} />
       </div>
-      <Field id="short_description" label="Кратко описание" help="Едно изречение за списъка и картите." value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} error={errors.short_description} />
-      <Field id="description" label="Описание" multiline rows={6} help="Пълният текст на продуктовата страница." value={description} onChange={(event) => setDescription(event.target.value)} error={errors.description} />
+      <TextEditor id="short_description" label="Кратко описание" help="Кратък форматиран текст за списъка и картите." value={shortDescription} onChange={setShortDescription} error={errors.short_description} />
+      <TextEditor id="description" label="Описание" help="Пълният форматиран текст на продуктовата страница." value={description} onChange={setDescription} error={errors.description} />
       <SectionActions busy={busy} />
     </form>
   );
