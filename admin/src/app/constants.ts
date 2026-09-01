@@ -9,6 +9,8 @@ export const routes = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   home: '/',
+  notifications: '/notifications',
+  notificationsShow: '/notifications/:id',
   orders: '/orders',
   ordersShow: '/orders/:id',
   invoices: '/invoices',

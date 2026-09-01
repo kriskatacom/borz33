@@ -15,6 +15,7 @@ use App\Models\ProductVariant;
 use App\Models\ProductVariantValue;
 use App\Models\SiteSetting;
 use App\Resources\ProductResource;
+use App\Services\Notifications\AdminNotificationService;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
@@ -22,7 +23,8 @@ use Illuminate\Support\Str;
 class ProductAdminService
 {
     public function __construct(
-        private readonly ProductImageService $images = new ProductImageService()
+        private readonly ProductImageService $images = new ProductImageService(),
+        private readonly AdminNotificationService $notifications = new AdminNotificationService()
     ) {
     }
 
@@ -465,6 +467,7 @@ class ProductAdminService
             $sku = trim((string) $row['sku']);
             $this->assertVariantSkuAvailable($sku, isset($row['id']) ? (int) $row['id'] : null);
             $variant = $this->ownedVariant($product, $row['id'] ?? null);
+            $previousStock = $variant->exists ? (int) $variant->stock : (int) $row['stock'];
             $variant->forceFill([
                 'product_id' => $product->id,
                 'sku' => $sku,
@@ -476,6 +479,7 @@ class ProductAdminService
                 'is_active' => (bool) $row['is_active'],
                 'sort_order' => (int) ($row['sort_order'] ?? $index),
             ])->save();
+            $this->notifications->lowStock($product, $variant, $previousStock);
 
             if ($defaultId === null && $this->isFlag($row['is_default'] ?? false)) {
                 $defaultId = (int) $variant->id;

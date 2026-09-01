@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use PhinxMigrationAbstractMigration;
+use Phinx\Migration\AbstractMigration;
 
 final class AddAdminBackgroundOverlayToSiteSettings extends AbstractMigration
 {

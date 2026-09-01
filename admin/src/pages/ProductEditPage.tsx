@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronsDownUp, ChevronsUpDown, CopyPlus, Eye, ImagePlus, Images, Layers, List, Palette, Plus, RotateCcw, Save, Share2, Shirt, Sparkles, Trash2, Type, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { listCategoryTree, type CategoryTreeNode } from '@/api/categories';
@@ -681,7 +681,7 @@ function mapOptions(options: ProductOption[]): OptionDraft[] {
   }));
 }
 
-function VariantsForm({ product, token, onSaved }: SectionFormProps) {
+function VariantsForm({ product, token, onSaved, focusVariantId }: SectionFormProps & { focusVariantId?: number }) {
   const [rows, setRows] = useState<VariantDraft[]>(() => mapVariants(product.variants));
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -696,6 +696,11 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
   const [bulkImageOptionValue, setBulkImageOptionValue] = useState('');
   const [bulkImageBusy, setBulkImageBusy] = useState(false);
   const [bulkImageProgress, setBulkImageProgress] = useState<number | null>(null);
+  useEffect(() => {
+    if (!focusVariantId || !rows.some((row) => row.id === focusVariantId)) return;
+    const frame = window.requestAnimationFrame(() => document.getElementById(`product-variant-${focusVariantId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusVariantId, rows]);
   const updateVariantOpenState = useCallback((key: string, open: boolean) => {
     setVariantOpenState((current) => (current[key] === open ? current : { ...current, [key]: open }));
   }, []);
@@ -883,11 +888,11 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
       </div>
       {rows.length === 0 ? <p className="m-0 text-muted-foreground">Няма варианти. Добавете комбинация от опциите.</p> : null}
       {rows.map((row, index) => (
+        <div id={row.id === focusVariantId ? `product-variant-${row.id}` : undefined} key={row.key} className={row.id === focusVariantId ? 'product-variant-target' : undefined}>
         <CollapsibleSection
-          key={row.key}
           heading="h3"
           persistKey={row.id ? `variant:${row.id}` : undefined}
-          forceOpen={allVariantsOpen === true}
+          forceOpen={allVariantsOpen === true || row.id === focusVariantId}
           forceClosed={allVariantsOpen === false}
           onOpenChange={(open) => updateVariantOpenState(row.key, open)}
           title={<VariantCardTitle row={row} options={product.options} />}
@@ -964,6 +969,7 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
             />
           </div>
         </CollapsibleSection>
+        </div>
       ))}
       <Button type="button" variant="outline" onClick={() => addVariant()}>
         <Plus />
@@ -1345,9 +1351,11 @@ function ProductTemplateSection({ token, product, selection, onSelectionChange, 
 export function ProductEditPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { id } = useParams();
   const isNew = id === undefined;
   const productId = Number(id);
+  const requestedVariantId = Number(searchParams.get('variant'));
   const [product, setProduct] = useState<AdminProduct | null>(null);
   const [busy, setBusy] = useState(!isNew);
   const [message, setMessage] = useState<string | null>(null);
@@ -1489,6 +1497,7 @@ export function ProductEditPage() {
   }, [isNew, productId, token]);
 
   const canEdit = isNew || (product !== null && !product.deleted_at);
+  const focusVariantId = product?.variants.some((variant) => variant.id === requestedVariantId) ? requestedVariantId : undefined;
 
   return (
     <div className="page min-w-0">
@@ -1591,7 +1600,7 @@ export function ProductEditPage() {
             <OptionsForm key={`options-${product.id}-${attributeSectionsRevision}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>
           <SectionShell title="Варианти" icon={Layers} help="Комбинации за покупка. Всяка може да има своя цена, наличност и снимка.">
-            <VariantsForm key={`variants-${product.id}-${attributeSectionsRevision}`} product={product} token={token} onSaved={setProduct} />
+            <VariantsForm key={`variants-${product.id}-${attributeSectionsRevision}`} product={product} token={token} onSaved={setProduct} focusVariantId={focusVariantId} />
           </SectionShell>
           <SectionShell title="Персонализация" icon={Type} help="Текст, който клиентът въвежда преди добавяне в количката, например име върху тениска.">
             <PersonalizationForm key={`personalization-${product.id}`} product={product} token={token} onSaved={setProduct} />

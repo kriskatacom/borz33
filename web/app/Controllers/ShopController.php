@@ -14,6 +14,7 @@ use App\Services\Orders\OrderNotificationService;
 use App\Services\Invoices\InvoiceService;
 use App\Services\Invoices\InvoiceNotificationService;
 use App\Services\Users\BillingAddressService;
+use App\Services\Notifications\AdminNotificationService;
 use App\Services\Shipping\EcontShippingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Capsule\Manager as Capsule;
@@ -32,7 +33,8 @@ class ShopController extends Controller
         private ?EcontShippingService $econtShipping = null,
         private readonly InvoiceService $invoices = new InvoiceService(),
         private readonly InvoiceNotificationService $invoiceNotifications = new InvoiceNotificationService(),
-        private readonly BillingAddressService $addresses = new BillingAddressService()
+        private readonly BillingAddressService $addresses = new BillingAddressService(),
+        private readonly AdminNotificationService $adminNotifications = new AdminNotificationService()
     ) {
     }
 
@@ -637,6 +639,10 @@ class ShopController extends Controller
 
                     if ($updated !== 1) {
                         throw new \RuntimeException('Наличността на един или повече избрани варианти вече не е достатъчна. Обновете количката и опитайте отново.');
+                    }
+                    $purchasedVariant = ProductVariant::query()->with(['product.frontImage', 'image'])->find((int) $line['variant_id']);
+                    if ($purchasedVariant !== null && $purchasedVariant->product !== null) {
+                        $this->adminNotifications->stockDepletedAfterPurchase($purchasedVariant->product, $purchasedVariant, (int) $line['qty'], (string) $order->number);
                     }
                 }
 

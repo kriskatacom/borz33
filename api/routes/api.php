@@ -7,6 +7,7 @@ use App\Controllers\Admin\AccountingController;
 use App\Controllers\Admin\DashboardController;
 use App\Controllers\Admin\CategoriesController;
 use App\Controllers\Admin\MediaController;
+use App\Controllers\Admin\NotificationsController;
 use App\Controllers\Admin\OrdersController;
 use App\Controllers\Admin\InvoicesController;
 use App\Controllers\Admin\MessagesController;
@@ -51,6 +52,15 @@ $router->post('/auth/logout', [SessionController::class, 'destroy'], [Authentica
 
 $admin = [Authenticate::class, RequireAdmin::class];
 $router->get('/admin/dashboard', [DashboardController::class, 'show'], $admin);
+$router->get('/admin/notifications', [NotificationsController::class, 'index'], $admin);
+$router->get('/admin/notifications/{id}', [NotificationsController::class, 'show'], $admin);
+$router->post('/admin/notifications/{id}/read', [NotificationsController::class, 'markRead'], $admin);
+$router->patch('/admin/notifications/{id}', [NotificationsController::class, 'update'], $admin);
+$router->post('/admin/notifications/read-all', [NotificationsController::class, 'readAll'], $admin);
+$router->post('/admin/notifications/{id}/archive', [NotificationsController::class, 'archive'], $admin);
+$router->delete('/admin/notifications/{id}', [NotificationsController::class, 'delete'], $admin);
+$router->post('/admin/notifications/archive-all', [NotificationsController::class, 'archiveAll'], $admin);
+$router->delete('/admin/notifications', [NotificationsController::class, 'deleteAll'], $admin);
 $router->post('/admin/ai/transcribe', [VoiceTranscriptionController::class, 'store'], $admin);
 $router->get('/admin/settings', [SettingsController::class, 'show'], $admin);
 $router->get('/admin/settings/admin-backgrounds', [SettingsController::class, 'adminBackgrounds'], $admin);

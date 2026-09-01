@@ -37,6 +37,8 @@ import { ReportsPage } from '@/pages/ReportsPage';
 import { AccountingPage } from '@/pages/AccountingPage';
 import { AccountingGuidePage } from '@/pages/AccountingGuidePage';
 import { UserFormPage } from '@/pages/UserFormPage';
+import { NotificationsPage } from '@/pages/NotificationsPage';
+import { NotificationDetailsPage } from '@/pages/NotificationDetailsPage';
 import { UsersPage } from '@/pages/UsersPage';
 
 export function App() {
@@ -61,6 +63,8 @@ export function App() {
             </Route>
             <Route element={<RequireAuth />}>
               <Route path={routes.home} element={<DashboardPage />} />
+              <Route path={routes.notifications} element={<NotificationsPage />} />
+              <Route path={routes.notificationsShow} element={<NotificationDetailsPage />} />
               <Route path={routes.usersNew} element={<UserFormPage />} />
               <Route path={routes.usersEdit} element={<UserFormPage />} />
               <Route path={routes.users} element={<UsersPage />} />

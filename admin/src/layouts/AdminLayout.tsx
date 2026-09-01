@@ -9,6 +9,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { logout } from '@/features/auth/authThunks';
 import { toast } from '@/lib/toast';
 import { listMessages } from '@/api/messages';
+import { listNotifications } from '@/api/notifications';
 import { getSiteSettings } from '@/api/settings';
 import { adminBackgroundCss } from '@/app/adminBackgrounds';
 
@@ -21,6 +22,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const user = useAppSelector((state) => state.auth.user);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem('admin-sidebar-collapsed') === '1');
   const menuId = useId();
   const location = useLocation();
@@ -34,6 +36,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     const onBackgroundChanged = (event: Event) => { const detail = (event as CustomEvent<{ background?: string | null; overlay?: number }>).detail; applyBackground(detail?.background ?? null, detail?.overlay ?? 48); };
     window.addEventListener('admin:background-changed', onBackgroundChanged);
     return () => window.removeEventListener('admin:background-changed', onBackgroundChanged);
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) { setUnreadNotifications(0); return; }
+    let cancelled = false;
+    const refresh = () => { void listNotifications(token).then((response) => { if (!cancelled) setUnreadNotifications(response.data.unread_count); }).catch(() => undefined); };
+    refresh();
+    const interval = window.setInterval(refresh, 60_000);
+    window.addEventListener('admin:notifications-refresh', refresh);
+    return () => { cancelled = true; window.clearInterval(interval); window.removeEventListener('admin:notifications-refresh', refresh); };
   }, [token]);
 
   function toggleSidebar() {
@@ -131,6 +143,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
                   <span>{item.label}</span>
                   {item.to === routes.messages && unreadMessages > 0 ? <span className="sidebar-unread-badge" aria-label={`${unreadMessages} непрочетени съобщения`}>{unreadMessages > 99 ? '99+' : unreadMessages}</span> : null}
+                  {item.to === routes.notifications && unreadNotifications > 0 ? <span className="sidebar-unread-badge" aria-label={`${unreadNotifications} непрочетени известия`}>{unreadNotifications > 99 ? '99+' : unreadNotifications}</span> : null}
                 </NavLink>
               ))}
             </section>

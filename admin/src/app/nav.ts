@@ -14,6 +14,7 @@ export type NavSection = {
 
 export const navItems: NavItem[] = [
   { to: routes.home, label: 'Табло', hint: 'Преглед и бързи връзки', mobile: true },
+  { to: routes.notifications, label: 'Известия', hint: 'Важни събития в магазина', mobile: true },
   { to: routes.orders, label: 'Поръчки', hint: 'Нови заявки, статуси и плащания', mobile: true },
   { to: routes.invoices, label: 'Фактури', hint: 'Издадени фактури и експорт' },
   { to: routes.creditNotes, label: 'Кредитни известия', hint: 'Кредитни известия и експорт' },
@@ -32,7 +33,7 @@ export const navItems: NavItem[] = [
 ];
 
 export const navSections: NavSection[] = [
-  { label: 'Начало', items: navItems.filter((item) => item.to === routes.home) },
+  { label: 'Начало', items: navItems.filter((item) => item.to === routes.home || item.to === routes.notifications) },
   { label: 'Продажби', items: navItems.filter((item) => new Set<string>([routes.orders, routes.invoices, routes.creditNotes]).has(item.to)) },
   { label: 'Каталог', items: navItems.filter((item) => new Set<string>([routes.products, routes.categories, routes.media]).has(item.to)) },
   { label: 'Съдържание', items: navItems.filter((item) => new Set<string>([routes.pages, routes.banners, routes.campaigns]).has(item.to)) },
@@ -51,6 +52,7 @@ export function navItemByPath(path: string): NavItem | undefined {
   if (path.startsWith(`${routes.invoices}/`) || path === routes.invoices) return navItems.find((item) => item.to === routes.invoices);
   if (path.startsWith(`${routes.creditNotes}/`) || path === routes.creditNotes) return navItems.find((item) => item.to === routes.creditNotes);
   if (path.startsWith(`${routes.accounting}/`) || path === routes.accounting) return navItems.find((item) => item.to === routes.accounting);
+  if (path.startsWith(`${routes.notifications}/`) || path === routes.notifications) return navItems.find((item) => item.to === routes.notifications);
 
   if (path.startsWith(`${routes.categories}/`) || path === routes.categories) {
     return navItems.find((item) => item.to === routes.categories);
