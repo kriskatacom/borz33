@@ -9,6 +9,7 @@ use App\Core\Request;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Services\Auth\EmailVerificationService;
+use App\Services\Auth\DeviceService;
 use App\Services\Auth\LoginService;
 use App\Services\Auth\RegisterService;
 use App\Services\Auth\TokenService;
@@ -32,6 +33,7 @@ class AuthController extends Controller
         private readonly EmailVerificationService $emailVerification = new EmailVerificationService(),
         private readonly VerifyEmailValidator $verifyEmailValidator = new VerifyEmailValidator(),
         private readonly ResendVerificationValidator $resendVerificationValidator = new ResendVerificationValidator(),
+        private readonly DeviceService $devices = new DeviceService(),
         private readonly TokenService $tokens = new TokenService()
     ) {
     }
@@ -139,7 +141,7 @@ class AuthController extends Controller
 
         try {
             $payload = $this->registerValidator->validate($this->registerInput());
-            $this->register->register($payload);
+            $user = $this->register->register($payload);
         } catch (ValidationException $exception) {
             $this->authPage([
                 'register' => $this->registerFields(),
@@ -155,29 +157,33 @@ class AuthController extends Controller
             ]);
         }
 
-        $this->authPage([
-            'showVerify' => true,
-            'register' => $this->registerFields(),
-            'registerMessage' => 'Регистрацията е успешна. Изпратихме 6-цифрен код на имейла Ви.',
-            'registerIsError' => false,
-        ]);
+        $device = $this->devices->findTrusted($user, StoreAuth::deviceUuid())
+            ?? $this->devices->trust($user, StoreAuth::deviceUuid(), StoreAuth::deviceName());
+        $user->recordLogin(Request::ip());
+        $issued = $this->tokens->issue($user, $device);
+
+        StoreAuth::persistToken($issued['token'], $issued['expires_at']);
+        $this->redirect('/account/profile');
     }
 
     public function verifyEmail(): never
     {
-        if (Auth::user() !== null) {
-            $this->redirect('/account');
-        }
+        $authenticatedUser = Auth::user();
 
         $this->assertCsrf();
 
         try {
             $payload = $this->verifyEmailValidator->validate([
-                'email' => Request::input('email'),
+                'email' => $authenticatedUser?->email ?? Request::input('email'),
                 'code' => Request::input('code'),
             ]);
             $this->emailVerification->verify($payload['email'], $payload['code']);
         } catch (ValidationException $exception) {
+            if ($authenticatedUser !== null) {
+                StoreAuth::setFlash($exception->getMessage(), true);
+                $this->redirect('/account/profile');
+            }
+
             $this->authPage([
                 'showVerify' => true,
                 'register' => $this->registerFields(),
@@ -186,12 +192,22 @@ class AuthController extends Controller
                 'registerIsError' => true,
             ]);
         } catch (AuthException $exception) {
+            if ($authenticatedUser !== null) {
+                StoreAuth::setFlash($exception->getMessage(), true);
+                $this->redirect('/account/profile');
+            }
+
             $this->authPage([
                 'showVerify' => true,
                 'register' => $this->registerFields(),
                 'registerMessage' => $exception->getMessage(),
                 'registerIsError' => true,
             ]);
+        }
+
+        if ($authenticatedUser !== null) {
+            StoreAuth::setFlash('Имейл адресът Ви е потвърден.');
+            $this->redirect('/account/profile');
         }
 
         $this->authPage([
@@ -204,18 +220,21 @@ class AuthController extends Controller
 
     public function resendVerification(): never
     {
-        if (Auth::user() !== null) {
-            $this->redirect('/account');
-        }
+        $authenticatedUser = Auth::user();
 
         $this->assertCsrf();
 
         try {
             $payload = $this->resendVerificationValidator->validate([
-                'email' => Request::input('email'),
+                'email' => $authenticatedUser?->email ?? Request::input('email'),
             ]);
             $this->emailVerification->resend($payload['email']);
         } catch (ValidationException $exception) {
+            if ($authenticatedUser !== null) {
+                StoreAuth::setFlash($exception->getMessage(), true);
+                $this->redirect('/account/profile');
+            }
+
             $this->authPage([
                 'showVerify' => true,
                 'register' => $this->registerFields(),
@@ -223,6 +242,11 @@ class AuthController extends Controller
                 'registerMessage' => $exception->getMessage(),
                 'registerIsError' => true,
             ]);
+        }
+
+        if ($authenticatedUser !== null) {
+            StoreAuth::setFlash('Изпратихме нов код за потвърждение.');
+            $this->redirect('/account/profile');
         }
 
         $this->authPage([

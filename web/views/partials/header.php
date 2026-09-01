@@ -188,11 +188,6 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
 
     <nav class="overflow-visible border-t border-line" aria-label="Категории">
         <div class="mx-auto flex w-[min(1120px,calc(100%-2rem))] flex-wrap items-center justify-center gap-x-1 gap-y-1 py-1.5">
-            <a
-                href="/catalog"
-                class="px-3 py-2 text-sm font-semibold no-underline <?= $catalogActive ? 'underline underline-offset-4' : '' ?>"
-                <?= $catalogActive ? 'aria-current="page"' : '' ?>
-            >Каталог</a>
             <?php foreach ($navCategories as $category): ?>
                 <?php
                 $href = '/catalog/' . $category->slug;
@@ -244,6 +239,11 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
                     </div>
                 <?php endif; ?>
             <?php endforeach; ?>
+            <a
+                href="/catalog"
+                class="px-3 py-2 text-sm font-semibold no-underline <?= $catalogActive ? 'underline underline-offset-4' : '' ?>"
+                <?= $catalogActive ? 'aria-current="page"' : '' ?>
+            >Каталог</a>
         </div>
     </nav>
 </header>

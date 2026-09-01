@@ -8,7 +8,29 @@ declare(strict_types=1);
 /** @var string|null $avatarUrl */
 /** @var array<string, mixed> $avatarConfig */
 /** @var \App\Models\User $user */
+/** @var string $csrf */
 ?>
+<?php if (!$user->hasVerifiedEmail()): ?>
+    <div class="mb-5 border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950" role="status">
+        <p class="m-0 font-semibold">Необходимо е да потвърдите имейл адреса си.</p>
+        <p class="mb-3 mt-1 text-sm">Въведете 6-цифрения код, който изпратихме на <?= htmlspecialchars((string) $user->email, ENT_QUOTES, 'UTF-8') ?>.</p>
+        <div class="flex flex-wrap items-end gap-2">
+            <form class="flex flex-wrap items-end gap-2" method="post" action="/register/verify">
+                <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+                <label class="grid gap-1 text-sm font-semibold" for="profile-email-code">
+                    Код за потвърждение
+                    <input class="store-input h-[42px] w-44 border border-amber-300 bg-white px-3 text-ink" id="profile-email-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}" required>
+                </label>
+                <button class="store-btn h-[42px] px-4" type="submit">Потвърди</button>
+            </form>
+            <form method="post" action="/register/resend">
+                <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+                <button class="h-[42px] border border-amber-300 bg-transparent px-4 text-sm font-semibold" type="submit">Изпрати нов код</button>
+            </form>
+        </div>
+    </div>
+<?php endif; ?>
+
 <p class="mt-0 mb-5 text-muted">Вашата публична профилна информация и профилна снимка.</p>
 
 <div class="store-profile-head store-profile-head--tab">
