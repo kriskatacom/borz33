@@ -595,6 +595,16 @@ class ShopController extends Controller
                 'invoice_mol' => $wantsInvoice ? $form['invoice_mol'] : null,
             ]);
 
+            // The checkout already reads the saved profile phone on the next visit.
+            // Save it only when the customer profile has no phone yet; a later order
+            // must never silently replace a number deliberately stored by the user.
+            if ($user !== null && trim((string) ($user->phone ?? '')) === '') {
+                \App\Models\User::query()
+                    ->whereKey($user->id)
+                    ->where(static fn ($query) => $query->whereNull('phone')->orWhere('phone', ''))
+                    ->update(['phone' => $form['phone'], 'updated_at' => date('Y-m-d H:i:s')]);
+            }
+
             foreach ($lines as $line) {
                 $order->items()->create([
                     'product_id' => $line['product_id'],
@@ -613,10 +623,10 @@ class ShopController extends Controller
         });
 
         $order->load('items');
-        if ($wantsInvoice) {
-            $invoice = $this->invoices->createForOrder($order, true);
-            $this->invoiceNotifications->send($invoice);
-        }
+        // Every order has an immutable invoice PDF in the archive. The checkbox controls
+        // delivery to the customer, not whether the accounting document is created.
+        $invoice = $this->invoices->createForOrder($order, true);
+        if ($wantsInvoice) $this->invoiceNotifications->send($invoice);
         $mailStatus = $this->orderNotifications->send($order);
         StoreCart::clear();
         $_SESSION['store_last_order_id'] = (int) $order->id;

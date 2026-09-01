@@ -77,6 +77,7 @@ $router->get('/admin/invoices', [InvoicesController::class, 'index'], $admin);
 $router->get('/admin/invoices/export', [InvoicesController::class, 'export'], $admin);
 $router->get('/admin/invoices/{id}', [InvoicesController::class, 'show'], $admin);
 $router->get('/admin/invoices/{id}/download', [InvoicesController::class, 'download'], $admin);
+$router->get('/admin/invoices/{id}/preview', [InvoicesController::class, 'preview'], $admin);
 $router->post('/admin/invoices/{id}/issue', [InvoicesController::class, 'issue'], $admin);
 $router->post('/admin/invoices/{id}/credit-notes', [InvoicesController::class, 'credit'], $admin);
 $router->post('/admin/invoices/{id}/cancel', [InvoicesController::class, 'cancel'], $admin);

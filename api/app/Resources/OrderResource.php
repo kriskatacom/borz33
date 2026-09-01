@@ -57,7 +57,7 @@ class OrderResource
             'invoice_vat_number' => $order->invoice_vat_number,
             'invoice_address' => $order->invoice_address,
             'invoice_mol' => $order->invoice_mol,
-            'invoices' => $order->relationLoaded('invoices') ? $order->invoices->map(static fn ($invoice): array => ['id' => $invoice->id, 'number' => $invoice->number, 'type' => $invoice->type, 'status' => $invoice->status])->values()->all() : [],
+            'invoices' => $order->relationLoaded('invoices') ? $order->invoices->map(static fn ($invoice): array => ['id' => $invoice->id, 'number' => $invoice->number, 'type' => $invoice->type, 'status' => $invoice->status, 'has_pdf' => $invoice->pdf_path !== null])->values()->all() : [],
             'items' => $order->items->map(static fn (OrderItem $item): array => [
                 'id' => $item->id,
                 'product_id' => $item->product_id,

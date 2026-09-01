@@ -167,11 +167,11 @@ if (!$freeShippingEligible) $shippingPayer = 'receiver';
             <section class="store-checkout-card" aria-labelledby="checkout-invoice-title" data-invoice-section>
                 <div class="store-checkout-card-title">
                     <span aria-hidden="true">3</span>
-                    <div><h2 id="checkout-invoice-title">Фактура</h2><p>Фирмените данни се запазват към издадения документ.</p></div>
+                    <div><h2 id="checkout-invoice-title">Фактура</h2><p>Фактура се създава към всяка поръчка. Попълнете фирмени данни само ако желаете да я получите по имейл.</p></div>
                 </div>
                 <label class="store-checkout-invoice-toggle">
                     <input type="checkbox" name="invoice_requested" value="1" <?= $wantsInvoice ? 'checked' : '' ?> data-invoice-toggle>
-                    <span><strong>Желая фактура</strong><small>PDF фактурата ще бъде генерирана автоматично към поръчката.</small></span>
+                    <span><strong>Изпрати фактурата по имейл</strong><small>Ще използваме фирмените данни по-долу и ще приложим PDF файла към писмото.</small></span>
                 </label>
                 <div class="store-checkout-fields store-checkout-invoice-fields" data-invoice-fields<?= $wantsInvoice ? '' : ' hidden' ?>>
                     <label class="<?= $error('invoice_company') ? 'has-error' : '' ?>"><span>Фирма <em>*</em></span><input type="text" name="invoice_company" autocomplete="organization" maxlength="191" value="<?= $value('invoice_company') ?>"><?php if ($error('invoice_company')): ?><small><?= $escape($error('invoice_company')) ?></small><?php endif; ?></label>

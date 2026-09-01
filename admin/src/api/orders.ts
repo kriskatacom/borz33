@@ -58,7 +58,7 @@ export type AdminOrder = OrderListItem & {
   invoice_vat_number: string | null;
   invoice_address: string | null;
   invoice_mol: string | null;
-  invoices: Array<{id:number;number:string|null;type:string;status:string}>;
+  invoices: Array<{id:number;number:string|null;type:string;status:string;has_pdf:boolean}>;
 };
 
 export type OrderFilters = {

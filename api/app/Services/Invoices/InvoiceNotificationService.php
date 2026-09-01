@@ -15,6 +15,7 @@ final class InvoiceNotificationService
     public function send(Invoice $invoice): bool
     {
         $invoice->loadMissing('order');
+        if (!$this->isRequested($invoice)) return false;
         $email = trim((string) ($invoice->buyer_snapshot['email'] ?? $invoice->order?->email ?? ''));
         $root = dirname(__DIR__, 4);
         $path = $invoice->pdf_path ? $root . '/' . ltrim($invoice->pdf_path, '/') : '';
@@ -38,5 +39,11 @@ final class InvoiceNotificationService
             error_log(sprintf('Invoice email failed [invoice=%s]: %s', $invoice->number, $exception->getMessage()));
             return false;
         }
+    }
+
+    public function isRequested(Invoice $invoice): bool
+    {
+        $invoice->loadMissing('order');
+        return (bool) ($invoice->order?->invoice_requested ?? false);
     }
 }

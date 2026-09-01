@@ -168,7 +168,19 @@ final class InvoiceService
     private function issueInsideTransaction(Invoice $invoice): Invoice
     {
         $sequence = Capsule::table('invoice_sequences')->where('name', 'fiscal_documents')->lockForUpdate()->first();
-        if ($sequence === null) throw new \RuntimeException('Липсва последователност за фактурите.');
+        if ($sequence === null) {
+            // A database reset can clear data while preserving the migration journal.
+            // Recreate the counter from the largest existing document number so a
+            // recovered installation never reuses a number.
+            $lastNumber = (int) (Invoice::query()->whereNotNull('number')->max('number') ?? 0);
+            Capsule::table('invoice_sequences')->insertOrIgnore([
+                'name' => 'fiscal_documents',
+                'next_number' => max(1, $lastNumber + 1),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            $sequence = Capsule::table('invoice_sequences')->where('name', 'fiscal_documents')->lockForUpdate()->first();
+        }
+        if ($sequence === null) throw new \RuntimeException('Последователността за фактурите не можа да бъде възстановена.');
         $number = (int) $sequence->next_number; Capsule::table('invoice_sequences')->where('name', 'fiscal_documents')->update(['next_number' => $number + 1, 'updated_at' => date('Y-m-d H:i:s')]);
         $invoice->number = str_pad((string) $number, 10, '0', STR_PAD_LEFT); $invoice->status = 'issued'; $invoice->issue_date = date('Y-m-d'); $invoice->tax_event_date = date('Y-m-d'); $invoice->issued_at = new \DateTimeImmutable(); $invoice->save(); return $invoice->fresh(['order', 'parentInvoice', 'creditNotes']);
     }

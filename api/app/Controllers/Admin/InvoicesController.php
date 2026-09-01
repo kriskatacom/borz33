@@ -29,8 +29,9 @@ final class InvoicesController extends Controller
     public function issue(string $id): never
     {
         $invoice = $this->invoices->issue($this->invoices->find($this->id($id)));
-        $sent = $this->notifications->send($invoice);
-        $this->ok(['invoice' => InvoiceResource::toArray($invoice), 'email_sent' => $sent], $sent ? 'Фактурата е издадена и изпратена на клиента.' : 'Фактурата е издадена, но имейлът не можа да бъде изпратен.');
+        $requested = $this->notifications->isRequested($invoice);
+        $sent = $requested && $this->notifications->send($invoice);
+        $this->ok(['invoice' => InvoiceResource::toArray($invoice), 'email_sent' => $sent], $sent ? 'Фактурата е издадена и изпратена на клиента.' : ($requested ? 'Фактурата е издадена, но имейлът не можа да бъде изпратен.' : 'Фактурата е издадена. Клиентът не е поискал изпращане по имейл.'));
     }
 
     public function credit(string $id): never
@@ -39,8 +40,9 @@ final class InvoicesController extends Controller
         $items = is_array($input['items'] ?? null) ? $input['items'] : [];
         $invoice = $this->invoices->find($this->id($id));
         $credit = $this->invoices->creditItems($invoice, (string) ($input['reason'] ?? ''), $items, (bool) ($input['refund_shipping'] ?? false));
-        $sent = $this->notifications->send($credit);
-        $this->created(['invoice' => InvoiceResource::toArray($credit), 'email_sent' => $sent], $sent ? 'Кредитното известие е издадено и изпратено на клиента.' : 'Кредитното известие е издадено, но имейлът не можа да бъде изпратен.');
+        $requested = $this->notifications->isRequested($credit);
+        $sent = $requested && $this->notifications->send($credit);
+        $this->created(['invoice' => InvoiceResource::toArray($credit), 'email_sent' => $sent], $sent ? 'Кредитното известие е издадено и изпратено на клиента.' : ($requested ? 'Кредитното известие е издадено, но имейлът не можа да бъде изпратен.' : 'Кредитното известие е издадено. Клиентът не е поискал изпращане по имейл.'));
     }
 
     public function cancel(string $id): never
@@ -51,12 +53,21 @@ final class InvoicesController extends Controller
 
     public function download(string $id): never
     {
-        $invoice = $this->invoices->find($this->id($id));
+        $this->sendPdf($this->invoices->find($this->id($id)), true);
+    }
+
+    public function preview(string $id): never
+    {
+        $this->sendPdf($this->invoices->find($this->id($id)), false);
+    }
+
+    private function sendPdf(\App\Models\Invoice $invoice, bool $download): never
+    {
         $root = dirname(__DIR__, 4);
         $path = $invoice->pdf_path ? $root . '/' . ltrim($invoice->pdf_path, '/') : '';
         if ($path === '' || !is_file($path)) $this->error('PDF файлът не е намерен.', 404);
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="' . ($invoice->type === 'credit_note' ? 'credit-note-' : 'invoice-') . $invoice->number . '.pdf"');
+        header('Content-Disposition: ' . ($download ? 'attachment' : 'inline') . '; filename="' . ($invoice->type === 'credit_note' ? 'credit-note-' : 'invoice-') . $invoice->number . '.pdf"');
         header('Content-Length: ' . filesize($path));
         readfile($path);
         exit;
