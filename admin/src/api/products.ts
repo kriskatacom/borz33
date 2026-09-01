@@ -125,6 +125,17 @@ export type ProductListFilters = {
   per_page?: number;
 };
 
+export type ProductAiSuggestion = {
+  name: string | null;
+  sku: string | null;
+  short_description: string | null;
+  description: string | null;
+  category_id: number | null;
+  price: number | null;
+  seo_title: string | null;
+  seo_description: string | null;
+};
+
 export type ProductListData = {
   products: ProductListItem[];
   pagination: {
@@ -141,6 +152,16 @@ export function listProducts(token: string, filters: ProductListFilters) {
 
 export function createProduct(token: string, body: Record<string, unknown>) {
   return apiRequest<{ product: AdminProduct }>('/admin/products', { method: 'POST', token, body });
+}
+
+export function generateProductWithAi(token: string, files: File[]) {
+  const form = new FormData();
+  files.forEach((file) => form.append('images[]', file));
+
+  return apiUpload<{ suggestion: ProductAiSuggestion }>('/admin/products/ai-generate', {
+    token,
+    form,
+  });
 }
 
 export function getProduct(token: string, id: number) {

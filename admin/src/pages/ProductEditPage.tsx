@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Eye, ImagePlus, Images, Layers, List, Palette, Plus, RotateCcw, Save, Share2, Shirt, Trash2, Type, X } from 'lucide-react';
+import { ArrowLeft, Eye, ImagePlus, Images, Layers, List, Palette, Plus, RotateCcw, Save, Share2, Shirt, Sparkles, Trash2, Type, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { listCategoryTree, type CategoryTreeNode } from '@/api/categories';
 import {
   createProduct,
   deleteProduct,
+  generateProductWithAi,
   getProduct,
   restoreProduct,
   shareProductPersonalization,
@@ -13,6 +14,7 @@ import {
   uploadProductGalleryImage,
   updateProduct,
   type AdminProduct,
+  type ProductAiSuggestion,
   type ProductOption,
   type ProductParameter,
   type ProductPersonalizationField,
@@ -142,9 +144,10 @@ type GeneralFormProps = {
   token: string;
   onSaved: (product: AdminProduct) => void;
   onCreated?: (product: AdminProduct) => void | Promise<void>;
+  aiSuggestion?: ProductAiSuggestion | null;
 };
 
-function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
+function GeneralForm({ product, token, onSaved, onCreated, aiSuggestion }: GeneralFormProps) {
   const isNew = product === null;
   const [name, setName] = useState(product?.name ?? '');
   const [slug, setSlug] = useState(product?.slug ?? '');
@@ -182,6 +185,17 @@ function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
       cancelled = true;
     };
   }, [token]);
+
+  useEffect(() => {
+    if (!aiSuggestion) return;
+
+    if (aiSuggestion.name !== null) setName(aiSuggestion.name);
+    if (aiSuggestion.sku !== null) setSku(aiSuggestion.sku);
+    if (aiSuggestion.category_id !== null) setCategoryId(String(aiSuggestion.category_id));
+    if (aiSuggestion.price !== null) setPrice(String(aiSuggestion.price));
+    if (aiSuggestion.short_description !== null) setShortDescription(aiSuggestion.short_description);
+    if (aiSuggestion.description !== null) setDescription(aiSuggestion.description);
+  }, [aiSuggestion]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -255,7 +269,17 @@ function GeneralForm({ product, token, onSaved, onCreated }: GeneralFormProps) {
   );
 }
 
-function DraftImagesEditor({ images, setImages }: { images: DraftProductImages; setImages: Dispatch<SetStateAction<DraftProductImages>> }) {
+function DraftImagesEditor({
+  images,
+  setImages,
+  aiBusy,
+  onGenerate,
+}: {
+  images: DraftProductImages;
+  setImages: Dispatch<SetStateAction<DraftProductImages>>;
+  aiBusy: boolean;
+  onGenerate: () => void;
+}) {
   const frontInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
   const accept = 'image/jpeg,image/png,image/webp';
@@ -284,6 +308,8 @@ function DraftImagesEditor({ images, setImages }: { images: DraftProductImages; 
       : { ...current, gallery: current.gallery.filter((item) => item.key !== image.key) });
   }
 
+  const hasImages = images.front !== null || images.gallery.length > 0;
+
   return <div className="grid gap-4">
     <div className="grid gap-2">
       <LabelWithHelp label="Основно изображение" help="Ще се използва като предна снимка на продукта." />
@@ -301,6 +327,13 @@ function DraftImagesEditor({ images, setImages }: { images: DraftProductImages; 
       </div>)}</div> : null}
       <Button type="button" variant="outline" className="w-fit" onClick={() => galleryInput.current?.click()}><Images />Добави към галерията</Button>
       <input ref={galleryInput} className="sr-only" type="file" accept={accept} multiple onChange={(event) => { addGallery(event.target.files); event.target.value = ''; }} />
+    </div>
+    <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+      <Button type="button" disabled={!hasImages || aiBusy} onClick={onGenerate}>
+        <Sparkles />
+        {aiBusy ? 'AI анализира…' : 'Генерирай с AI'}
+      </Button>
+      <p className="m-0 text-sm text-muted-foreground">AI попълва само предложения във формата. Продуктът няма да бъде записан или публикуван автоматично.</p>
     </div>
   </div>;
 }
@@ -937,6 +970,8 @@ export function ProductEditPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [confirmStatus, setConfirmStatus] = useState<'delete' | 'restore' | null>(null);
   const [draftImages, setDraftImages] = useState<DraftProductImages>({ front: null, gallery: [] });
+  const [aiSuggestion, setAiSuggestion] = useState<ProductAiSuggestion | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
   const draftImagesRef = useRef(draftImages);
   draftImagesRef.current = draftImages;
   useGlobalLoading(busy);
@@ -957,6 +992,29 @@ export function ProductEditPage() {
       toastError(error, 'Продуктът е създаден, но част от изображенията не можаха да се качат. Можете да опитате отново в редакцията.');
     } finally {
       navigate(`/products/${created.id}/edit`, { replace: true });
+    }
+  }
+
+  async function generateWithAi() {
+    const files = [
+      ...(draftImages.front ? [draftImages.front.file] : []),
+      ...draftImages.gallery.map((image) => image.file),
+    ];
+
+    if (files.length === 0) {
+      toast.error('Добавете поне едно изображение на продукта.');
+      return;
+    }
+
+    setAiBusy(true);
+    try {
+      const response = await generateProductWithAi(token, files);
+      setAiSuggestion(response.data.suggestion);
+      toast.success(response.message || 'AI предложенията са попълнени. Прегледайте ги преди запис.');
+    } catch (error) {
+      toastError(error, 'AI предложенията не можаха да бъдат генерирани.');
+    } finally {
+      setAiBusy(false);
     }
   }
 
@@ -1083,7 +1141,12 @@ export function ProductEditPage() {
       {canEdit && isNew ? (
         <div className="flex min-w-0 max-w-full flex-col gap-3">
           <SectionShell title="Изображения" icon={Images} help="Изберете основна снимка и галерия преди създаването на продукта.">
-            <DraftImagesEditor images={draftImages} setImages={setDraftImages} />
+            <DraftImagesEditor
+              images={draftImages}
+              setImages={setDraftImages}
+              aiBusy={aiBusy}
+              onGenerate={() => void generateWithAi()}
+            />
           </SectionShell>
           <SectionShell title="Общи данни" icon={Shirt} help="Име, цена и статус. След запис се отваря пълната редакция.">
             <GeneralForm
@@ -1091,6 +1154,7 @@ export function ProductEditPage() {
               token={token}
               onSaved={setProduct}
               onCreated={finishCreation}
+              aiSuggestion={aiSuggestion}
             />
           </SectionShell>
         </div>
