@@ -6,6 +6,7 @@ namespace Store\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\ProductOption;
 use App\Models\Order;
 use App\Resources\ProductImageResource;
@@ -229,7 +230,7 @@ class ShopController extends Controller
 
         $flash = StoreAuth::pullFlash();
         $frontImage = $product->frontImage;
-        $metaDescription = trim((string) ($product->short_description ?: $product->description));
+        $metaDescription = trim((string) preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string) ($product->short_description ?: $product->description)), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
 
         $this->view('product', [
             'title' => $product->name . ' · Borz33',
@@ -543,6 +544,18 @@ class ShopController extends Controller
             $errors['accept_terms'] = 'Потвърдете условията, за да завършите поръчката.';
         }
 
+        foreach ($lines as $line) {
+            if ((int) $line['variant_id'] < 1) {
+                continue;
+            }
+
+            $variant = ProductVariant::query()->find((int) $line['variant_id']);
+            if ($variant === null || !$variant->isActive() || (int) $variant->stock < (int) $line['qty']) {
+                $errors['stock'] = 'Наличността на един или повече избрани варианти вече не е достатъчна. Обновете количката и опитайте отново.';
+                break;
+            }
+        }
+
         $shipping = null;
 
         if ($errors === []) {
@@ -615,6 +628,18 @@ class ShopController extends Controller
             }
 
             foreach ($lines as $line) {
+                if ((int) $line['variant_id'] > 0) {
+                    $updated = ProductVariant::query()
+                        ->whereKey((int) $line['variant_id'])
+                        ->where('is_active', true)
+                        ->where('stock', '>=', (int) $line['qty'])
+                        ->decrement('stock', (int) $line['qty']);
+
+                    if ($updated !== 1) {
+                        throw new \RuntimeException('Наличността на един или повече избрани варианти вече не е достатъчна. Обновете количката и опитайте отново.');
+                    }
+                }
+
                 $order->items()->create([
                     'product_id' => $line['product_id'],
                     'variant_id' => $line['variant_id'] > 0 ? $line['variant_id'] : null,

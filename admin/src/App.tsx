@@ -8,6 +8,7 @@ import { hydrateSession } from '@/features/auth/authThunks';
 import { ThemeProvider } from '@/components/theme-provider';
 import { LoadingProvider } from '@/components/loading-provider';
 import { Toaster } from '@/components/ui/Toaster';
+import { VoiceDictationProvider } from '@/components/voice-dictation-provider';
 import { BannerFormPage } from '@/pages/BannerFormPage';
 import { BannersPage } from '@/pages/BannersPage';
 import { CategoriesPage } from '@/pages/CategoriesPage';
@@ -50,6 +51,7 @@ export function App() {
     <ThemeProvider defaultTheme="system">
       <LoadingProvider>
         <Toaster />
+        <VoiceDictationProvider />
         <BrowserRouter>
           <Routes>
             <Route element={<GuestOnly />}>

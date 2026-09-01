@@ -18,6 +18,7 @@ use App\Controllers\Admin\ProductAttributeTemplatesController;
 use App\Controllers\Admin\ProductsController;
 use App\Controllers\Admin\SettingsController;
 use App\Controllers\Admin\UsersController;
+use App\Controllers\Admin\VoiceTranscriptionController;
 use App\Controllers\Auth\EmailVerificationController;
 use App\Controllers\Auth\LoginController;
 use App\Controllers\Auth\PasswordResetController;
@@ -50,6 +51,7 @@ $router->post('/auth/logout', [SessionController::class, 'destroy'], [Authentica
 
 $admin = [Authenticate::class, RequireAdmin::class];
 $router->get('/admin/dashboard', [DashboardController::class, 'show'], $admin);
+$router->post('/admin/ai/transcribe', [VoiceTranscriptionController::class, 'store'], $admin);
 $router->get('/admin/settings', [SettingsController::class, 'show'], $admin);
 $router->get('/admin/settings/admin-backgrounds', [SettingsController::class, 'adminBackgrounds'], $admin);
 $router->patch('/admin/settings', [SettingsController::class, 'update'], $admin);
