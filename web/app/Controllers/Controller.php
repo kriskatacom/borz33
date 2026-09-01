@@ -31,6 +31,17 @@ abstract class Controller
         exit;
     }
 
+    protected function loginPath(?string $returnTo = null): string
+    {
+        $returnTo = $returnTo ?? (string) ($_SERVER['REQUEST_URI'] ?? '/');
+
+        if ($returnTo === '' || !str_starts_with($returnTo, '/') || str_starts_with($returnTo, '//')) {
+            $returnTo = '/';
+        }
+
+        return '/login?return=' . rawurlencode($returnTo);
+    }
+
     protected function wantsJson(): bool
     {
         return str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
@@ -50,7 +61,7 @@ abstract class Controller
         $user = Auth::user();
 
         if ($user === null) {
-            $this->redirect('/login');
+            $this->redirect($this->loginPath());
         }
 
         return $user;

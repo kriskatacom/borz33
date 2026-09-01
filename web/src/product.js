@@ -321,3 +321,266 @@ export function registerStoreProduct(Alpine) {
     }));
   });
 }
+
+function reviewStars(rating) {
+  const value = Math.max(1, Math.min(5, Number(rating) || 0));
+
+  return `${'★'.repeat(value)}${'☆'.repeat(5 - value)}`;
+}
+
+function reviewDate(value) {
+  if (typeof value !== 'string' || value === '') {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));
+}
+
+function setReviewRating(form, rating) {
+  const value = Math.max(0, Math.min(5, Number(rating) || 0));
+  const input = form.querySelector('[data-review-rating-input]');
+  const label = form.querySelector('[data-review-rating-label]');
+
+  if (input) {
+    input.value = String(value);
+  }
+
+  form.querySelectorAll('[data-review-rating-value]').forEach((button) => {
+    const buttonRating = Number(button.dataset.reviewRatingValue);
+    const selected = buttonRating <= value;
+    button.classList.toggle('is-filled', selected);
+    button.setAttribute('aria-pressed', String(buttonRating === value));
+  });
+
+  if (label) {
+    label.hidden = value === 0;
+    label.textContent = value === 1 ? '1 звезда' : `${value} звезди`;
+  }
+}
+
+function reviewItem(review, ownReview, editUrl) {
+  const article = document.createElement('article');
+  article.className = `store-review${ownReview ? ' is-owned' : ''}`;
+  article.dataset.reviewItem = String(review.id);
+
+  const header = document.createElement('header');
+  const author = document.createElement('span');
+  const authorName = document.createElement('strong');
+  authorName.textContent = review.author;
+  const stars = document.createElement('span');
+  stars.className = 'store-review-stars';
+  stars.setAttribute('aria-label', `Оценка ${review.rating} от 5`);
+  const starContent = document.createElement('i');
+  starContent.setAttribute('aria-hidden', 'true');
+  starContent.textContent = reviewStars(review.rating);
+  stars.append(starContent);
+  author.append(authorName, stars);
+
+  const time = document.createElement('time');
+  time.dateTime = review.created_at_iso || '';
+  time.textContent = review.created_at || reviewDate(review.created_at_iso);
+  header.append(author, time);
+
+  const body = document.createElement('p');
+  body.textContent = review.body;
+  article.append(header, body);
+
+  if (ownReview) {
+    const actions = document.createElement('div');
+    actions.className = 'store-review-actions';
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'store-review-edit';
+    edit.dataset.reviewEdit = '';
+    edit.dataset.reviewId = String(review.id);
+    edit.dataset.reviewUrl = editUrl;
+    edit.dataset.reviewRating = String(review.rating);
+    edit.dataset.reviewBody = review.body;
+    edit.textContent = 'Редактирай отзива';
+    actions.append(edit);
+    article.append(actions);
+  }
+
+  return article;
+}
+
+function updateReviewSummary(root, summary) {
+  const count = Number(summary?.count) || 0;
+  const average = summary?.average === null || summary?.average === undefined ? null : Number(summary.average);
+
+  root.querySelectorAll('[data-review-count]').forEach((element) => {
+    element.textContent = String(count);
+  });
+
+  const averageElement = root.querySelector('[data-review-average]');
+  if (!averageElement) {
+    return;
+  }
+
+  const showAverage = Number.isFinite(average) && average !== null && count > 0;
+  averageElement.hidden = !showAverage;
+
+  if (!showAverage) {
+    return;
+  }
+
+  const displayed = average.toLocaleString('bg-BG', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  averageElement.setAttribute('aria-label', `Средна оценка ${displayed} от 5`);
+  const stars = averageElement.querySelector('i');
+  const value = averageElement.querySelector('strong');
+
+  if (stars) {
+    stars.textContent = reviewStars(Math.round(average));
+  }
+
+  if (value) {
+    value.textContent = displayed;
+  }
+}
+
+export function mountProductReviews() {
+  const root = document.querySelector('[data-product-reviews]');
+  const composer = root?.querySelector('[data-review-composer]');
+  const form = root?.querySelector('[data-review-form]');
+
+  if (!root || !composer || !form) {
+    return;
+  }
+
+  const error = form.querySelector('[data-review-error]');
+  const title = form.querySelector('[data-review-form-title]');
+  const help = form.querySelector('[data-review-form-help]');
+  const body = form.querySelector('[data-review-body]');
+  const submit = form.querySelector('[data-review-submit]');
+  const createUrl = form.dataset.reviewCreateUrl || root.dataset.reviewCreateUrl || form.action;
+  const showError = (message = '') => {
+    if (!error) {
+      return;
+    }
+
+    error.hidden = message === '';
+    error.textContent = message;
+  };
+  const closeComposer = () => {
+    if (composer instanceof HTMLDialogElement && composer.open) {
+      composer.close();
+    }
+    showError();
+  };
+  const openComposer = (mode, review = null) => {
+    const editing = mode === 'edit' && review !== null;
+    form.dataset.reviewMode = editing ? 'edit' : 'create';
+    form.action = editing ? review.url : createUrl;
+
+    if (title) {
+      title.textContent = editing ? 'Редактирайте отзива си' : 'Оставете отзив';
+    }
+    if (help) {
+      help.textContent = editing ? 'Променете текста или оценката и запазете промените.' : 'Споделете впечатленията си от продукта.';
+    }
+    if (submit) {
+      submit.textContent = editing ? 'Запази промените' : 'Публикувай отзив';
+    }
+    if (body) {
+      body.value = editing ? review.body : '';
+    }
+
+    setReviewRating(form, editing ? review.rating : 0);
+    showError();
+    if (composer instanceof HTMLDialogElement && !composer.open) {
+      composer.showModal();
+    }
+    window.requestAnimationFrame(() => body?.focus());
+  };
+
+  root.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const rating = target?.closest('[data-review-rating-value]');
+
+    if (rating instanceof HTMLButtonElement) {
+      setReviewRating(form, Number(rating.dataset.reviewRatingValue));
+      return;
+    }
+
+    if (target?.closest('[data-review-create]')) {
+      openComposer('create');
+      return;
+    }
+
+    const edit = target?.closest('[data-review-edit]');
+    if (edit instanceof HTMLButtonElement) {
+      openComposer('edit', {
+        url: edit.dataset.reviewUrl || '',
+        rating: Number(edit.dataset.reviewRating),
+        body: edit.dataset.reviewBody || '',
+      });
+      return;
+    }
+
+    if (target?.closest('[data-review-cancel]')) {
+      closeComposer();
+    }
+  });
+
+  composer.addEventListener('cancel', () => {
+    showError();
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const mode = form.dataset.reviewMode || 'create';
+    const formData = new FormData(form);
+    const rating = Number(formData.get('rating'));
+
+    if (rating < 1 || rating > 5) {
+      showError('Изберете оценка от 1 до 5 звезди.');
+      return;
+    }
+
+    if (!form.reportValidity()) {
+      return;
+    }
+
+    showError();
+    if (submit instanceof HTMLButtonElement) {
+      submit.disabled = true;
+    }
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData,
+        credentials: 'same-origin',
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || payload?.success !== true || !payload?.data?.review) {
+        throw new Error(payload?.message || 'Отзивът не може да бъде запазен. Опитайте отново.');
+      }
+
+      const review = payload.data.review;
+      const editUrl = `${createUrl.replace(/\/$/, '')}/${review.id}`;
+      const item = reviewItem(review, true, editUrl);
+      const current = root.querySelector(`[data-review-item="${review.id}"]`);
+      const list = root.querySelector('[data-reviews-list]');
+
+      if (current) {
+        current.replaceWith(item);
+      } else {
+        list?.prepend(item);
+      }
+
+      root.querySelector('[data-reviews-empty]')?.setAttribute('hidden', '');
+      updateReviewSummary(root, payload.data.summary);
+      closeComposer();
+      notify(payload.message || (mode === 'edit' ? 'Отзивът Ви е обновен.' : 'Отзивът е публикуван.'), 'success');
+    } catch (reason) {
+      showError(reason instanceof Error ? reason.message : 'Възникна грешка. Опитайте отново.');
+    } finally {
+      if (submit instanceof HTMLButtonElement) {
+        submit.disabled = false;
+      }
+    }
+  });
+}

@@ -15,6 +15,8 @@ $router->get('/', [HomeController::class, 'index']);
 $router->get('/catalog', [ShopController::class, 'catalog']);
 $router->get('/catalog/{slug}', [ShopController::class, 'catalog']);
 $router->get('/products/{slug}', [ShopController::class, 'product']);
+$router->post('/products/{slug}/reviews', [ShopController::class, 'storeReview']);
+$router->post('/products/{slug}/reviews/{id}', [ShopController::class, 'updateReview']);
 $router->get('/products/{slug}/quick-view', [ShopController::class, 'quickView']);
 $router->post('/products/{slug}/cart', [ShopController::class, 'addToCart']);
 $router->get('/search/products', [ShopController::class, 'search']);

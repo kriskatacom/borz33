@@ -11,6 +11,7 @@ use App\Models\ProductOptionValue;
 use App\Models\ProductPersonalizationField;
 use App\Models\ProductVariant;
 use App\Resources\ProductImageResource;
+use Store\Core\Banners;
 
 class ProductPage
 {
@@ -65,6 +66,19 @@ class ProductPage
         if ($value < 1) return 'Теглото не е посочено';
         if ($value < 1000) return $value . ' г';
         return rtrim(rtrim(number_format($value / 1000, 2, ',', ' '), '0'), ',') . ' кг';
+    }
+
+    public static function richText(string $html): string
+    {
+        $html = trim($html);
+
+        // Поддържа по-стари описания, записани като HTML entities, без да
+        // променя обичайния HTML, генериран от текстовия редактор.
+        if (preg_match('/&lt;\/?(?:p|h[1-6]|ul|ol|li|strong|em|a|hr)\b/i', $html) === 1) {
+            $html = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        return Banners::expandShortcodes($html);
     }
 
     /** @return list<array{label: string, href: string|null}> */

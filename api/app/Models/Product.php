@@ -135,6 +135,11 @@ class Product extends Model
         return $this->hasMany(ProductPersonalizationField::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class)->latest('id');
+    }
+
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy('role')->orderBy('sort_order')->orderBy('id');

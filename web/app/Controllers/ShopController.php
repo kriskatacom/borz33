@@ -21,6 +21,7 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 use Store\Core\StoreAuth;
 use Store\Core\View;
 use Store\Services\ProductPage;
+use Store\Services\ProductReviews;
 use Store\Services\ProductSearch;
 use Store\Services\RecentlyViewedProducts;
 use Store\Services\StoreCart;
@@ -34,7 +35,8 @@ class ShopController extends Controller
         private readonly InvoiceService $invoices = new InvoiceService(),
         private readonly InvoiceNotificationService $invoiceNotifications = new InvoiceNotificationService(),
         private readonly BillingAddressService $addresses = new BillingAddressService(),
-        private readonly AdminNotificationService $adminNotifications = new AdminNotificationService()
+        private readonly AdminNotificationService $adminNotifications = new AdminNotificationService(),
+        private readonly ProductReviews $reviews = new ProductReviews()
     ) {
     }
 
@@ -240,6 +242,9 @@ class ShopController extends Controller
             'crumbs' => ProductPage::crumbs($product),
             'config' => ProductPage::config($product),
             'related' => ProductPage::related($product),
+            'reviews' => $this->reviews->list($product),
+            'reviewEligibility' => $this->reviews->eligibility(\App\Core\Auth::user(), $product),
+            'viewerReview' => $this->reviews->findForUser(\App\Core\Auth::user(), $product),
             'favoriteIds' => StoreFavorites::ids(),
             'message' => $flash['message'] ?? null,
             'isError' => (bool) ($flash['error'] ?? false),
@@ -253,6 +258,138 @@ class ShopController extends Controller
             'productCurrency' => 'EUR',
             'productAvailability' => 'in stock',
         ]);
+    }
+
+    public function storeReview(string $slug): never
+    {
+        $user = \App\Core\Auth::user();
+
+        if ($user === null) {
+            if ($this->wantsJson()) {
+                $this->json(['success' => false, 'message' => 'Влезте в профила си, за да оставите отзив.'], 401);
+            }
+
+            $this->redirect($this->loginPath('/products/' . $slug . '#reviews'));
+        }
+
+        $product = ProductPage::findActive($slug);
+
+        if ($product === null) {
+            if ($this->wantsJson()) {
+                $this->json(['success' => false, 'message' => 'Продуктът не е намерен.'], 404);
+            }
+
+            View::renderError('Продуктът не е намерен.', 404);
+        }
+
+        $this->assertReviewCsrf($product);
+
+        $body = trim((string) \App\Core\Request::input('body', ''));
+        $rating = (int) \App\Core\Request::input('rating', 0);
+
+        if (($body !== '' && mb_strlen($body) < 3) || mb_strlen($body) > 2000) {
+            $this->reviewFailure($product, 'Отзивът трябва да бъде между 3 и 2000 знака.');
+        }
+
+        if ($rating < 1 || $rating > 5) {
+            $this->reviewFailure($product, 'Изберете оценка от 1 до 5 звезди.');
+        }
+
+        try {
+            $review = $this->reviews->create($user, $product, $rating, $body);
+        } catch (\DomainException) {
+            $this->reviewFailure($product, 'Можете да оставите отзив само след доставена или платена поръчка за този продукт.', 403);
+        } catch (\Throwable) {
+            $this->reviewFailure($product, 'Отзивът не може да бъде публикуван. Опитайте отново.', 409);
+        }
+
+        $this->reviewSuccess($product, $review, 'Благодарим Ви! Отзивът е публикуван.');
+    }
+
+    public function updateReview(string $slug, string $id): never
+    {
+        $user = \App\Core\Auth::user();
+
+        if ($user === null) {
+            if ($this->wantsJson()) {
+                $this->json(['success' => false, 'message' => 'Влезте в профила си, за да редактирате отзива.'], 401);
+            }
+
+                $this->redirect($this->loginPath('/products/' . $slug . '#reviews'));
+        }
+
+        $product = ProductPage::findActive($slug);
+
+        if ($product === null) {
+            if ($this->wantsJson()) {
+                $this->json(['success' => false, 'message' => 'Продуктът не е намерен.'], 404);
+            }
+
+            View::renderError('Продуктът не е намерен.', 404);
+        }
+
+        $this->assertReviewCsrf($product);
+
+        $review = $this->reviews->findForUserReview($user, $product, (int) $id);
+
+        if ($review === null) {
+            if ($this->wantsJson()) {
+                $this->json(['success' => false, 'message' => 'Отзивът не е намерен.'], 404);
+            }
+
+            View::renderError('Отзивът не е намерен.', 404);
+        }
+
+        $body = trim((string) \App\Core\Request::input('body', ''));
+        $rating = (int) \App\Core\Request::input('rating', 0);
+
+        if (($body !== '' && mb_strlen($body) < 3) || mb_strlen($body) > 2000) {
+            $this->reviewFailure($product, 'Отзивът трябва да бъде между 3 и 2000 знака.');
+        }
+
+        try {
+            $review = $this->reviews->update($review, $rating, $body);
+        } catch (\InvalidArgumentException) {
+            $this->reviewFailure($product, 'Изберете оценка от 1 до 5 звезди.');
+        }
+
+        $this->reviewSuccess($product, $review, 'Отзивът Ви е обновен.');
+    }
+
+    private function reviewFailure(Product $product, string $message, int $status = 422): never
+    {
+        if ($this->wantsJson()) {
+            $this->json(['success' => false, 'message' => $message], $status);
+        }
+
+        StoreAuth::setFlash($message, true);
+        $this->redirect('/products/' . $product->slug . '#reviews');
+    }
+
+    private function assertReviewCsrf(Product $product): void
+    {
+        $token = (string) (\App\Core\Request::input('_token') ?? '');
+
+        if (!StoreAuth::checkCsrf($token)) {
+            $this->reviewFailure($product, 'Сесията изтече. Презаредете страницата и опитайте отново.', 419);
+        }
+    }
+
+    private function reviewSuccess(Product $product, \App\Models\ProductReview $review, string $message): never
+    {
+        if ($this->wantsJson()) {
+            $this->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'review' => $this->reviews->payload($review),
+                    'summary' => $this->reviews->summary($product),
+                ],
+            ]);
+        }
+
+        StoreAuth::setFlash($message);
+        $this->redirect('/products/' . $product->slug . '#reviews');
     }
 
     public function quickView(string $slug): never

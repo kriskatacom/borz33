@@ -16,6 +16,9 @@ use Store\Services\ProductPage;
 /** @var bool $isError */
 /** @var string $csrf */
 /** @var list<int> $favoriteIds */
+/** @var \Illuminate\Support\Collection<int, \App\Models\ProductReview> $reviews */
+/** @var array{can_review: bool, reason: string} $reviewEligibility */
+/** @var \App\Models\ProductReview|null $viewerReview */
 
 $product = $product ?? null;
 $crumbs = $crumbs ?? [];
@@ -25,6 +28,13 @@ $message = $message ?? null;
 $isError = $isError ?? false;
 $csrf = $csrf ?? '';
 $favoriteIds = $favoriteIds ?? [];
+$reviews = $reviews ?? new \Illuminate\Support\Collection();
+$reviewEligibility = $reviewEligibility ?? ['can_review' => false, 'reason' => 'login'];
+$viewerReview = $viewerReview ?? null;
+$viewerId = (int) (\App\Core\Auth::user()?->id ?? 0);
+$reviewCount = $reviews->count();
+$averageRating = $reviewCount > 0 ? round((float) $reviews->avg('rating'), 1) : null;
+$reviewCreateAction = '/products/' . $product->slug . '/reviews';
 $alpine = (string) json_encode($config, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP);
 $defaultVariantId = ProductPage::defaultVariantId($config);
 $options = is_array($config['options'] ?? null) ? $config['options'] : [];
@@ -255,26 +265,118 @@ $jsonLd = [
         </div>
     </div>
 
-    <?php if (trim((string) $product->description) !== ''): ?>
-        <section class="store-pdp-section">
-            <h2>Описание</h2>
-            <div class="store-pdp-copy"><?= Banners::expandShortcodes((string) $product->description) ?></div>
-        </section>
-    <?php endif; ?>
+    <section class="store-pdp-section store-product-tabs" x-data="{ activeTab: ['description', 'parameters', 'reviews'].includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : 'description' }" x-init="$watch('activeTab', value => history.replaceState(null, '', value === 'description' ? window.location.pathname + window.location.search : '#' + value))">
+        <div class="store-product-tab-list" role="tablist" aria-label="Информация за продукта">
+            <button type="button" id="product-tab-description" role="tab" aria-controls="product-panel-description" :aria-selected="activeTab === 'description'" :class="{ 'is-active': activeTab === 'description' }" @click="activeTab = 'description'">Описание</button>
+            <button type="button" id="product-tab-parameters" role="tab" aria-controls="product-panel-parameters" :aria-selected="activeTab === 'parameters'" :class="{ 'is-active': activeTab === 'parameters' }" @click="activeTab = 'parameters'">Параметри</button>
+            <button type="button" id="product-tab-reviews" role="tab" aria-controls="reviews" :aria-selected="activeTab === 'reviews'" :class="{ 'is-active': activeTab === 'reviews' }" @click="activeTab = 'reviews'">Отзиви <span><?= $reviewCount ?></span></button>
+        </div>
 
-    <?php if ($product->parameters->isNotEmpty()): ?>
-        <section class="store-pdp-section">
-            <h2>Параметри</h2>
-            <dl class="store-pdp-specs">
-                <?php foreach ($product->parameters as $parameter): ?>
+        <div class="store-product-tab-panels">
+            <section id="product-panel-description" class="store-product-tab-panel" role="tabpanel" aria-labelledby="product-tab-description" x-cloak x-show="activeTab === 'description'">
+                <h2>Описание</h2>
+                <?php if (trim((string) $product->description) !== ''): ?>
+                    <div class="store-pdp-copy store-pdp-copy--rich"><?= ProductPage::richText((string) $product->description) ?></div>
+                <?php else: ?>
+                    <p class="store-product-tab-empty">Все още няма добавено подробно описание за този продукт.</p>
+                <?php endif; ?>
+            </section>
+
+            <section id="product-panel-parameters" class="store-product-tab-panel" role="tabpanel" aria-labelledby="product-tab-parameters" x-cloak x-show="activeTab === 'parameters'">
+                <h2>Параметри</h2>
+                <?php if ($product->parameters->isNotEmpty()): ?>
+                    <table class="store-pdp-specs-table">
+                        <tbody>
+                        <?php foreach ($product->parameters as $parameter): ?>
+                            <tr>
+                                <th scope="row"><?= htmlspecialchars($parameter->name, ENT_QUOTES, 'UTF-8') ?></th>
+                                <td><?= htmlspecialchars($parameter->value, ENT_QUOTES, 'UTF-8') ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <p class="store-product-tab-empty">Все още няма добавени параметри за този продукт.</p>
+                <?php endif; ?>
+            </section>
+
+            <section id="reviews" class="store-product-tab-panel store-pdp-reviews" role="tabpanel" aria-labelledby="product-tab-reviews" x-cloak x-show="activeTab === 'reviews'" data-product-reviews data-review-create-url="<?= htmlspecialchars($reviewCreateAction, ENT_QUOTES, 'UTF-8') ?>">
+                <header class="store-pdp-reviews-head">
                     <div>
-                        <dt><?= htmlspecialchars($parameter->name, ENT_QUOTES, 'UTF-8') ?></dt>
-                        <dd><?= htmlspecialchars($parameter->value, ENT_QUOTES, 'UTF-8') ?></dd>
+                        <p>Мнения от клиенти</p>
+                        <h2>Отзиви <span data-review-count><?= $reviewCount ?></span></h2>
                     </div>
-                <?php endforeach; ?>
-            </dl>
-        </section>
-    <?php endif; ?>
+                    <div class="store-reviews-summary">
+                        <span class="store-review-stars" data-review-average<?= $averageRating === null ? ' hidden' : '' ?> aria-label="<?= $averageRating === null ? '' : 'Средна оценка ' . number_format($averageRating, 1, ',', '') . ' от 5' ?>"><i aria-hidden="true"><?= $averageRating === null ? '' : str_repeat('★', (int) round($averageRating)) . str_repeat('☆', 5 - (int) round($averageRating)) ?></i><strong><?= $averageRating === null ? '' : number_format($averageRating, 1, ',', '') ?></strong></span>
+                        <small>Отзиви могат да оставят само клиенти с доставена или платена поръчка.</small>
+                    </div>
+                </header>
+
+                <?php if ($reviewEligibility['can_review']): ?>
+                    <button type="button" class="store-review-create" data-review-create><?= $viewerReview !== null ? 'Напишете нов отзив' : 'Напишете отзив' ?></button>
+                <?php elseif ($reviewEligibility['reason'] === 'login'): ?>
+                    <p class="store-review-notice">Имате закупен продукта? <a href="/login?return=<?= rawurlencode('/products/' . $product->slug . '#reviews') ?>">Влезте в профила си</a>, за да оставите отзив.</p>
+                <?php else: ?>
+                    <p class="store-review-notice">След доставена или платена поръчка ще можете да оставите отзив за продукта.</p>
+                <?php endif; ?>
+
+                <?php if ($viewerReview !== null || $reviewEligibility['can_review']): ?>
+                    <dialog class="store-review-composer" data-review-composer aria-labelledby="product-review-dialog-title">
+                        <form class="store-review-form" method="post" action="<?= htmlspecialchars($reviewCreateAction, ENT_QUOTES, 'UTF-8') ?>" data-review-form data-review-create-url="<?= htmlspecialchars($reviewCreateAction, ENT_QUOTES, 'UTF-8') ?>">
+                            <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+                            <button type="button" class="store-review-dialog-close" data-review-cancel aria-label="Затвори прозореца">×</button>
+                            <div class="store-review-form-head">
+                                <strong id="product-review-dialog-title" data-review-form-title>Оставете отзив</strong>
+                                <small data-review-form-help>Споделете впечатленията си от продукта.</small>
+                            </div>
+                            <div class="store-review-rating-picker" data-review-rating-picker>
+                                <span>Вашата оценка</span>
+                                <input type="hidden" name="rating" value="0" data-review-rating-input>
+                                <div role="group" aria-label="Оценка от 1 до 5 звезди">
+                                    <?php foreach ([1, 2, 3, 4, 5] as $rating): ?>
+                                        <button type="button" data-review-rating-value="<?= $rating ?>" aria-pressed="false" aria-label="<?= $rating ?> <?= $rating === 1 ? 'звезда' : 'звезди' ?>">★</button>
+                                    <?php endforeach; ?>
+                                </div>
+                                <small data-review-rating-label hidden></small>
+                            </div>
+                            <label for="product-review-body">Споделете впечатлението си</label>
+                            <textarea id="product-review-body" name="body" rows="4" minlength="3" maxlength="2000" placeholder="Какво Ви хареса в продукта? (по желание)" data-review-body></textarea>
+                            <p class="store-review-form-error" data-review-error hidden role="alert"></p>
+                            <footer class="store-review-form-actions">
+                                <button type="button" class="store-button-secondary" data-review-cancel>Отказ</button>
+                                <button type="submit" class="store-submit" data-review-submit>Публикувай отзив</button>
+                            </footer>
+                        </form>
+                    </dialog>
+                <?php endif; ?>
+
+                <p class="store-reviews-empty" data-reviews-empty<?= $reviews->isEmpty() ? '' : ' hidden' ?>>Все още няма отзиви за този продукт.</p>
+                <div class="store-reviews-list" data-reviews-list>
+                        <?php foreach ($reviews as $review): ?>
+                            <?php
+                            $author = trim((string) ($review->user?->first_name ?? 'Клиент'));
+                            $lastName = trim((string) ($review->user?->last_name ?? ''));
+                            $author .= $lastName !== '' ? ' ' . $lastName : '';
+                            $rating = max(1, min(5, (int) $review->rating));
+                            ?>
+                            <?php $isOwnedReview = $viewerId > 0 && (int) $review->user_id === $viewerId; ?>
+                            <article class="store-review<?= $isOwnedReview ? ' is-owned' : '' ?>" data-review-item="<?= (int) $review->id ?>">
+                                <header>
+                                    <span><strong><?= htmlspecialchars($author, ENT_QUOTES, 'UTF-8') ?></strong><span class="store-review-stars" aria-label="Оценка <?= $rating ?> от 5"><i aria-hidden="true"><?= str_repeat('★', $rating) . str_repeat('☆', 5 - $rating) ?></i></span></span>
+                                    <time datetime="<?= htmlspecialchars((string) $review->created_at?->toIso8601String(), ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) $review->created_at?->timezone('Europe/Sofia')->format('d.m.Y'), ENT_QUOTES, 'UTF-8') ?></time>
+                                </header>
+                                <p><?= nl2br(htmlspecialchars((string) $review->body, ENT_QUOTES, 'UTF-8')) ?></p>
+                                <?php if ($isOwnedReview): ?>
+                                    <div class="store-review-actions">
+                                        <button type="button" class="store-review-edit" data-review-edit data-review-id="<?= (int) $review->id ?>" data-review-url="<?= htmlspecialchars('/products/' . $product->slug . '/reviews/' . $review->id, ENT_QUOTES, 'UTF-8') ?>" data-review-rating="<?= $rating ?>" data-review-body="<?= htmlspecialchars((string) $review->body, ENT_QUOTES, 'UTF-8') ?>">Редактирай отзива</button>
+                                    </div>
+                                <?php endif; ?>
+                            </article>
+                        <?php endforeach; ?>
+                </div>
+            </section>
+        </div>
+    </section>
 
 </article>
 

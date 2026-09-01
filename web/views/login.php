@@ -15,6 +15,7 @@ use Store\Core\Html;
 /** @var string|null $registerMessage */
 /** @var bool $registerIsError */
 /** @var bool $showVerify */
+/** @var string $returnTo */
 
 $step = $step ?? 'credentials';
 $email = $email ?? '';
@@ -27,6 +28,7 @@ $registerErrors = $registerErrors ?? [];
 $registerMessage = $registerMessage ?? null;
 $registerIsError = $registerIsError ?? false;
 $showVerify = $showVerify ?? false;
+$returnTo = $returnTo ?? '';
 
 $fieldError = static function (array $errors, string $key): ?string {
     $value = $errors[$key] ?? null;
@@ -63,6 +65,7 @@ $inputClass = 'h-[42px] w-full border border-line bg-canvas px-3 text-ink';
         <form class="mt-5 grid gap-4" method="post" action="/login" novalidate>
             <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
             <input type="hidden" name="step" value="<?= htmlspecialchars($step, ENT_QUOTES, 'UTF-8') ?>">
+            <?php if ($returnTo !== ''): ?><input type="hidden" name="return" value="<?= htmlspecialchars($returnTo, ENT_QUOTES, 'UTF-8') ?>"><?php endif; ?>
 
             <?php if ($step === 'credentials'): ?>
                 <div class="grid gap-1.5">
@@ -103,6 +106,7 @@ $inputClass = 'h-[42px] w-full border border-line bg-canvas px-3 text-ink';
             <form class="mt-3" method="post" action="/login/code">
                 <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
                 <input type="hidden" name="email" value="<?= htmlspecialchars($email, ENT_QUOTES, 'UTF-8') ?>">
+                <?php if ($returnTo !== ''): ?><input type="hidden" name="return" value="<?= htmlspecialchars($returnTo, ENT_QUOTES, 'UTF-8') ?>"><?php endif; ?>
                 <button type="submit" class="inline-flex h-[42px] items-center justify-center border border-ink bg-transparent px-4 font-semibold text-ink">Изпрати нов код</button>
             </form>
             <p class="mt-3 text-muted"><a class="underline" href="/login">Назад към входа</a></p>

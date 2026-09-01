@@ -99,7 +99,7 @@ class AuthController extends Controller
         }
 
         StoreAuth::persistToken($result->token, $result->expiresAt);
-        $this->redirect('/account');
+        $this->redirect($this->returnPath((string) Request::input('return', '')) ?: '/account');
     }
 
     public function resendCode(): never
@@ -284,9 +284,19 @@ class AuthController extends Controller
             'registerMessage' => $extra['registerMessage'] ?? null,
             'registerIsError' => $extra['registerIsError'] ?? false,
             'showVerify' => (bool) ($extra['showVerify'] ?? false),
+            'returnTo' => $this->returnPath((string) ($extra['returnTo'] ?? Request::input('return', Request::query('return', '')))),
             'deviceUuid' => StoreAuth::deviceUuid(),
             'deviceName' => StoreAuth::deviceName(),
         ]);
+    }
+
+    private function returnPath(string $path): string
+    {
+        if ($path === '' || !str_starts_with($path, '/') || str_starts_with($path, '//')) {
+            return '';
+        }
+
+        return $path;
     }
 
     /** @return array<string, mixed> */
