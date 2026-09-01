@@ -28,6 +28,7 @@ export const navItems: NavItem[] = [
   { to: routes.reports, label: 'Отчети', hint: 'Продажби и счетоводни данни' },
   { to: routes.accounting, label: 'Счетоводство', hint: 'Плащания, справки и месечно приключване' },
   { to: routes.settings, label: 'Настройки', hint: 'Магазин, екип и достъп' },
+  { to: routes.customization, label: 'Персонализиране', hint: 'Фон на административния панел' },
 ];
 
 export const navSections: NavSection[] = [
@@ -36,7 +37,7 @@ export const navSections: NavSection[] = [
   { label: 'Каталог', items: navItems.filter((item) => new Set<string>([routes.products, routes.categories, routes.media]).has(item.to)) },
   { label: 'Съдържание', items: navItems.filter((item) => new Set<string>([routes.pages, routes.banners, routes.campaigns]).has(item.to)) },
   { label: 'Комуникация', items: navItems.filter((item) => item.to === routes.messages) },
-  { label: 'Анализи и настройки', items: navItems.filter((item) => new Set<string>([routes.reports, routes.accounting, routes.users, routes.settings]).has(item.to)) },
+  { label: 'Анализи и настройки', items: navItems.filter((item) => new Set<string>([routes.reports, routes.accounting, routes.users, routes.settings, routes.customization]).has(item.to)) },
 ];
 
 export function navItemByPath(path: string): NavItem | undefined {

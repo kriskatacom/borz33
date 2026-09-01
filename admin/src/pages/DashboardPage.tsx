@@ -6,6 +6,8 @@ import { navItems } from '@/app/nav';
 import { useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
+import { OrderStatusBadge } from '@/features/orders/orderFormat';
+import { formatDateTime, formatMoney } from '@/lib/format';
 import { toastError } from '@/lib/toast';
 
 const emptySummary: DashboardSummary = {
@@ -16,6 +18,12 @@ const emptySummary: DashboardSummary = {
   categories_active: 0,
   pages_active: 0,
   media: 0,
+  orders_today: 0,
+  orders_month: 0,
+  revenue_month: 0,
+  pending_orders: 0,
+  invoices_month: 0,
+  recent_orders: [],
 };
 
 export function DashboardPage() {
@@ -57,11 +65,16 @@ export function DashboardPage() {
     <div className="page">
       <PageHeader
         title={`Добре дошли, ${firstName}.`}
-        help="Текущо състояние на каталога, банерите и наличностите."
+        help="Актуално състояние на поръчките, приходите, каталога и документите."
         crumbs={[{ label: 'Табло' }]}
       />
 
       <section className="stat-grid" aria-label="Обобщение">
+        <Link to={routes.orders} className="stat-card"><p>Поръчки днес</p><strong>{busy ? '—' : summary.orders_today}</strong></Link>
+        <Link to={routes.orders} className="stat-card"><p>Поръчки този месец</p><strong>{busy ? '—' : summary.orders_month}</strong></Link>
+        <Link to={routes.accounting} className="stat-card"><p>Оборот този месец</p><strong>{busy ? '—' : formatMoney(summary.revenue_month)}</strong></Link>
+        <Link to={routes.orders} className={`stat-card${summary.pending_orders > 0 ? ' accent' : ''}`}><p>Чакащи поръчки</p><strong>{busy ? '—' : summary.pending_orders}</strong></Link>
+        <Link to={routes.invoices} className="stat-card"><p>Фактури този месец</p><strong>{busy ? '—' : summary.invoices_month}</strong></Link>
         <Link to={routes.products} className="stat-card">
           <p>Активни продукти</p>
           <strong>{busy ? '—' : summary.products_active}</strong>
@@ -74,6 +87,11 @@ export function DashboardPage() {
           <p>Активни банери</p>
           <strong>{busy ? '—' : summary.banners_active}</strong>
         </Link>
+      </section>
+
+      <section className="dashboard-recent">
+        <div className="flex items-center justify-between gap-3"><h2 className="section-label">Последни поръчки</h2><Link to={routes.orders}>Всички поръчки</Link></div>
+        {busy ? <p className="dashboard-empty">Зареждане на последните поръчки…</p> : summary.recent_orders.length === 0 ? <p className="dashboard-empty">Все още няма поръчки.</p> : <div className="dashboard-order-list">{summary.recent_orders.map((order) => <Link key={order.id} to={`/orders/${order.id}`} className="dashboard-order-row"><span><strong>#{order.number}</strong><small>{order.customer} · {formatDateTime(order.created_at)}</small></span><span className="text-right"><strong>{formatMoney(order.total)}</strong><OrderStatusBadge status={order.status} /></span></Link>)}</div>}
       </section>
 
       <section>

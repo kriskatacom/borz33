@@ -50,6 +50,8 @@ type CollapsibleSectionProps = {
   actions?: ReactNode;
   persistKey?: string;
   forceOpen?: boolean;
+  forceClosed?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export function CollapsibleSection({
@@ -63,6 +65,8 @@ export function CollapsibleSection({
   actions,
   persistKey,
   forceOpen = false,
+  forceClosed = false,
+  onOpenChange,
 }: CollapsibleSectionProps) {
   const storageKey = persistKey ?? (typeof title === 'string' ? `section:${title}` : undefined);
   const [open, setOpen] = useState(() => (storageKey ? (readOpen(storageKey) ?? defaultOpen) : defaultOpen));
@@ -80,6 +84,22 @@ export function CollapsibleSection({
       writeOpen(storageKey, true);
     }
   }, [forceOpen, storageKey]);
+
+  useEffect(() => {
+    if (!forceClosed) {
+      return;
+    }
+
+    setOpen(false);
+
+    if (storageKey) {
+      writeOpen(storageKey, false);
+    }
+  }, [forceClosed, storageKey]);
+
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open]);
 
   function toggle() {
     setOpen((value) => {

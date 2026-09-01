@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CopyPlus, Eye, ImagePlus, Images, Layers, List, Palette, Plus, RotateCcw, Save, Share2, Shirt, Sparkles, Trash2, Type, X } from 'lucide-react';
+import { ArrowLeft, ChevronsDownUp, ChevronsUpDown, CopyPlus, Eye, ImagePlus, Images, Layers, List, Palette, Plus, RotateCcw, Save, Share2, Shirt, Sparkles, Trash2, Type, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { listCategoryTree, type CategoryTreeNode } from '@/api/categories';
 import {
@@ -11,6 +11,7 @@ import {
   generateProductWithAiFromAttachedImages,
   getProduct,
   listProductAttributeTemplates,
+  attachVariantImage,
   restoreProduct,
   shareProductPersonalization,
   uploadProductFrontImage,
@@ -39,6 +40,7 @@ import { Switch } from '@/components/ui/switch';
 import { TextEditor } from '@/components/ui/TextEditor';
 import { toast, toastError } from '@/lib/toast';
 import { ProductImagesEditor } from '@/features/products/ProductImagesSection';
+import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
 import { flattenCategoryTree } from '@/features/categories/categoryTree';
 import { PageTreeSelect } from '@/features/pages/PageTreeSelect';
 import { VariantImageField } from '@/features/products/VariantImageField';
@@ -57,6 +59,9 @@ type VariantDraft = {
   is_active: boolean;
   option_values: Record<string, string>;
 };
+type BulkVariantField = 'name' | 'sku_prefix' | 'price' | 'stock' | 'is_active' | 'is_default' | `option:${string}`;
+type BulkImageTarget = 'all' | `option:${string}`;
+const BULK_IMAGE_ALL_VALUES = '__all__';
 type PersonalizationFieldDraft = {
   key: string;
   id?: number;
@@ -117,7 +122,6 @@ function SwitchField({
   help,
   checked,
   disabled = false,
-  note,
   onCheckedChange,
 }: {
   id: string;
@@ -125,7 +129,6 @@ function SwitchField({
   help: string;
   checked: boolean;
   disabled?: boolean;
-  note?: string;
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
@@ -134,7 +137,6 @@ function SwitchField({
       <div className="flex min-h-12 items-center">
         <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
       </div>
-      {note ? <p className="m-0 text-base text-muted-foreground">{note}</p> : null}
     </div>
   );
 }
@@ -682,6 +684,36 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
   const [rows, setRows] = useState<VariantDraft[]>(() => mapVariants(product.variants));
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [allVariantsOpen, setAllVariantsOpen] = useState<boolean | null>(null);
+  const [variantOpenState, setVariantOpenState] = useState<Record<string, boolean>>({});
+  const [bulkField, setBulkField] = useState<BulkVariantField>('stock');
+  const [bulkValue, setBulkValue] = useState('');
+  const [bulkImageId, setBulkImageId] = useState<number | null>(null);
+  const [bulkImageName, setBulkImageName] = useState('');
+  const [bulkImagePickerOpen, setBulkImagePickerOpen] = useState(false);
+  const [bulkImageTarget, setBulkImageTarget] = useState<BulkImageTarget>('all');
+  const [bulkImageOptionValue, setBulkImageOptionValue] = useState('');
+  const [bulkImageBusy, setBulkImageBusy] = useState(false);
+  const [bulkImageProgress, setBulkImageProgress] = useState<number | null>(null);
+  const updateVariantOpenState = useCallback((key: string, open: boolean) => {
+    setVariantOpenState((current) => (current[key] === open ? current : { ...current, [key]: open }));
+  }, []);
+  const allVariantsCollapsed = rows.length === 0 || rows.every((row) => variantOpenState[row.key] === false);
+  const allVariantsExpanded = rows.length === 0 || rows.every((row) => variantOpenState[row.key] === true);
+  const selectedBulkOption = product.options.find((option) => `option:${option.slug}` === bulkField);
+  const savedVariantRows = rows.filter((row) => row.id !== undefined);
+  const selectedBulkImageOption = product.options.find((option) => `option:${option.slug}` === bulkImageTarget);
+  const bulkImageRows = savedVariantRows.filter((row) => {
+    if (bulkImageTarget === 'all') {
+      return true;
+    }
+
+    if (bulkImageOptionValue === BULK_IMAGE_ALL_VALUES) {
+      return true;
+    }
+
+    return row.option_values[bulkImageTarget.slice('option:'.length)] === bulkImageOptionValue;
+  });
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -720,12 +752,143 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
 
   return (
     <form className="grid gap-3" onSubmit={(event) => void onSubmit(event)} noValidate>
+      {rows.length > 0 ? (
+        <div className="grid gap-3 rounded-[6px] border border-border bg-muted/20 p-3">
+          <div>
+            <h3 className="m-0 text-base font-semibold">Масова промяна</h3>
+            <p className="mb-0 mt-1 text-sm text-muted-foreground">Задайте стойност за поле и я приложете към всички варианти. Промяната се записва с бутона за секцията.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="field">
+              <LabelWithHelp htmlFor="variant-bulk-field" label="Поле" help="Изберете полето, което да промените за всички варианти." />
+              <Select value={bulkField} disabled={busy} onValueChange={changeBulkField}>
+                <SelectTrigger id="variant-bulk-field" className="w-full min-h-12 font-sans"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Име</SelectItem>
+                  <SelectItem value="sku_prefix">SKU префикс</SelectItem>
+                  <SelectItem value="price">Цена</SelectItem>
+                  <SelectItem value="stock">Наличност</SelectItem>
+                  <SelectItem value="is_active">Статус</SelectItem>
+                  <SelectItem value="is_default">По подразбиране</SelectItem>
+                  {product.options.map((option) => <SelectItem key={option.id} value={`option:${option.slug}`}>Опция: {option.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedBulkOption ? (
+              <div className="field">
+                <LabelWithHelp htmlFor="variant-bulk-value" label={selectedBulkOption.name} help="Тази стойност ще се зададе на всички варианти." />
+                <Select value={bulkValue} disabled={busy} onValueChange={setBulkValue}>
+                  <SelectTrigger id="variant-bulk-value" className="w-full min-h-12 font-sans"><SelectValue placeholder="Изберете" /></SelectTrigger>
+                  <SelectContent>
+                    {selectedBulkOption.values.map((value) => <SelectItem key={value.id} value={value.slug}>{value.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : bulkField === 'is_active' ? (
+              <div className="field">
+                <LabelWithHelp htmlFor="variant-bulk-value" label="Статус" help="Активният вариант се предлага за покупка." />
+                <Select value={bulkValue} disabled={busy} onValueChange={setBulkValue}>
+                  <SelectTrigger id="variant-bulk-value" className="w-full min-h-12 font-sans"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Активен</SelectItem>
+                    <SelectItem value="false">Неактивен</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : bulkField === 'is_default' ? (
+              <div className="field">
+                <LabelWithHelp htmlFor="variant-bulk-value" label="Вариант по подразбиране" help="Само един вариант може да е по подразбиране; всички останали ще бъдат изключени." />
+                <Select value={bulkValue} disabled={busy} onValueChange={setBulkValue}>
+                  <SelectTrigger id="variant-bulk-value" className="w-full min-h-12 font-sans"><SelectValue placeholder="Изберете вариант" /></SelectTrigger>
+                  <SelectContent>
+                    {rows.map((row, index) => <SelectItem key={row.key} value={row.key}>{row.name.trim() || row.sku.trim() || `Вариант ${index + 1}`}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <Field
+                id="variant-bulk-value"
+                label={bulkField === 'name' ? 'Име' : bulkField === 'sku_prefix' ? 'SKU префикс' : bulkField === 'price' ? 'Цена' : 'Наличност'}
+                type={bulkField === 'price' || bulkField === 'stock' ? 'number' : 'text'}
+                step={bulkField === 'price' ? '0.01' : bulkField === 'stock' ? '1' : undefined}
+                min={bulkField === 'price' || bulkField === 'stock' ? '0' : undefined}
+                help={bulkField === 'sku_prefix' ? 'Към префикса автоматично се добавят -1, -2 и т.н., за да останат SKU кодовете уникални.' : 'Стойността ще се зададе на всички варианти.'}
+                value={bulkValue}
+                disabled={busy}
+                onChange={(event) => setBulkValue(event.target.value)}
+              />
+            )}
+          </div>
+          <div className="grid gap-3 border-t border-border pt-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="button" variant="outline" disabled={busy || bulkValue.trim() === ''} onClick={applyBulkChange}>
+              <CopyPlus />
+              Приложи към всички ({rows.length})
+              </Button>
+              <p className="m-0 text-sm text-muted-foreground">Незапазените стойности могат да се прегледат и коригират поотделно отдолу.</p>
+            </div>
+            <div className="grid gap-2">
+              <LabelWithHelp label="Изображение" help="Изберете изображение от медията и го прикачете към всички варианти или към конкретна стойност на опция." />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="field">
+                  <LabelWithHelp htmlFor="variant-bulk-image-target" label="Прилагане към" help="Изберете дали изображението да се приложи към всички варианти или само към конкретна стойност на опция." />
+                  <Select value={bulkImageTarget} disabled={busy || bulkImageBusy} onValueChange={(value) => { setBulkImageTarget(value as BulkImageTarget); setBulkImageOptionValue(''); }}>
+                    <SelectTrigger id="variant-bulk-image-target" className="w-full min-h-12 font-sans"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Всички варианти</SelectItem>
+                      {product.options.map((option) => <SelectItem key={option.id} value={`option:${option.slug}`}>Опция: {option.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedBulkImageOption ? (
+                  <div className="field">
+                    <LabelWithHelp htmlFor="variant-bulk-image-value" label={selectedBulkImageOption.name} help="Изображението ще се прикачи само към вариантите с тази стойност." />
+                    <Select value={bulkImageOptionValue} disabled={busy || bulkImageBusy} onValueChange={setBulkImageOptionValue}>
+                      <SelectTrigger id="variant-bulk-image-value" className="w-full min-h-12 font-sans"><SelectValue placeholder="Изберете стойност" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={BULK_IMAGE_ALL_VALUES}>Всички</SelectItem>
+                        {selectedBulkImageOption.values.map((value) => <SelectItem key={value.id} value={value.slug}>{value.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button type="button" variant="outline" disabled={busy || bulkImageBusy} onClick={() => setBulkImagePickerOpen(true)}>
+                  <Images />
+                  {bulkImageId ? 'Смени от медията' : 'Избери от медията'}
+                </Button>
+                {bulkImageName ? <span className="text-sm text-muted-foreground">{bulkImageName}</span> : null}
+                <Button type="button" variant="outline" disabled={busy || bulkImageBusy || !bulkImageId || bulkImageRows.length === 0} onClick={() => void applyBulkImage()}>
+                  <CopyPlus />
+                  {bulkImageBusy && bulkImageProgress !== null ? `Прикачване… ${bulkImageProgress}%` : `Прикачи към избраните (${bulkImageRows.length})`}
+                </Button>
+              </div>
+              {savedVariantRows.length < rows.length ? <p className="m-0 text-sm text-muted-foreground">Незапазените варианти трябва първо да бъдат записани.</p> : null}
+            </div>
+          </div>
+          {bulkImagePickerOpen ? <MediaPickerDialog token={token} title="Избери изображение от медията" onSelect={(files) => { const file = files[0]; if (file) { setBulkImageId(file.id); setBulkImageName(file.original_name); setBulkImagePickerOpen(false); } }} onClose={() => setBulkImagePickerOpen(false)} /> : null}
+        </div>
+      ) : null}
+      <div className="flex flex-wrap justify-start gap-2">
+        <Button type="button" variant="outline" size="sm" disabled={allVariantsCollapsed} onClick={() => setAllVariantsOpen(false)}>
+          <ChevronsDownUp />
+          Прибери всички
+        </Button>
+        <Button type="button" variant="outline" size="sm" disabled={allVariantsExpanded} onClick={() => setAllVariantsOpen(true)}>
+          <ChevronsUpDown />
+          Разгъни всички
+        </Button>
+      </div>
       {rows.length === 0 ? <p className="m-0 text-muted-foreground">Няма варианти. Добавете комбинация от опциите.</p> : null}
       {rows.map((row, index) => (
         <CollapsibleSection
           key={row.key}
           heading="h3"
           persistKey={row.id ? `variant:${row.id}` : undefined}
+          forceOpen={allVariantsOpen === true}
+          forceClosed={allVariantsOpen === false}
+          onOpenChange={(open) => updateVariantOpenState(row.key, open)}
           title={<VariantCardTitle row={row} options={product.options} />}
           actions={
             <Button
@@ -782,14 +945,9 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
               <SwitchField
                 id={`${row.key}-default`}
                 label="По подразбиране"
-                help="Само един вариант може да е избран първи в магазина. Включете го на друг вариант, за да преместите избора."
+                help={`Само един вариант може да е избран първи в магазина. Включете го на друг вариант, за да преместите избора.${row.is_default ? ' Включено е и не може да се кликва. За да го смените, отворете друг вариант и включете „По подразбиране“ там.' : ''}`}
                 checked={row.is_default}
                 disabled={row.is_default}
-                note={
-                  row.is_default
-                    ? 'Включено е и не може да се кликва. За да го смените, отворете друг вариант и включете „По подразбиране“ там.'
-                    : undefined
-                }
                 onCheckedChange={(checked) => {
                   if (checked) {
                     setDefault(index);
@@ -816,6 +974,94 @@ function VariantsForm({ product, token, onSaved }: SectionFormProps) {
 
   function patchRow(index: number, patch: Partial<VariantDraft>) {
     setRows((current) => current.map((row, item) => (item === index ? { ...row, ...patch } : row)));
+  }
+
+  function changeBulkField(value: string) {
+    const next = value as BulkVariantField;
+    setBulkField(next);
+
+    if (next === 'is_active') {
+      setBulkValue('true');
+    } else if (next === 'is_default') {
+      setBulkValue(rows.find((row) => row.is_default)?.key ?? rows[0]?.key ?? '');
+    } else if (next.startsWith('option:')) {
+      const option = product.options.find((item) => `option:${item.slug}` === next);
+      setBulkValue(option?.values[0]?.slug ?? '');
+    } else {
+      setBulkValue('');
+    }
+  }
+
+  function applyBulkChange() {
+    const value = bulkValue.trim();
+
+    if (value === '') {
+      return;
+    }
+
+    if (bulkField === 'price') {
+      const price = Number(value);
+      if (!Number.isFinite(price) || price < 0) {
+        toast.error('Въведете валидна цена.');
+        return;
+      }
+      setRows((current) => current.map((row) => ({ ...row, price: String(price) })));
+    } else if (bulkField === 'stock') {
+      const stock = Number(value);
+      if (!Number.isInteger(stock) || stock < 0) {
+        toast.error('Въведете цяло число за наличността.');
+        return;
+      }
+      setRows((current) => current.map((row) => ({ ...row, stock: String(stock) })));
+    } else if (bulkField === 'name') {
+      setRows((current) => current.map((row) => ({ ...row, name: value })));
+    } else if (bulkField === 'sku_prefix') {
+      setRows((current) => current.map((row, index) => ({ ...row, sku: `${value}-${index + 1}` })));
+    } else if (bulkField === 'is_active') {
+      setRows((current) => current.map((row) => ({ ...row, is_active: value === 'true' })));
+    } else if (bulkField === 'is_default') {
+      setRows((current) => current.map((row) => ({ ...row, is_default: row.key === value })));
+    } else if (bulkField.startsWith('option:')) {
+      const optionSlug = bulkField.slice('option:'.length);
+      setRows((current) => current.map((row) => ({
+        ...row,
+        option_values: { ...row.option_values, [optionSlug]: value },
+      })));
+    }
+
+    toast.success('Масовата промяна е приложена. Запазете секцията, за да влезе в сила.');
+  }
+
+  async function applyBulkImage() {
+    if (!bulkImageId || bulkImageRows.length === 0) {
+      return;
+    }
+
+    setBulkImageBusy(true);
+    setBulkImageProgress(0);
+    let nextProduct = product;
+
+    try {
+      for (const [index, row] of bulkImageRows.entries()) {
+        const response = await attachVariantImage(token, product.id, row.id!, bulkImageId);
+        setBulkImageProgress(Math.round(((index + 1) / bulkImageRows.length) * 100));
+        nextProduct = {
+          ...nextProduct,
+          variants: nextProduct.variants.map((variant) => variant.id === row.id ? { ...variant, image: response.data.image } : variant),
+        };
+      }
+
+      setBulkImageProgress(100);
+      onSaved(nextProduct);
+      setBulkImageId(null);
+      setBulkImageName('');
+      toast.success('Изображението е прикачено към избраните варианти.');
+    } catch (error) {
+      toastError(error, 'Изображението не можа да бъде прикачено към всички варианти.');
+    } finally {
+      setBulkImageBusy(false);
+      setBulkImageProgress(null);
+    }
   }
 
   function setDefault(index: number) {
@@ -1073,18 +1319,25 @@ function ProductTemplateSection({ token, product, selection, onSelectionChange, 
   const selected = templates.find((template) => template.id === selection?.templateId) ?? null;
   const variantCount = selected?.options.reduce((count, option) => count * option.values.length, 1) ?? 0;
   const sections = selection?.sections ?? ['parameters', 'options', 'variants'];
-  function setTemplate(id: string) { onSelectionChange(id === 'none' ? null : { templateId: Number(id), sections: ['parameters', 'options', 'variants'] }); }
+  function setTemplate(id: string) {
+    const next = id === 'none' ? null : { templateId: Number(id), sections: ['parameters', 'options', 'variants'] };
+    onSelectionChange(next);
+
+    if (next && product && onApplied) {
+      void apply(next);
+    }
+  }
   function toggle(section: string) { if (!selection) return; const next = sections.includes(section) ? sections.filter((item) => item !== section) : [...sections, section]; onSelectionChange({ ...selection, sections: next }); }
-  async function apply() {
-    if (!product || !selection || !onApplied) return;
+  async function apply(nextSelection = selection) {
+    if (!product || !nextSelection || !onApplied) return;
     setBusy(true);
-    try { const response = await applyProductAttributeTemplate(token, product.id, selection.templateId, selection.sections); onApplied(response.data.product); toast.success(response.message || 'Шаблонът е приложен.'); }
+    try { const response = await applyProductAttributeTemplate(token, product.id, nextSelection.templateId, nextSelection.sections); onApplied(response.data.product); toast.success(response.message || 'Шаблонът е приложен.'); }
     catch (error) { toastError(error, 'Шаблонът не можа да бъде приложен.'); }
     finally { setBusy(false); }
   }
   return <div className="grid gap-3">
-    <div className="field"><LabelWithHelp htmlFor="product-template" label="Шаблон" help="Копира данните в продукта. По-късните промени по шаблона не променят продукта." /><Select value={selection ? String(selection.templateId) : 'none'} onValueChange={setTemplate}><SelectTrigger id="product-template" className="w-full min-h-12 font-sans"><SelectValue placeholder="Без шаблон" /></SelectTrigger><SelectContent><SelectItem value="none">Без шаблон</SelectItem>{templates.map((template) => <SelectItem key={template.id} value={String(template.id)}>{template.name}{template.category ? ` · ${template.category.name}` : ''}</SelectItem>)}</SelectContent></Select></div>
-    {selected ? <><p className="m-0 text-sm text-muted-foreground">{selected.parameters.length} параметъра · {selected.options.length} опции · до {variantCount} комбинации.</p><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sections.includes('parameters')} onChange={() => toggle('parameters')} />Параметри</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sections.includes('options')} onChange={() => toggle('options')} />Опции</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sections.includes('variants')} onChange={() => toggle('variants')} />Генерирай липсващи варианти</label></div>{product ? <><p className="m-0 text-sm text-muted-foreground">Съществуващите редове и изображения не се изтриват. Добавят се само липсващи данни.</p><Button type="button" className="w-fit" disabled={busy || sections.length === 0} onClick={() => void apply()}><CopyPlus />{busy ? 'Прилагане…' : 'Приложи шаблона'}</Button></> : <p className="m-0 text-sm text-muted-foreground">Шаблонът ще се приложи след създаването на продукта.</p>}</> : <p className="m-0 text-sm text-muted-foreground">Създайте шаблон от „Продукти → Шаблони“.</p>}
+    <div className="field"><LabelWithHelp htmlFor="product-template" label="Шаблон" help="При избор шаблонът се прилага веднага. По-късните промени по шаблона не променят продукта." /><Select value={selection ? String(selection.templateId) : 'none'} disabled={busy} onValueChange={setTemplate}><SelectTrigger id="product-template" className="w-full min-h-12 font-sans"><SelectValue placeholder="Без шаблон" /></SelectTrigger><SelectContent><SelectItem value="none">Без шаблон</SelectItem>{templates.map((template) => <SelectItem key={template.id} value={String(template.id)}>{template.name}{template.category ? ` · ${template.category.name}` : ''}</SelectItem>)}</SelectContent></Select></div>
+    {selected ? <><p className="m-0 text-sm text-muted-foreground">{selected.parameters.length} параметъра · {selected.options.length} опции · до {variantCount} комбинации.</p><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sections.includes('parameters')} onChange={() => toggle('parameters')} />Параметри</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sections.includes('options')} onChange={() => toggle('options')} />Опции</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sections.includes('variants')} onChange={() => toggle('variants')} />Генерирай липсващи варианти</label></div>{product ? <><p className="m-0 text-sm text-muted-foreground">Шаблонът се прилага автоматично при избор. Съществуващите редове и изображения не се изтриват.</p><Button type="button" className="w-fit" disabled={busy || sections.length === 0} onClick={() => void apply()}><CopyPlus />{busy ? 'Прилагане…' : 'Приложи отново'}</Button></> : <p className="m-0 text-sm text-muted-foreground">Шаблонът ще се приложи след създаването на продукта.</p>}</> : <p className="m-0 text-sm text-muted-foreground">Създайте шаблон от „Продукти → Шаблони“.</p>}
   </div>;
 }
 
@@ -1102,6 +1355,7 @@ export function ProductEditPage() {
   const [aiSuggestion, setAiSuggestion] = useState<ProductAiSuggestion | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [templateSelection, setTemplateSelection] = useState<TemplateSelection>(null);
+  const [attributeSectionsRevision, setAttributeSectionsRevision] = useState(0);
   const draftImagesRef = useRef(draftImages);
   draftImagesRef.current = draftImages;
   useGlobalLoading(busy);
@@ -1159,6 +1413,11 @@ export function ProductEditPage() {
     } finally {
       setAiBusy(false);
     }
+  }
+
+  function applyTemplateToProduct(nextProduct: AdminProduct) {
+    setProduct(nextProduct);
+    setAttributeSectionsRevision((current) => current + 1);
   }
 
   async function changeDeletedStatus() {
@@ -1320,16 +1579,16 @@ export function ProductEditPage() {
             <GeneralForm key={`general-${product.id}`} product={product} token={token} onSaved={setProduct} aiSuggestion={aiSuggestion} />
           </SectionShell>
           <SectionShell title="Шаблон за атрибути" icon={CopyPlus} help="Добавя данни от шаблон, без да премахва съществуващи варианти или изображения.">
-            <ProductTemplateSection token={token} product={product} selection={templateSelection} onSelectionChange={setTemplateSelection} onApplied={setProduct} />
+            <ProductTemplateSection token={token} product={product} selection={templateSelection} onSelectionChange={setTemplateSelection} onApplied={applyTemplateToProduct} />
           </SectionShell>
           <SectionShell title="Параметри" icon={List} help="Характеристики като материя и грамаж. Показват се в описанието на продукта.">
-            <ParametersForm key={`parameters-${product.id}`} product={product} token={token} onSaved={setProduct} />
+            <ParametersForm key={`parameters-${product.id}-${attributeSectionsRevision}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>
           <SectionShell title="Опции" icon={Palette} help="Размер, цвят и други избори. След промяна запишете и вариантите, ако комбинациите са се сменили.">
-            <OptionsForm key={`options-${product.id}`} product={product} token={token} onSaved={setProduct} />
+            <OptionsForm key={`options-${product.id}-${attributeSectionsRevision}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>
           <SectionShell title="Варианти" icon={Layers} help="Комбинации за покупка. Всяка може да има своя цена, наличност и снимка.">
-            <VariantsForm key={`variants-${product.id}`} product={product} token={token} onSaved={setProduct} />
+            <VariantsForm key={`variants-${product.id}-${attributeSectionsRevision}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>
           <SectionShell title="Персонализация" icon={Type} help="Текст, който клиентът въвежда преди добавяне в количката, например име върху тениска.">
             <PersonalizationForm key={`personalization-${product.id}`} product={product} token={token} onSaved={setProduct} />

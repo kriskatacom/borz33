@@ -688,6 +688,10 @@ h1 {
   min-height: 100dvh;
   display: grid;
   grid-template-rows: var(--topbar) 1fr var(--bottom);
+  background-image: var(--admin-background-image, none);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
 .admin-topbar {
@@ -1000,6 +1004,17 @@ a.stat-card {
   margin-top: 8px;
   font-size: 2rem;
 }
+
+.dashboard-recent { display: grid; gap: 12px; }
+.dashboard-recent .section-label { margin-bottom: 0; }
+.dashboard-order-list { display: grid; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--cream); }
+.dashboard-order-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; color: inherit; text-decoration: none; }
+.dashboard-order-row + .dashboard-order-row { border-top: 1px solid var(--line); }
+.dashboard-order-row:hover { background: var(--paper); }
+.dashboard-order-row > span { display: grid; gap: 4px; }
+.dashboard-order-row small { color: var(--muted-foreground); }
+.dashboard-order-row > span:last-child { justify-items: end; }
+.dashboard-empty { margin: 0; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--cream); color: var(--muted-foreground); text-align: center; }
 
 .stat-card.accent {
   background: var(--coral);

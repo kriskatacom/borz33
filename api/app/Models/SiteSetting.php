@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SiteSetting extends Model
 {
-    protected $fillable = ['logo_media_file_id', 'product_personalization_default', 'vat_enabled', 'free_shipping_threshold', 'econt_operations_enabled', 'econt_environment', 'econt_production_username', 'econt_production_password', 'econt_production_verified_at'];
+    protected $fillable = ['logo_media_file_id', 'product_personalization_default', 'admin_background', 'admin_background_overlay', 'vat_enabled', 'free_shipping_threshold', 'econt_operations_enabled', 'econt_environment', 'econt_production_username', 'econt_production_password', 'econt_production_verified_at'];
 
     protected function casts(): array
     {

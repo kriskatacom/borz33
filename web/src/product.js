@@ -39,6 +39,8 @@ export function registerStoreProduct(Alpine) {
       error: '',
       submitting: false,
       photoSwipe: null,
+      lightboxOpening: false,
+      lightboxImageData: {},
 
       init() {
         this.syncVariantImage();
@@ -176,32 +178,87 @@ export function registerStoreProduct(Alpine) {
         this.imageIndex = (this.imageIndex + step + this.images.length) % this.images.length;
       },
 
-      openLightbox() {
-        if (!this.image) {
+      async lightboxItem(image) {
+        const cached = this.lightboxImageData[image.url];
+
+        if (cached) {
+          return { ...image, ...cached };
+        }
+
+        const knownWidth = Number(image.width);
+        const knownHeight = Number(image.height);
+
+        if (knownWidth > 0 && knownHeight > 0) {
+          const dimensions = { width: knownWidth, height: knownHeight };
+          this.lightboxImageData[image.url] = dimensions;
+
+          return { ...image, ...dimensions };
+        }
+
+        const dimensions = await new Promise((resolve) => {
+          const asset = new Image();
+
+          asset.onload = () => resolve({
+            width: asset.naturalWidth || 1600,
+            height: asset.naturalHeight || 1600,
+          });
+          asset.onerror = () => resolve({ width: 1600, height: 1600 });
+          asset.src = image.url;
+        });
+
+        this.lightboxImageData[image.url] = dimensions;
+
+        return { ...image, ...dimensions };
+      },
+
+      async openLightbox() {
+        if (!this.image || this.lightboxOpening || this.photoSwipe) {
           return;
         }
 
-        const lightbox = new PhotoSwipeLightbox({
-          dataSource: this.images.map((item) => ({
-            src: item.url,
-            width: 900,
-            height: 1125,
-            alt: item.alt,
-          })),
-          pswpModule: () => import('photoswipe'),
-          bgOpacity: 0.92,
-          showHideAnimationType: 'zoom',
-        });
+        this.lightboxOpening = true;
 
-        lightbox.on('change', () => {
-          this.imageIndex = lightbox.pswp?.currIndex ?? this.imageIndex;
-        });
-        lightbox.on('destroy', () => {
-          this.photoSwipe = null;
-        });
-        lightbox.init();
-        this.photoSwipe = lightbox;
-        lightbox.loadAndOpen(this.imageIndex);
+        try {
+          const images = this.images.slice();
+          const startIndex = Math.min(this.imageIndex, images.length - 1);
+          const dataSource = await Promise.all(images.map((image) => this.lightboxItem(image)));
+          const lightbox = new PhotoSwipeLightbox({
+            dataSource: dataSource.map((image) => ({
+              src: image.url,
+              width: image.width,
+              height: image.height,
+              alt: image.alt || this.name,
+            })),
+            pswpModule: () => import('photoswipe'),
+            bgOpacity: 0.92,
+            initialZoomLevel: 'fit',
+            paddingFn: (viewportSize) => {
+              const compactViewport = viewportSize.x < 640;
+              const verticalPadding = compactViewport ? 12 : 24;
+
+              return {
+                top: verticalPadding,
+                bottom: verticalPadding,
+                left: compactViewport ? 12 : 32,
+                right: compactViewport ? 12 : 32,
+              };
+            },
+            showHideAnimationType: 'zoom',
+            mainClass: 'store-pdp-lightbox',
+          });
+
+          lightbox.on('change', () => {
+            this.imageIndex = lightbox.pswp?.currIndex ?? this.imageIndex;
+          });
+          lightbox.on('destroy', () => {
+            this.photoSwipe = null;
+          });
+          lightbox.init();
+          this.photoSwipe = lightbox;
+          lightbox.loadAndOpen(startIndex);
+        } finally {
+          this.lightboxOpening = false;
+        }
       },
 
       minus() {

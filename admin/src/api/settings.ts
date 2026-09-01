@@ -9,14 +9,19 @@ export type EcontSettings = {
   production_verified_at: string | null;
 };
 
-export type SiteSettings = { logo_media_file_id: number | null; logo: MediaFile | null; vat_enabled: boolean; free_shipping_threshold: number; econt_operations_enabled: boolean; econt: EcontSettings };
+export type SiteSettings = { logo_media_file_id: number | null; logo: MediaFile | null; admin_background: string | null; admin_background_overlay: number; vat_enabled: boolean; free_shipping_threshold: number; econt_operations_enabled: boolean; econt: EcontSettings };
+export type AdminBackground = { value: string; label: string; help: string };
 
 export function getSiteSettings(token: string) {
   return apiRequest<{ settings: SiteSettings }>('/admin/settings', { token });
 }
 
-export function updateSiteSettings(token: string, body: { logo_media_file_id?: number | null; vat_enabled?: boolean; free_shipping_threshold?: number; econt_operations_enabled?: boolean; econt_environment?: 'demo' | 'production'; econt_production_username?: string; econt_production_password?: string }) {
+export function updateSiteSettings(token: string, body: { logo_media_file_id?: number | null; admin_background?: string | null; admin_background_overlay?: number; vat_enabled?: boolean; free_shipping_threshold?: number; econt_operations_enabled?: boolean; econt_environment?: 'demo' | 'production'; econt_production_username?: string; econt_production_password?: string }) {
   return apiRequest<{ settings: SiteSettings }>('/admin/settings', { method: 'PATCH', token, body });
+}
+
+export function listAdminBackgrounds(token: string) {
+  return apiRequest<{ backgrounds: AdminBackground[] }>('/admin/settings/admin-backgrounds', { token });
 }
 
 export function testEcontConnection(token: string, body: { environment: 'demo' | 'production'; username?: string; password?: string }) {

@@ -23,10 +23,17 @@ class SettingsController extends Controller
         $this->ok(['settings' => $this->resource($this->settings())], 'Настройки на сайта.');
     }
 
+    public function adminBackgrounds(): never
+    {
+        $this->ok(['backgrounds' => $this->adminBackgroundsList()], 'Фоновите изображения са заредени.');
+    }
+
     public function update(): never
     {
         $validator = ValidatorFactory::make()->make(Request::input(), [
             'logo_media_file_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_files', 'id')],
+            'admin_background' => ['sometimes', 'nullable', 'string', 'max:191', Rule::in(array_merge([''], $this->adminBackgroundValues(), $this->adminColorValues()))],
+            'admin_background_overlay' => ['sometimes', 'integer', 'min:0', 'max:80'],
             'vat_enabled' => ['sometimes', 'boolean'],
             'free_shipping_threshold' => ['sometimes', 'numeric', 'min:0', 'max:999999.99'],
             'econt_operations_enabled' => ['sometimes', 'boolean'],
@@ -51,6 +58,8 @@ class SettingsController extends Controller
 
         $settings = $this->settings();
         $settings->logo_media_file_id = $logoId !== null ? (int) $logoId : null;
+        if (array_key_exists('admin_background', $data)) $settings->admin_background = $data['admin_background'] !== '' ? $data['admin_background'] : null;
+        if (array_key_exists('admin_background_overlay', $data)) $settings->admin_background_overlay = (int) $data['admin_background_overlay'];
         if (array_key_exists('vat_enabled', $data)) $settings->vat_enabled = (bool) $data['vat_enabled'];
         if (array_key_exists('free_shipping_threshold', $data)) $settings->free_shipping_threshold = round((float) $data['free_shipping_threshold'], 2);
         if (array_key_exists('econt_operations_enabled', $data)) $settings->econt_operations_enabled = (bool) $data['econt_operations_enabled'];
@@ -125,6 +134,47 @@ class SettingsController extends Controller
         return SiteSetting::query()->with('logo')->firstOrCreate([]);
     }
 
+    /** @return list<string> */
+    private function adminBackgroundValues(): array
+    {
+        return array_column($this->adminBackgroundsList(), 'value');
+    }
+
+    /** @return list<string> */
+    private function adminColorValues(): array
+    {
+        return ['solid-graphite', 'solid-forest', 'solid-slate', 'gradient-forest', 'gradient-ocean', 'gradient-sunset', 'solid-midnight', 'solid-plum', 'solid-teal', 'gradient-aurora', 'gradient-violet', 'gradient-copper', 'gradient-mist', 'gradient-sage', 'gradient-sky', 'gradient-peach', 'gradient-aqua'];
+    }
+
+    /** @return list<array{value: string, label: string, help: string}> */
+    private function adminBackgroundsList(): array
+    {
+        $directory = dirname(__DIR__, 4) . '/admin/public/admin-backgrounds';
+        $files = is_dir($directory) ? scandir($directory) : false;
+        if ($files === false) {
+            return [];
+        }
+
+        $allowedExtensions = ['avif', 'gif', 'jpeg', 'jpg', 'png', 'webp'];
+        $backgrounds = [];
+        foreach ($files as $file) {
+            $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+            if ($file === '.' || $file === '..' || !in_array($extension, $allowedExtensions, true) || !is_file($directory . '/' . $file)) {
+                continue;
+            }
+
+            $backgrounds[] = [
+                'value' => 'admin-backgrounds/' . $file,
+                'label' => 'Фон ' . (count($backgrounds) + 1),
+                'help' => 'Изображение от папката с фонове.',
+            ];
+        }
+
+        usort($backgrounds, static fn (array $first, array $second): int => strnatcasecmp($first['value'], $second['value']));
+
+        return $backgrounds;
+    }
+
     /** @return array{logo_media_file_id: int|null, logo: array<string, mixed>|null, vat_enabled: bool} */
     private function resource(SiteSetting $settings): array
     {
@@ -133,6 +183,8 @@ class SettingsController extends Controller
         return [
             'logo_media_file_id' => $settings->logo_media_file_id,
             'logo' => $settings->logo ? MediaFileResource::toArray($settings->logo) : null,
+            'admin_background' => $settings->admin_background,
+            'admin_background_overlay' => (int) ($settings->admin_background_overlay ?? 48),
             'vat_enabled' => (bool) $settings->vat_enabled,
             'free_shipping_threshold' => (float) $settings->free_shipping_threshold,
             'econt_operations_enabled' => (bool) $settings->econt_operations_enabled,

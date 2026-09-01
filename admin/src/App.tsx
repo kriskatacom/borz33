@@ -28,6 +28,7 @@ import { ProductEditPage } from '@/pages/ProductEditPage';
 import { ProductViewPage } from '@/pages/ProductViewPage';
 import { ProductTemplatesPage } from '@/pages/ProductTemplatesPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { CustomizationPage } from '@/pages/CustomizationPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
@@ -92,6 +93,7 @@ export function App() {
               <Route path={routes.accounting} element={<AccountingPage />} />
               <Route path={routes.accountingGuide} element={<AccountingGuidePage />} />
               <Route path={routes.settings} element={<SettingsPage />} />
+              <Route path={routes.customization} element={<CustomizationPage />} />
             </Route>
             <Route path="*" element={<Navigate to={routes.login} replace />} />
           </Routes>

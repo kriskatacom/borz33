@@ -9,6 +9,8 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { logout } from '@/features/auth/authThunks';
 import { toast } from '@/lib/toast';
 import { listMessages } from '@/api/messages';
+import { getSiteSettings } from '@/api/settings';
+import { adminBackgroundCss } from '@/app/adminBackgrounds';
 
 type AdminLayoutProps = {
   children: ReactNode;
@@ -24,6 +26,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const displayName = user ? `${user.first_name} ${user.last_name}`.trim() : 'Екип';
   const token = useAppSelector((state) => state.auth.token) ?? '';
+
+  useEffect(() => {
+    if (!token) return;
+    const applyBackground = (background: string | null, overlay = 48) => { const css = adminBackgroundCss(background); const opacity = Math.max(0, Math.min(80, Number(overlay) || 0)); document.documentElement.style.setProperty('--admin-background-image', css === 'none' ? 'none' : opacity === 0 ? css : `linear-gradient(rgb(0 0 0 / ${opacity}%), rgb(0 0 0 / ${opacity}%)), ${css}`); };
+    void getSiteSettings(token).then((response) => applyBackground(response.data.settings.admin_background, response.data.settings.admin_background_overlay)).catch(() => applyBackground(null));
+    const onBackgroundChanged = (event: Event) => { const detail = (event as CustomEvent<{ background?: string | null; overlay?: number }>).detail; applyBackground(detail?.background ?? null, detail?.overlay ?? 48); };
+    window.addEventListener('admin:background-changed', onBackgroundChanged);
+    return () => window.removeEventListener('admin:background-changed', onBackgroundChanged);
+  }, [token]);
 
   function toggleSidebar() {
     setSidebarCollapsed((collapsed) => {

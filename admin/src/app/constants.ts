@@ -43,4 +43,5 @@ export const routes = {
   accounting: '/accounting',
   accountingGuide: '/accounting/guide',
   settings: '/settings',
+  customization: '/customization',
 } as const;

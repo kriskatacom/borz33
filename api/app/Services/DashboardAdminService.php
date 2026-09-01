@@ -7,6 +7,8 @@ namespace App\Services;
 use App\Models\Banner;
 use App\Models\Category;
 use App\Models\MediaFile;
+use App\Models\Order;
+use App\Models\Invoice;
 use App\Models\Page;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -19,6 +21,11 @@ class DashboardAdminService
     /** @return array<string, int> */
     public function summary(): array
     {
+        $today = date('Y-m-d');
+        $monthStart = date('Y-m-01');
+        $ordersToday = Order::query()->whereDate('created_at', $today);
+        $ordersMonth = Order::query()->whereBetween('created_at', [$monthStart . ' 00:00:00', date('Y-m-d') . ' 23:59:59']);
+
         return [
             'products_active' => Product::query()->where('is_active', true)->count(),
             'low_stock' => ProductVariant::query()
@@ -33,6 +40,20 @@ class DashboardAdminService
             'categories_active' => Category::query()->where('is_active', true)->count(),
             'pages_active' => Page::query()->where('is_active', true)->count(),
             'media' => MediaFile::query()->count(),
+            'orders_today' => (clone $ordersToday)->count(),
+            'orders_month' => (clone $ordersMonth)->count(),
+            'revenue_month' => (float) (clone $ordersMonth)->where('status', '!=', 'cancelled')->sum('total'),
+            'pending_orders' => Order::query()->whereIn('status', ['pending', 'confirmed'])->count(),
+            'invoices_month' => Invoice::query()->where('type', 'invoice')->whereBetween('issue_date', [$monthStart, date('Y-m-d')])->count(),
+            'recent_orders' => Order::query()->latest('created_at')->limit(5)->get(['id', 'number', 'first_name', 'last_name', 'status', 'total', 'currency', 'created_at'])->map(static fn (Order $order): array => [
+                'id' => (int) $order->id,
+                'number' => $order->number,
+                'customer' => trim($order->first_name . ' ' . $order->last_name),
+                'status' => $order->status,
+                'total' => (float) $order->total,
+                'currency' => $order->currency,
+                'created_at' => $order->created_at?->toIso8601String(),
+            ])->all(),
         ];
     }
 }

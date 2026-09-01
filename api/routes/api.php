@@ -51,6 +51,7 @@ $router->post('/auth/logout', [SessionController::class, 'destroy'], [Authentica
 $admin = [Authenticate::class, RequireAdmin::class];
 $router->get('/admin/dashboard', [DashboardController::class, 'show'], $admin);
 $router->get('/admin/settings', [SettingsController::class, 'show'], $admin);
+$router->get('/admin/settings/admin-backgrounds', [SettingsController::class, 'adminBackgrounds'], $admin);
 $router->patch('/admin/settings', [SettingsController::class, 'update'], $admin);
 $router->post('/admin/settings/econt/test', [SettingsController::class, 'testEcont'], $admin);
 $router->get('/admin/users', [UsersController::class, 'index'], $admin);

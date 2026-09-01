@@ -2350,6 +2350,7 @@ select.store-input {
     height: 100%;
     object-fit: cover;
 }
+
 .store-pdp-buy {
     display: grid;
     gap: 0.85rem;
