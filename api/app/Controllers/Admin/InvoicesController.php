@@ -40,9 +40,8 @@ final class InvoicesController extends Controller
         $items = is_array($input['items'] ?? null) ? $input['items'] : [];
         $invoice = $this->invoices->find($this->id($id));
         $credit = $this->invoices->creditItems($invoice, (string) ($input['reason'] ?? ''), $items, (bool) ($input['refund_shipping'] ?? false));
-        $requested = $this->notifications->isRequested($credit);
-        $sent = $requested && $this->notifications->send($credit);
-        $this->created(['invoice' => InvoiceResource::toArray($credit), 'email_sent' => $sent], $sent ? 'Кредитното известие е издадено и изпратено на клиента.' : ($requested ? 'Кредитното известие е издадено, но имейлът не можа да бъде изпратен.' : 'Кредитното известие е издадено. Клиентът не е поискал изпращане по имейл.'));
+        $sent = $this->notifications->send($credit);
+        $this->created(['invoice' => InvoiceResource::toArray($credit), 'email_sent' => $sent], $sent ? 'Кредитното известие е издадено и изпратено на клиента.' : 'Кредитното известие е издадено, но имейлът не можа да бъде изпратен.');
     }
 
     public function cancel(string $id): never
@@ -79,12 +78,17 @@ final class InvoicesController extends Controller
         $filters['per_page'] = 10000;
         $rows = $this->invoices->paginate($filters)['invoices'];
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="invoices-' . date('Y-m-d') . '.csv"');
+        $filePrefix = ($filters['type'] ?? '') === 'credit_note' ? 'credit-notes' : 'invoices';
+        header('Content-Disposition: attachment; filename="' . $filePrefix . '-' . date('Y-m-d') . '.csv"');
         echo "\xEF\xBB\xBF";
         $out = fopen('php://output', 'wb');
-        fputcsv($out, ['Тип', 'Номер', 'Дата', 'Поръчка', 'Клиент', 'ЕИК', 'Данъчна основа', 'ДДС', 'Общо', 'Валута', 'Статус'], ';');
+        $typeLabels = ['invoice' => 'Фактура', 'credit_note' => 'Кредитно известие'];
+        $statusLabels = ($filters['type'] ?? '') === 'credit_note'
+            ? ['draft' => 'Чернова', 'issued' => 'Издадено', 'cancelled' => 'Анулирано', 'credited' => 'Кредитирано']
+            : ['draft' => 'Чернова', 'issued' => 'Издадена', 'cancelled' => 'Анулирана', 'credited' => 'Кредитирана'];
+        fputcsv($out, ['Тип', 'Номер', 'Дата', 'Поръчка', 'Клиент', 'ЕИК', 'Данъчна основа', 'ДДС', 'Общо', 'Валута', 'Статус'], ';', '"', '\\');
         foreach ($rows as $row) {
-            fputcsv($out, [$row->type, $row->number, $row->issue_date?->format('Y-m-d'), $row->order?->number, $row->buyer_snapshot['company'] ?? '', $row->buyer_snapshot['eik'] ?? '', $row->subtotal_net + $row->shipping_net - $row->discount_net, $row->tax_amount, $row->total_gross, $row->currency, $row->status], ';');
+            fputcsv($out, [$typeLabels[$row->type] ?? $row->type, $row->number, $row->issue_date?->format('Y-m-d'), $row->order?->number, $row->buyer_snapshot['company'] ?? '', $row->buyer_snapshot['eik'] ?? '', $row->subtotal_net + $row->shipping_net - $row->discount_net, $row->tax_amount, $row->total_gross, $row->currency, $statusLabels[$row->status] ?? $row->status], ';', '"', '\\');
         }
         fclose($out);
         exit;

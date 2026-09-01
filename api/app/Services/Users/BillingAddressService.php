@@ -38,16 +38,17 @@ class BillingAddressService
     public function create(User $user, array $data): UserAddress
     {
         $count = $this->list($user)->count();
+        $hasPartyAddress = $this->listForParty($user, (string) $data['party'])->isNotEmpty();
 
         if ($count >= self::MAX) {
             throw new ValidationException(['label' => ['Може да запишете най-много ' . self::MAX . ' адреса за фактуриране.']]);
         }
 
-        return Capsule::connection()->transaction(function () use ($user, $data, $count): UserAddress {
-            $makeDefault = (bool) ($data['is_default'] ?? false) || $count === 0;
+        return Capsule::connection()->transaction(function () use ($user, $data, $hasPartyAddress): UserAddress {
+            $makeDefault = (bool) ($data['is_default'] ?? false) || !$hasPartyAddress;
 
             if ($makeDefault) {
-                $this->clearDefault($user);
+                $this->clearDefault($user, (string) $data['party']);
             }
 
             return UserAddress::query()->create([
@@ -66,7 +67,7 @@ class BillingAddressService
             $makeDefault = (bool) ($data['is_default'] ?? false);
 
             if ($makeDefault) {
-                $this->clearDefault($user, (int) $address->id);
+                $this->clearDefault($user, (string) $data['party'], (int) $address->id);
             }
 
             $address->forceFill([
@@ -88,7 +89,7 @@ class BillingAddressService
                 return;
             }
 
-            $next = $this->list($user)->first();
+            $next = $this->listForParty($user, (string) $address->party)->first();
 
             if ($next !== null) {
                 $next->forceFill(['is_default' => true])->save();
@@ -99,10 +100,50 @@ class BillingAddressService
     public function setDefault(User $user, UserAddress $address): UserAddress
     {
         return Capsule::connection()->transaction(function () use ($user, $address): UserAddress {
-            $this->clearDefault($user);
+            $this->clearDefault($user, (string) $address->party);
             $address->forceFill(['is_default' => true])->save();
 
             return $address->refresh();
+        });
+    }
+
+    /**
+     * Save checkout data in the customer profile without duplicates. Physical and
+     * company addresses keep independent defaults, so either checkout mode can
+     * restore the appropriate address next time.
+     *
+     * @param array<string, string> $form
+     */
+    public function rememberOrderAddresses(User $user, array $form, bool $wantsInvoice): void
+    {
+        Capsule::connection()->transaction(function () use ($user, $form, $wantsInvoice): void {
+            $delivery = [
+                'party' => UserAddress::PARTY_PERSON,
+                'first_name' => $form['first_name'], 'last_name' => $form['last_name'],
+                'company_name' => null, 'eik' => null, 'vat_number' => null, 'mol' => null,
+                'line1' => $form['address_line'], 'city' => $form['city'],
+                'postal_code' => $form['postal_code'], 'country' => $form['country'],
+            ];
+
+            if (!$wantsInvoice) {
+                $this->createIfMissing($user, $delivery);
+                return;
+            }
+
+            $billing = [
+                'party' => UserAddress::PARTY_COMPANY,
+                'first_name' => null, 'last_name' => null,
+                'company_name' => $form['invoice_company'], 'eik' => $form['invoice_eik'],
+                'vat_number' => $form['invoice_vat_number'] !== '' ? strtoupper($form['invoice_vat_number']) : null,
+                'mol' => $form['invoice_mol'], 'line1' => $form['invoice_address'],
+                'city' => $form['city'], 'postal_code' => $form['postal_code'], 'country' => $form['country'],
+            ];
+            $this->createIfMissing($user, $billing);
+
+            // A separate delivery location is kept as a physical-person address.
+            if (!$this->sameLocation($delivery, $billing)) {
+                $this->createIfMissing($user, $delivery);
+            }
         });
     }
 
@@ -165,11 +206,67 @@ class BillingAddressService
         ];
     }
 
-    private function clearDefault(User $user, ?int $exceptId = null): void
+    /** @return Collection<int, UserAddress> */
+    private function listForParty(User $user, string $party): Collection
+    {
+        return UserAddress::query()
+            ->where('user_id', $user->id)
+            ->where('type', UserAddress::TYPE_BILLING)
+            ->where('party', $party)
+            ->orderByDesc('is_default')
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    /** @param array<string, string|null> $data */
+    private function createIfMissing(User $user, array $data): ?UserAddress
+    {
+        $party = (string) $data['party'];
+        $existing = $this->listForParty($user, $party);
+        foreach ($existing as $address) {
+            if ($this->sameAddress($address, $data)) return $address;
+        }
+        if ($this->list($user)->count() >= self::MAX) return null;
+
+        $this->clearDefault($user, $party);
+        return UserAddress::query()->create([
+            ...$data,
+            'user_id' => $user->id,
+            'type' => UserAddress::TYPE_BILLING,
+            'label' => null,
+            'is_default' => true,
+        ]);
+    }
+
+    /** @param array<string, string|null> $data */
+    private function sameAddress(UserAddress $address, array $data): bool
+    {
+        foreach (['party', 'first_name', 'last_name', 'company_name', 'eik', 'vat_number', 'mol', 'line1', 'city', 'postal_code', 'country'] as $field) {
+            if ($this->normalise($address->{$field}) !== $this->normalise($data[$field] ?? null)) return false;
+        }
+        return true;
+    }
+
+    /** @param array<string, string|null> $first @param array<string, string|null> $second */
+    private function sameLocation(array $first, array $second): bool
+    {
+        foreach (['line1', 'city', 'postal_code', 'country'] as $field) {
+            if ($this->normalise($first[$field] ?? null) !== $this->normalise($second[$field] ?? null)) return false;
+        }
+        return true;
+    }
+
+    private function normalise(mixed $value): string
+    {
+        return mb_strtolower(trim(preg_replace('/\s+/u', ' ', (string) $value) ?? ''));
+    }
+
+    private function clearDefault(User $user, string $party, ?int $exceptId = null): void
     {
         $query = UserAddress::query()
             ->where('user_id', $user->id)
             ->where('type', UserAddress::TYPE_BILLING)
+            ->where('party', $party)
             ->where('is_default', true);
 
         if ($exceptId !== null) {

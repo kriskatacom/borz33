@@ -19,6 +19,20 @@ function pageSize(raw: string | null): number {
   return (DATA_TABLE_PAGE_SIZES as readonly number[]).includes(value) ? value : DEFAULT_PAGE_SIZE;
 }
 
+function dateValue(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function currentMonthDates(): { from: string; to: string } {
+  const now = new Date();
+  return {
+    from: dateValue(new Date(now.getFullYear(), now.getMonth(), 1)),
+    to: dateValue(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+  };
+}
+
 export function OrdersPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const [params, setParams] = useSearchParams();
@@ -29,14 +43,17 @@ export function OrdersPage() {
   const [message, setMessage] = useState<string | null>(null);
   useGlobalLoading(busy);
   const columns = useMemo(() => getOrdersColumns(), []);
+  const defaultDates = useMemo(currentMonthDates, []);
   const filters = useMemo(() => ({
     q: params.get('q') ?? '',
     status: params.get('status') ?? 'all',
     delivery_method: params.get('delivery_method') ?? 'all',
     payment_method: params.get('payment_method') ?? 'all',
+    date_from: params.get('date_from') ?? defaultDates.from,
+    date_to: params.get('date_to') ?? defaultDates.to,
     page: Number(params.get('page') ?? '1') || 1,
     per_page: pageSize(params.get('per_page')),
-  }), [params]);
+  }), [defaultDates, params]);
 
   function updateParams(next: Record<string, string>, resetPage = true) {
     const merged = new URLSearchParams(params);
@@ -74,10 +91,12 @@ export function OrdersPage() {
     <div className="page">
       <PageHeader title="Поръчки" help="Преглеждайте новите поръчки, данните за доставка и плащане и управлявайте изпълнението им." crumbs={[{ label: 'Табло', to: routes.home }, { label: 'Поръчки' }]} />
       <form className="filters" onSubmit={(event) => event.preventDefault()}>
-        <Field id="orders-q" label="Търсене" help="Номер, име, имейл или телефон." value={search} placeholder="Номер или клиент" onChange={(event) => setSearch(event.target.value)} />
+        <Field id="orders-q" label="Търсене" help="Номер на поръчка, име или имейл на клиента." value={search} placeholder="Номер, име или имейл" onChange={(event) => setSearch(event.target.value)} />
         <div className="field"><LabelWithHelp htmlFor="orders-status" label="Статус" help="Етап на обработка." /><Select value={filters.status} onValueChange={(value) => updateParams({ status: value })}><SelectTrigger id="orders-status" className="min-h-12 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Всички статуси</SelectItem>{ORDER_STATUSES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select></div>
-        <div className="field"><LabelWithHelp htmlFor="orders-delivery" label="Доставка" help="Начин на получаване." /><Select value={filters.delivery_method} onValueChange={(value) => updateParams({ delivery_method: value })}><SelectTrigger id="orders-delivery" className="min-h-12 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Всички</SelectItem><SelectItem value="office">Офис на Еконт</SelectItem><SelectItem value="machine">Еконтомат</SelectItem><SelectItem value="address">До адрес</SelectItem></SelectContent></Select></div>
-        <div className="field"><LabelWithHelp htmlFor="orders-payment" label="Плащане" help="Избран метод на плащане." /><Select value={filters.payment_method} onValueChange={(value) => updateParams({ payment_method: value })}><SelectTrigger id="orders-payment" className="min-h-12 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Всички</SelectItem><SelectItem value="cash_on_delivery">Наложен платеж</SelectItem><SelectItem value="bank_transfer">Банков превод</SelectItem><SelectItem value="card">Карта</SelectItem></SelectContent></Select></div>
+        <div className="field"><LabelWithHelp htmlFor="orders-delivery" label="Доставка" help="Начин на получаване." /><Select value={filters.delivery_method} onValueChange={(value) => updateParams({ delivery_method: value })}><SelectTrigger id="orders-delivery" className="min-h-12 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Всички</SelectItem><SelectItem value="office">Офис на Еконт</SelectItem><SelectItem value="address">До адрес</SelectItem></SelectContent></Select></div>
+        <div className="field"><LabelWithHelp htmlFor="orders-payment" label="Плащане" help="Избран метод на плащане." /><Select value={filters.payment_method} onValueChange={(value) => updateParams({ payment_method: value })}><SelectTrigger id="orders-payment" className="min-h-12 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Всички</SelectItem><SelectItem value="cash_on_delivery">Наложен платеж</SelectItem></SelectContent></Select></div>
+        <Field id="orders-date-from" label="От дата" type="date" value={filters.date_from} onChange={(event) => updateParams({ date_from: event.target.value })} />
+        <Field id="orders-date-to" label="До дата" type="date" value={filters.date_to} min={filters.date_from} onChange={(event) => updateParams({ date_to: event.target.value })} />
       </form>
       {message ? <p className="form-message is-error" role="alert">{message}</p> : null}
       <DataTable columns={columns} data={orders} loading={busy} emptyMessage="Няма поръчки за избраните филтри." caption="Поръчки" pagination={{ page: filters.page, lastPage: pagination.lastPage, total: pagination.total, pageSize: filters.per_page, onPageChange: (page) => updateParams({ page: String(page) }, false), onPageSizeChange: (size) => updateParams({ per_page: size === DEFAULT_PAGE_SIZE ? '' : String(size) }) }} />

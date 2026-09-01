@@ -7,12 +7,15 @@ fi
 
 uploads="/var/www/api/public/uploads"
 invoices="/var/www/storage/invoices"
+packages="/var/www/storage/accounting/packages"
 mkdir -p "$uploads/products" "$uploads/users" "$uploads/media"
-mkdir -p "$invoices"
+mkdir -p "$invoices" "$packages"
 # Host bind-mount user (usually 1000) and php-fpm (www-data) both need to write.
 chown -R "${HOST_UID:-1000}:www-data" "$uploads"
 chmod -R ug+rwX "$uploads"
 chown -R "${HOST_UID:-1000}:www-data" "$invoices"
 chmod -R ug+rwX "$invoices"
+chown -R "${HOST_UID:-1000}:www-data" "$packages"
+chmod -R ug+rwX "$packages"
 
 exec docker-php-entrypoint "$@"

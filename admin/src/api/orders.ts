@@ -66,6 +66,8 @@ export type OrderFilters = {
   status?: string;
   delivery_method?: string;
   payment_method?: string;
+  date_from?: string;
+  date_to?: string;
   page?: number;
   per_page?: number;
 };

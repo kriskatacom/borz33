@@ -94,6 +94,7 @@ $router->get('/admin/accounting/export/{type}/{format}', [AccountingController::
 $router->post('/admin/accounting/transactions', [AccountingController::class, 'transaction'], $admin);
 $router->post('/admin/accounting/econt-reconciliation', [AccountingController::class, 'reconcile'], $admin);
 $router->post('/admin/accounting/package', [AccountingController::class, 'package'], $admin);
+$router->post('/admin/accounting/invoice-pdfs', [AccountingController::class, 'invoicePdfs'], $admin);
 $router->post('/admin/accounting/close', [AccountingController::class, 'close'], $admin);
 $router->get('/admin/accounting/closures/{id}/download', [AccountingController::class, 'downloadClosure'], $admin);
 

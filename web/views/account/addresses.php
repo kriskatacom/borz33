@@ -43,7 +43,7 @@ $formConfig = $alpineJson([
     'idleLabel' => $saveLabel,
 ]);
 ?>
-<p class="mt-0 mb-5 text-muted">Запишете няколко адреса за фактура — за себе си или за фирми. При поръчка ще може да изберете кой да се използва.</p>
+<p class="mt-0 mb-5 text-muted">Запишете адреси за доставка и фактуриране — за себе си или за фирми. При поръчка се попълва подходящият основен адрес.</p>
 
 <article class="store-card store-address-fold" x-data="{ open: <?= $foldOpen ? 'true' : 'false' ?> }" :class="open && 'is-open'">
     <button
@@ -54,7 +54,7 @@ $formConfig = $alpineJson([
         aria-controls="address-fold-panel"
     >
         <span class="store-address-fold-copy">
-            <span class="store-address-fold-title"><?= $editingAddressId !== null ? 'Редакция на адрес' : 'Нов адрес за фактуриране' ?></span>
+            <span class="store-address-fold-title"><?= $editingAddressId !== null ? 'Редакция на адрес' : 'Нов адрес' ?></span>
             <span class="store-address-fold-hint">Добавете адрес за себе си или за фирма</span>
         </span>
         <span class="store-address-fold-icon" aria-hidden="true"><?= Html::iconSvg('chevron-down') ?></span>
@@ -206,7 +206,7 @@ $formConfig = $alpineJson([
                 <input type="hidden" name="is_default" value="0">
                 <input type="checkbox" name="is_default" value="1" <?= $isDefault ? 'checked' : '' ?>>
                 <span class="store-check-box" aria-hidden="true"></span>
-                Основен адрес за фактуриране
+                Основен адрес за този тип
             </label>
             <div class="flex flex-wrap items-center gap-2">
                 <button type="submit" class="store-submit">
@@ -256,7 +256,7 @@ $formConfig = $alpineJson([
                             </button>
                         </form>
                     <?php endif; ?>
-                    <form method="post" action="/account/addresses/<?= (int) $address->id ?>/delete" @submit="if (!confirm('Изтриване на този адрес за фактуриране?')) { $event.preventDefault(); return; } busy = true">
+                    <form method="post" action="/account/addresses/<?= (int) $address->id ?>/delete" @submit="if (!confirm('Изтриване на този адрес?')) { $event.preventDefault(); return; } busy = true">
                         <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
                         <button type="submit" class="store-address-btn store-address-btn--danger">
                             <?= Html::iconSvg('trash') ?>

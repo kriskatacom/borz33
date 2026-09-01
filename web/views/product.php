@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Product;
 use App\Resources\ProductImageResource;
+use Store\Core\Banners;
 use Store\Core\Html;
 use Store\Services\ProductPage;
 
@@ -34,7 +35,7 @@ $jsonLd = [
     '@context' => 'https://schema.org',
     '@type' => 'Product',
     'name' => $product->name,
-    'description' => $product->short_description ?: $product->description,
+    'description' => strip_tags((string) ($product->short_description ?: $product->description)),
     'sku' => $product->sku,
     'image' => $front !== null ? ProductImageResource::toArray($front)['url'] : null,
     'offers' => [
@@ -95,7 +96,7 @@ $jsonLd = [
         <div class="store-pdp-buy">
             <h1 class="store-pdp-title"><?= htmlspecialchars($product->name, ENT_QUOTES, 'UTF-8') ?></h1>
             <?php if ($product->short_description): ?>
-                <p class="store-pdp-lead"><?= htmlspecialchars($product->short_description, ENT_QUOTES, 'UTF-8') ?></p>
+                <div class="store-pdp-lead"><?= Banners::expandShortcodes((string) $product->short_description) ?></div>
             <?php endif; ?>
 
             <p class="store-pdp-price">
@@ -257,7 +258,7 @@ $jsonLd = [
     <?php if (trim((string) $product->description) !== ''): ?>
         <section class="store-pdp-section">
             <h2>Описание</h2>
-            <div class="store-pdp-copy"><?= nl2br(htmlspecialchars($product->description, ENT_QUOTES, 'UTF-8')) ?></div>
+            <div class="store-pdp-copy"><?= Banners::expandShortcodes((string) $product->description) ?></div>
         </section>
     <?php endif; ?>
 

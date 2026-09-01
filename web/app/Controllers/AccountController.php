@@ -207,7 +207,7 @@ class AccountController extends Controller
             ]);
         }
 
-        StoreAuth::setFlash('Адресът за фактуриране е записан.');
+        StoreAuth::setFlash('Адресът е записан.');
         $this->redirect('/account/addresses');
     }
 
@@ -231,7 +231,7 @@ class AccountController extends Controller
             ]);
         }
 
-        StoreAuth::setFlash('Адресът за фактуриране е обновен.');
+        StoreAuth::setFlash('Адресът е обновен.');
         $this->redirect('/account/addresses');
     }
 
@@ -249,7 +249,7 @@ class AccountController extends Controller
         $user = $this->requireUser();
         $this->assertCsrf();
         $this->addresses->setDefault($user, $this->ownedAddress($user, $id));
-        StoreAuth::setFlash('Основният адрес за фактуриране е сменен.');
+        StoreAuth::setFlash('Основният адрес за този тип е сменен.');
         $this->redirect('/account/addresses');
     }
 

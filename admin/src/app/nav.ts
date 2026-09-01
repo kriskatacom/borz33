@@ -15,12 +15,12 @@ export type NavSection = {
 export const navItems: NavItem[] = [
   { to: routes.home, label: 'Табло', hint: 'Преглед и бързи връзки', mobile: true },
   { to: routes.orders, label: 'Поръчки', hint: 'Нови заявки, статуси и плащания', mobile: true },
-  { to: routes.invoices, label: 'Фактури', hint: 'Фактури, кредитни известия и експорт' },
+  { to: routes.invoices, label: 'Фактури', hint: 'Издадени фактури и експорт' },
+  { to: routes.creditNotes, label: 'Кредитни известия', hint: 'Кредитни известия и експорт' },
   { to: routes.products, label: 'Продукти', hint: 'Каталог, цени и наличности', mobile: true },
   { to: routes.categories, label: 'Категории', hint: 'Дърво на каталога и изображения' },
   { to: routes.media, label: 'Медия', hint: 'Файлове и изображения' },
   { to: routes.users, label: 'Потребители', hint: 'Екип и клиентски профили' },
-  { to: routes.shipments, label: 'Доставки', hint: 'Econt, товарителници и куриер' },
   { to: routes.pages, label: 'Страници', hint: 'CMS страници и персонални полета' },
   { to: routes.banners, label: 'Банери', hint: 'Текст, изображение и бутони за сайта' },
   { to: routes.campaigns, label: 'Кампании', hint: 'Промоции и купони' },
@@ -32,7 +32,7 @@ export const navItems: NavItem[] = [
 
 export const navSections: NavSection[] = [
   { label: 'Начало', items: navItems.filter((item) => item.to === routes.home) },
-  { label: 'Продажби', items: navItems.filter((item) => new Set<string>([routes.orders, routes.invoices, routes.shipments]).has(item.to)) },
+  { label: 'Продажби', items: navItems.filter((item) => new Set<string>([routes.orders, routes.invoices, routes.creditNotes]).has(item.to)) },
   { label: 'Каталог', items: navItems.filter((item) => new Set<string>([routes.products, routes.categories, routes.media]).has(item.to)) },
   { label: 'Съдържание', items: navItems.filter((item) => new Set<string>([routes.pages, routes.banners, routes.campaigns]).has(item.to)) },
   { label: 'Комуникация', items: navItems.filter((item) => item.to === routes.messages) },
@@ -48,6 +48,7 @@ export function navItemByPath(path: string): NavItem | undefined {
     return navItems.find((item) => item.to === routes.products);
   }
   if (path.startsWith(`${routes.invoices}/`) || path === routes.invoices) return navItems.find((item) => item.to === routes.invoices);
+  if (path.startsWith(`${routes.creditNotes}/`) || path === routes.creditNotes) return navItems.find((item) => item.to === routes.creditNotes);
   if (path.startsWith(`${routes.accounting}/`) || path === routes.accounting) return navItems.find((item) => item.to === routes.accounting);
 
   if (path.startsWith(`${routes.categories}/`) || path === routes.categories) {

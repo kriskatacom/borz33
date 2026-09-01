@@ -51,7 +51,7 @@ export function getProductsColumns({ onDelete, onRestore, onForceDelete }: Produ
               {product.name}
             </Link>
             {product.short_description ? (
-              <p className="m-0 mt-1 max-w-md truncate text-muted-foreground">{product.short_description}</p>
+              <div className="m-0 mt-1 max-w-md truncate text-muted-foreground" dangerouslySetInnerHTML={{ __html: product.short_description }} />
             ) : null}
           </div>
         );

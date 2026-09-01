@@ -27,20 +27,31 @@ class OrderAdminService
         $query = Order::query()->withCount('items');
         $search = trim((string) ($filters['q'] ?? ''));
         $status = trim((string) ($filters['status'] ?? ''));
+        $dateFrom = trim((string) ($filters['date_from'] ?? ''));
+        $dateTo = trim((string) ($filters['date_to'] ?? ''));
 
         if ($search !== '') {
-            $query->where(static function (Builder $builder) use ($search): void {
-                $like = '%' . $search . '%';
-                $builder->where('number', 'like', $like)
-                    ->orWhere('first_name', 'like', $like)
-                    ->orWhere('last_name', 'like', $like)
-                    ->orWhere('email', 'like', $like)
-                    ->orWhere('phone', 'like', $like);
-            });
+            foreach (preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $term) {
+                $like = '%' . $term . '%';
+                $query->where(static function (Builder $builder) use ($like): void {
+                    $builder->where('number', 'like', $like)
+                        ->orWhere('first_name', 'like', $like)
+                        ->orWhere('last_name', 'like', $like)
+                        ->orWhere('email', 'like', $like);
+                });
+            }
         }
 
         if ($status !== '' && $status !== 'all' && in_array($status, self::STATUSES, true)) {
             $query->where('status', $status);
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom) === 1) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo) === 1) {
+            $query->whereDate('created_at', '<=', $dateTo);
         }
 
         foreach (['delivery_method', 'payment_method'] as $field) {

@@ -216,9 +216,9 @@ export function ProductViewPage() {
                   <dd className="m-0">{formatMoney(product.compare_at_price)}</dd>
                 </div>
               </dl>
-              {product.short_description ? <p className="mb-0 mt-4">{product.short_description}</p> : null}
+              {product.short_description ? <div className="mb-0 mt-4" dangerouslySetInnerHTML={{ __html: product.short_description }} /> : null}
               {product.description ? (
-                <p className="mb-0 mt-3 whitespace-pre-wrap text-muted-foreground">{product.description}</p>
+                <div className="mb-0 mt-3 text-muted-foreground" dangerouslySetInnerHTML={{ __html: product.description }} />
               ) : null}
             </div>
           </CollapsibleSection>

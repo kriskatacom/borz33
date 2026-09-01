@@ -10,6 +10,7 @@ import { useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,6 +27,8 @@ export function OrderDetailsPage() {
   const [econtOperationsEnabled, setEcontOperationsEnabled] = useState(false);
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmStatusChange, setConfirmStatusChange] = useState(false);
+  const [confirmPayment, setConfirmPayment] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   useGlobalLoading(busy);
 
@@ -49,14 +52,24 @@ export function OrderDetailsPage() {
     return () => { cancelled = true; };
   }, [token]);
 
-  async function saveStatus() {
+  async function saveStatus(statusConfirmed = false) {
     if (!order || (status === order.status && trackingNumber.trim() === (order.tracking_number ?? ''))) return;
-    const recordPayment = status === 'paid' && order.status !== 'paid' && order.payment_method === 'cash_on_delivery'
-      ? window.confirm('Да отбележим ли и полученото плащане в Счетоводство?\n\n„Да“ създава платежен запис с пълната сума по наложен платеж.\n„Отказ“ запазва само статуса „Платена“ и позволява да въведете плащането по-късно.')
-      : false;
+    const requiresPaymentConfirmation = status === 'paid' && order.status !== 'paid' && order.payment_method === 'cash_on_delivery';
+    if (status === 'paid' && order.status !== 'paid' && !statusConfirmed) {
+      setConfirmStatusChange(true);
+      return;
+    }
+    if (requiresPaymentConfirmation && !confirmPayment) {
+      setConfirmStatusChange(false);
+      setConfirmPayment(true);
+      return;
+    }
+    const recordPayment = requiresPaymentConfirmation && confirmPayment;
     setSaving(true);
     try {
       const response = await updateOrderStatus(token, order.id, status, trackingNumber.trim(), recordPayment);
+      setConfirmStatusChange(false);
+      setConfirmPayment(false);
       setOrder(response.data.order);
       setTrackingNumber(response.data.order.tracking_number ?? '');
       if (response.data.payment_recorded) toast.success('Статусът е обновен и плащането е записано в Счетоводство.');
@@ -97,10 +110,12 @@ export function OrderDetailsPage() {
           <section className="border border-border bg-card p-4"><h2 className="m-0 mb-3 text-lg">Клиент</h2><p className="m-0 font-bold">{order.first_name} {order.last_name}</p><p className="m-0 mt-2 flex items-center gap-2"><Mail className="size-4" /><a href={`mailto:${order.email}`}>{order.email}</a></p><p className="m-0 mt-2 flex items-center gap-2"><Phone className="size-4" /><a href={`tel:${order.phone}`}>{order.phone}</a></p>{order.user_id ? <p className="m-0 mt-2 text-sm text-muted-foreground">Регистриран клиент · ID {order.user_id}</p> : <p className="m-0 mt-2 text-sm text-muted-foreground">Поръчка като гост</p>}</section>
           <section className="border border-border bg-card p-4"><h2 className="m-0 mb-3 flex items-center gap-2 text-lg"><Truck className="size-5" />Доставка</h2><p className="m-0 font-bold">{deliveryLabel(order.delivery_method)}</p>{order.econt_office_code ? <p className="m-0 mt-2">Код на Econt локация: {order.econt_office_code}</p> : null}<p className="m-0 mt-2">Платец: <strong>{order.shipping_payer === 'sender' ? 'Магазинът' : 'Клиентът'}</strong></p>{order.econt_quote_snapshot ? <div className="mt-3 border-t border-border pt-3 text-sm"><p className="m-0 text-muted-foreground">Econt калкулация · {order.econt_quote_snapshot.environment === 'demo' ? 'demo' : order.econt_quote_snapshot.environment}</p><p className="m-0 mt-1">Куриерска цена: <strong>{formatMoney(order.econt_quote_snapshot.carrier_amount ?? 0)}</strong></p><p className="m-0 mt-1">Подадени: {order.econt_quote_snapshot.weight_kg ?? 0} kg · стойност {formatMoney(order.econt_quote_snapshot.order_value ?? 0)} · НП {formatMoney(order.econt_quote_snapshot.cod_amount ?? 0)}</p></div> : null}<p className="m-0 mt-2 flex items-start gap-2"><MapPin className="mt-1 size-4 shrink-0" /><span>{order.address_line}<br />{[order.postal_code, order.city].filter(Boolean).join(' ')}, {order.country}</span></p>{order.tracking_number && order.tracking_url ? <div className="mt-4 border-t border-border pt-3"><p className="m-0 text-sm text-muted-foreground">Товарителница</p><p className="m-0 mt-1 font-bold">{order.tracking_number}</p><Button asChild variant="outline" size="sm" className="mt-2"><a href={order.tracking_url} target="_blank" rel="noopener noreferrer"><ExternalLink />Проследи в Еконт</a></Button>{order.shipped_at ? <p className="m-0 mt-2 text-xs text-muted-foreground">Изпратена: {formatDateTime(order.shipped_at)}</p> : null}</div> : null}</section>
           <section className="border border-border bg-card p-4"><h2 className="m-0 mb-3 flex items-center gap-2 text-lg"><Package className="size-5" />Плащане</h2><p className="m-0">{paymentLabel(order.payment_method)}</p></section>
-          <section className="border border-border bg-card p-4"><h2 className="m-0 mb-3 flex items-center gap-2 text-lg"><FileText className="size-5" />Фактури</h2><p className="m-0 text-sm text-muted-foreground">{order.invoice_requested ? 'Клиентът е поискал PDF фактура по имейл.' : 'Клиентът не е поискал изпращане по имейл. PDF документът остава в архива.'}</p>{order.invoice_requested ? <><p className="m-0 mt-3 font-bold">{order.invoice_company}</p><p className="m-0 mt-1 text-sm text-muted-foreground">ЕИК {order.invoice_eik}{order.invoice_vat_number ? ` · ДДС № ${order.invoice_vat_number}` : ''}<br />{order.invoice_address}<br />МОЛ {order.invoice_mol}</p></> : null}<div className="mt-3 grid gap-2">{order.invoices.length ? order.invoices.map((invoice) => <div key={invoice.id} className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link to={`/invoices/${invoice.id}`}>{invoice.type === 'credit_note' ? 'Кредитно известие' : 'Фактура'} № {invoice.number ?? '—'}</Link></Button>{invoice.has_pdf ? <Button type="button" variant="outline" onClick={() => void openInvoice(invoice.id)}><FileText />Преглед на PDF</Button> : null}</div>) : <p className="m-0 text-sm text-muted-foreground">Документът се генерира при създаването на поръчката.</p>}</div></section>
+          <section className="border border-border bg-card p-4"><h2 className="m-0 mb-3 flex items-center gap-2 text-lg"><FileText className="size-5" />Фактури</h2><p className="m-0 text-sm text-muted-foreground">{order.invoice_requested ? 'Клиентът е поискал PDF фактура по имейл.' : 'Клиентът не е поискал изпращане по имейл. PDF документът остава в архива.'}</p>{order.invoice_requested ? <><p className="m-0 mt-3 font-bold">{order.invoice_company}</p><p className="m-0 mt-1 text-sm text-muted-foreground">ЕИК {order.invoice_eik}{order.invoice_vat_number ? ` · ДДС № ${order.invoice_vat_number}` : ''}<br />{order.invoice_address}<br />МОЛ {order.invoice_mol}</p></> : null}<div className="mt-3 grid gap-2">{order.invoices.length ? order.invoices.map((invoice) => <div key={invoice.id} className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link to={invoice.type === 'credit_note' ? `/credit-notes/${invoice.id}` : `/invoices/${invoice.id}`}>{invoice.type === 'credit_note' ? 'Кредитно известие' : 'Фактура'} № {invoice.number ?? '—'}</Link></Button>{invoice.has_pdf ? <Button type="button" variant="outline" onClick={() => void openInvoice(invoice.id)}><FileText />Преглед на PDF</Button> : null}</div>) : <p className="m-0 text-sm text-muted-foreground">Документът се генерира при създаването на поръчката.</p>}</div></section>
           {order.notes ? <section className="border border-border bg-card p-4"><h2 className="m-0 mb-2 text-lg">Бележка от клиента</h2><p className="m-0 whitespace-pre-wrap text-muted-foreground">{order.notes}</p></section> : null}
         </aside>
       </div>
+      {confirmStatusChange ? <ConfirmDialog title="Потвърждение на промяната" message={`Сигурни ли сте, че искате да промените статуса на поръчка №${order.number} на „Платена“?`} description="След потвърждение статусът ще бъде обновен. Ще получите отделен въпрос дали да запишете и плащането в Счетоводство." confirmLabel="Потвърди промяната" variant="default" busy={saving} onCancel={() => setConfirmStatusChange(false)} onConfirm={() => void saveStatus(true)} /> : null}
+      {confirmPayment ? <ConfirmDialog title="Потвърждение на плащането" message="Да отбележим ли и полученото плащане в Счетоводство?" description="При потвърждение ще се запише платежна операция с пълната сума по наложен платеж. При отказ ще се запази само статусът „Платена“." confirmLabel="Запиши плащането" variant="default" busy={saving} onCancel={() => setConfirmPayment(false)} onConfirm={() => void saveStatus(true)} /> : null}
     </div>
   );
 }

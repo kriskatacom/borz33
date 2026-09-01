@@ -12,6 +12,7 @@ use App\Resources\ProductImageResource;
 use App\Services\Orders\OrderNotificationService;
 use App\Services\Invoices\InvoiceService;
 use App\Services\Invoices\InvoiceNotificationService;
+use App\Services\Users\BillingAddressService;
 use App\Services\Shipping\EcontShippingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Capsule\Manager as Capsule;
@@ -29,7 +30,8 @@ class ShopController extends Controller
         private readonly OrderNotificationService $orderNotifications = new OrderNotificationService(),
         private ?EcontShippingService $econtShipping = null,
         private readonly InvoiceService $invoices = new InvoiceService(),
-        private readonly InvoiceNotificationService $invoiceNotifications = new InvoiceNotificationService()
+        private readonly InvoiceNotificationService $invoiceNotifications = new InvoiceNotificationService(),
+        private readonly BillingAddressService $addresses = new BillingAddressService()
     ) {
     }
 
@@ -396,7 +398,10 @@ class ShopController extends Controller
         }
 
         $user = \App\Core\Auth::user();
-        $address = $user?->billingAddresses()->first();
+        $addresses = $user?->billingAddresses()->get() ?? new \Illuminate\Support\Collection();
+        $personalAddress = $addresses->first(static fn (\App\Models\UserAddress $address): bool => $address->party === \App\Models\UserAddress::PARTY_PERSON);
+        $companyAddress = $addresses->first(static fn (\App\Models\UserAddress $address): bool => $address->party === \App\Models\UserAddress::PARTY_COMPANY);
+        $deliveryAddress = $personalAddress ?? $companyAddress;
         $subtotal = $this->cartSubtotal($lines);
         $freeShippingThreshold = $this->freeShippingThreshold();
 
@@ -408,24 +413,24 @@ class ShopController extends Controller
             'subtotalAmount' => $subtotal,
             'freeShippingThreshold' => $freeShippingThreshold,
             'form' => [
-                'first_name' => (string) ($address?->first_name ?: $user?->first_name),
-                'last_name' => (string) ($address?->last_name ?: $user?->last_name),
+                'first_name' => (string) ($personalAddress?->first_name ?: $user?->first_name),
+                'last_name' => (string) ($personalAddress?->last_name ?: $user?->last_name),
                 'email' => (string) ($user?->email ?? ''),
                 'phone' => (string) ($user?->phone ?? ''),
                 'delivery_method' => 'address',
                 'shipping_payer' => 'receiver',
                 'econt_office_code' => '',
-                'address_line' => (string) ($address?->line1 ?? ''),
-                'city' => (string) ($address?->city ?? ''),
-                'postal_code' => (string) ($address?->postal_code ?? ''),
+                'address_line' => (string) ($deliveryAddress?->line1 ?? ''),
+                'city' => (string) ($deliveryAddress?->city ?? ''),
+                'postal_code' => (string) ($deliveryAddress?->postal_code ?? ''),
                 'country' => 'България',
                 'payment_method' => 'cash_on_delivery',
                 'notes' => '',
-                'invoice_company' => (string) ($address?->company_name ?? ''),
-                'invoice_eik' => (string) ($address?->eik ?? ''),
-                'invoice_vat_number' => (string) ($address?->vat_number ?? ''),
-                'invoice_address' => (string) ($address?->line1 ?? ''),
-                'invoice_mol' => (string) ($address?->mol ?? ''),
+                'invoice_company' => (string) ($companyAddress?->company_name ?? ''),
+                'invoice_eik' => (string) ($companyAddress?->eik ?? ''),
+                'invoice_vat_number' => (string) ($companyAddress?->vat_number ?? ''),
+                'invoice_address' => (string) ($companyAddress?->line1 ?? ''),
+                'invoice_mol' => (string) ($companyAddress?->mol ?? ''),
             ],
             'errors' => [],
             'acceptedTerms' => false,
@@ -571,7 +576,7 @@ class ShopController extends Controller
         $vatEnabled = (bool) $vatSettings->vat_enabled;
         $vatRate = $vatEnabled ? max(0, (float) $company['vat_rate']) : 0.0;
 
-        $order = Capsule::connection()->transaction(static function () use ($form, $lines, $sum, $shippingAmount, $shipping, $user, $wantsInvoice, $vatEnabled, $vatRate): Order {
+        $order = Capsule::connection()->transaction(function () use ($form, $lines, $sum, $shippingAmount, $shipping, $user, $wantsInvoice, $vatEnabled, $vatRate): Order {
             $order = Order::query()->create([
                 ...$form,
                 'user_id' => $user?->id,
@@ -603,6 +608,10 @@ class ShopController extends Controller
                     ->whereKey($user->id)
                     ->where(static fn ($query) => $query->whereNull('phone')->orWhere('phone', ''))
                     ->update(['phone' => $form['phone'], 'updated_at' => date('Y-m-d H:i:s')]);
+            }
+
+            if ($user !== null) {
+                $this->addresses->rememberOrderAddresses($user, $form, $wantsInvoice);
             }
 
             foreach ($lines as $line) {

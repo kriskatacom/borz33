@@ -15,7 +15,7 @@ final class InvoiceNotificationService
     public function send(Invoice $invoice): bool
     {
         $invoice->loadMissing('order');
-        if (!$this->isRequested($invoice)) return false;
+        if ($invoice->type !== 'credit_note' && !$this->isRequested($invoice)) return false;
         $email = trim((string) ($invoice->buyer_snapshot['email'] ?? $invoice->order?->email ?? ''));
         $root = dirname(__DIR__, 4);
         $path = $invoice->pdf_path ? $root . '/' . ltrim($invoice->pdf_path, '/') : '';

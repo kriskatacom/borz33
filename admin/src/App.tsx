@@ -65,7 +65,9 @@ export function App() {
               <Route path={routes.ordersShow} element={<OrderDetailsPage />} />
               <Route path={routes.orders} element={<OrdersPage />} />
               <Route path={routes.invoicesShow} element={<InvoiceDetailsPage />} />
-              <Route path={routes.invoices} element={<InvoicesPage />} />
+              <Route path={routes.creditNotesShow} element={<InvoiceDetailsPage />} />
+              <Route path={routes.creditNotes} element={<InvoicesPage documentType="credit_note" />} />
+              <Route path={routes.invoices} element={<InvoicesPage documentType="invoice" />} />
               <Route path={routes.productsNew} element={<ProductEditPage />} />
               <Route path={routes.productTemplates} element={<ProductTemplatesPage />} />
               <Route path={routes.productsEdit} element={<ProductEditPage />} />
