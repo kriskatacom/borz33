@@ -136,6 +136,20 @@ export type ProductAiSuggestion = {
   seo_description: string | null;
 };
 
+export type ProductAttributeTemplateValue = { name: string; slug: string; hex_color: string | null };
+export type ProductAttributeTemplateOption = { name: string; slug: string; values: ProductAttributeTemplateValue[] };
+export type ProductAttributeTemplateParameter = { name: string; value: string };
+export type ProductAttributeTemplate = {
+  id: number;
+  name: string;
+  category_id: number | null;
+  category: ProductCategorySummary | null;
+  parameters: ProductAttributeTemplateParameter[];
+  options: ProductAttributeTemplateOption[];
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export type ProductListData = {
   products: ProductListItem[];
   pagination: {
@@ -154,9 +168,42 @@ export function createProduct(token: string, body: Record<string, unknown>) {
   return apiRequest<{ product: AdminProduct }>('/admin/products', { method: 'POST', token, body });
 }
 
+export function listProductAttributeTemplates(token: string) {
+  return apiRequest<{ templates: ProductAttributeTemplate[] }>('/admin/product-templates', { token });
+}
+
+export function createProductAttributeTemplate(token: string, body: Record<string, unknown>) {
+  return apiRequest<{ template: ProductAttributeTemplate }>('/admin/product-templates', { method: 'POST', token, body });
+}
+
+export function updateProductAttributeTemplate(token: string, id: number, body: Record<string, unknown>) {
+  return apiRequest<{ template: ProductAttributeTemplate }>(`/admin/product-templates/${id}`, { method: 'PATCH', token, body });
+}
+
+export function deleteProductAttributeTemplate(token: string, id: number) {
+  return apiRequest<Record<string, never>>(`/admin/product-templates/${id}`, { method: 'DELETE', token });
+}
+
+export function applyProductAttributeTemplate(token: string, productId: number, templateId: number, sections: string[]) {
+  return apiRequest<{ product: AdminProduct }>(`/admin/products/${productId}/apply-template`, {
+    method: 'POST', token, body: { template_id: templateId, sections },
+  });
+}
+
 export function generateProductWithAi(token: string, files: File[]) {
   const form = new FormData();
   files.forEach((file) => form.append('images[]', file));
+
+  return apiUpload<{ suggestion: ProductAiSuggestion }>('/admin/products/ai-generate', {
+    token,
+    form,
+  });
+}
+
+export function generateProductWithAiFromAttachedImages(token: string, productId: number, imageIds: number[]) {
+  const form = new FormData();
+  form.append('product_id', String(productId));
+  imageIds.forEach((id) => form.append('image_ids[]', String(id)));
 
   return apiUpload<{ suggestion: ProductAiSuggestion }>('/admin/products/ai-generate', {
     token,

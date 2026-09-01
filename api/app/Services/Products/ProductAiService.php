@@ -6,6 +6,7 @@ namespace App\Services\Products;
 
 use App\Exceptions\AuthException;
 use App\Models\Category;
+use App\Models\ProductImage;
 use App\Validation\ProductImageValidator;
 
 final class ProductAiService
@@ -80,6 +81,43 @@ final class ProductAiService
         ];
 
         return $this->request($payload, $apiKey);
+    }
+
+    /** @param list<int> $imageIds @return array<string, mixed> */
+    public function generateForProduct(int $productId, array $imageIds): array
+    {
+        $imageIds = array_values(array_unique(array_filter($imageIds, static fn (int $id): bool => $id > 0)));
+        if ($imageIds === []) {
+            throw new AuthException('Изберете поне едно изображение за AI анализ.', 422);
+        }
+
+        $records = ProductImage::query()
+            ->where('product_id', $productId)
+            ->whereIn('id', $imageIds)
+            ->whereIn('role', [ProductImage::ROLE_FRONT, ProductImage::ROLE_GALLERY])
+            ->get();
+
+        if ($records->count() !== count($imageIds)) {
+            throw new AuthException('Някое от избраните изображения не е прикачено към този продукт.', 422);
+        }
+
+        $storage = new ProductImageStorage();
+        $files = [];
+        foreach ($records as $record) {
+            $path = $storage->absolutePath((string) $record->path);
+            if (!is_file($path)) {
+                throw new AuthException('Някое от избраните изображения липсва.', 422);
+            }
+            $files[] = [
+                'name' => (string) $record->original_name,
+                'type' => (string) $record->mime,
+                'tmp_name' => $path,
+                'error' => UPLOAD_ERR_OK,
+                'size' => (int) (filesize($path) ?: $record->size),
+            ];
+        }
+
+        return $this->generate($files);
     }
 
     private function prompt(): string

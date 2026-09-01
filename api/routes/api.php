@@ -14,6 +14,7 @@ use App\Controllers\Admin\ReportsController;
 use App\Controllers\Admin\PagesController;
 use App\Controllers\Admin\ProductImagesController;
 use App\Controllers\Admin\ProductAiController;
+use App\Controllers\Admin\ProductAttributeTemplatesController;
 use App\Controllers\Admin\ProductsController;
 use App\Controllers\Admin\SettingsController;
 use App\Controllers\Admin\UsersController;
@@ -125,6 +126,11 @@ $router->post('/admin/categories/{id}/restore', [CategoriesController::class, 'r
 
 $router->post('/admin/products', [ProductsController::class, 'store'], $admin);
 $router->post('/admin/products/ai-generate', [ProductAiController::class, 'generate'], $admin);
+$router->get('/admin/product-templates', [ProductAttributeTemplatesController::class, 'index'], $admin);
+$router->post('/admin/product-templates', [ProductAttributeTemplatesController::class, 'store'], $admin);
+$router->patch('/admin/product-templates/{id}', [ProductAttributeTemplatesController::class, 'update'], $admin);
+$router->delete('/admin/product-templates/{id}', [ProductAttributeTemplatesController::class, 'destroy'], $admin);
+$router->post('/admin/products/{id}/apply-template', [ProductAttributeTemplatesController::class, 'apply'], $admin);
 $router->get('/admin/products', [ProductsController::class, 'index'], $admin);
 $router->get('/admin/products/{id}', [ProductsController::class, 'show'], $admin);
 $router->put('/admin/products/{id}', [ProductsController::class, 'update'], $admin);

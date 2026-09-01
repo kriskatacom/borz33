@@ -18,6 +18,13 @@ final class ProductAiController extends Controller
     public function generate(): never
     {
         $images = Request::files('images');
-        $this->ok(['suggestion' => $this->ai->generate($images)], 'AI предложенията са готови. Прегледайте ги преди запис.');
+        $productId = (int) Request::input('product_id', 0);
+        $rawIds = Request::input('image_ids', []);
+        $imageIds = is_array($rawIds) ? array_map('intval', $rawIds) : [];
+        $suggestion = $productId > 0
+            ? $this->ai->generateForProduct($productId, $imageIds)
+            : $this->ai->generate($images);
+
+        $this->ok(['suggestion' => $suggestion], 'AI предложенията са готови. Прегледайте ги преди запис.');
     }
 }

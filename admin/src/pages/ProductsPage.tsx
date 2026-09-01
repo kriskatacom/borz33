@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { CopyPlus, Plus } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { listCategoryTree } from '@/api/categories';
 import { deleteProduct, forceDeleteProduct, listProducts, restoreProduct, type ProductListItem } from '@/api/products';
@@ -177,14 +177,7 @@ export function ProductsPage() {
           { label: 'Табло', to: routes.home },
           { label: 'Продукти' },
         ]}
-        actions={
-          <Button asChild>
-            <Link to={routes.productsNew}>
-              <Plus />
-              Нов продукт
-            </Link>
-          </Button>
-        }
+        actions={<div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link to={routes.productTemplates}><CopyPlus />Шаблони</Link></Button><Button asChild><Link to={routes.productsNew}><Plus />Нов продукт</Link></Button></div>}
       />
 
       <form className="filters" onSubmit={(event) => event.preventDefault()}>

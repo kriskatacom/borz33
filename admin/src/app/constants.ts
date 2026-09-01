@@ -17,6 +17,7 @@ export const routes = {
   productsNew: '/products/new',
   productsShow: '/products/:id',
   productsEdit: '/products/:id/edit',
+  productTemplates: '/products/templates',
   categories: '/categories',
   categoriesNew: '/categories/new',
   categoriesEdit: '/categories/:id',

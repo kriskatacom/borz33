@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Eye, ImagePlus, Images, Layers, List, Palette, Plus, RotateCcw, Save, Share2, Shirt, Sparkles, Trash2, Type, X } from 'lucide-react';
+import { ArrowLeft, CopyPlus, Eye, ImagePlus, Images, Layers, List, Palette, Plus, RotateCcw, Save, Share2, Shirt, Sparkles, Trash2, Type, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { listCategoryTree, type CategoryTreeNode } from '@/api/categories';
 import {
   createProduct,
+  applyProductAttributeTemplate,
   deleteProduct,
   generateProductWithAi,
+  generateProductWithAiFromAttachedImages,
   getProduct,
+  listProductAttributeTemplates,
   restoreProduct,
   shareProductPersonalization,
   uploadProductFrontImage,
@@ -15,6 +18,8 @@ import {
   updateProduct,
   type AdminProduct,
   type ProductAiSuggestion,
+  type ProductAttributeTemplate,
+  type ProductImage,
   type ProductOption,
   type ProductParameter,
   type ProductPersonalizationField,
@@ -63,6 +68,7 @@ type PersonalizationFieldDraft = {
 };
 type DraftProductImage = { key: string; file: File; previewUrl: string };
 type DraftProductImages = { front: DraftProductImage | null; gallery: DraftProductImage[] };
+type TemplateSelection = { templateId: number; sections: string[] } | null;
 
 let draftSeq = 0;
 function nextKey(): string {
@@ -278,11 +284,12 @@ function DraftImagesEditor({
   images: DraftProductImages;
   setImages: Dispatch<SetStateAction<DraftProductImages>>;
   aiBusy: boolean;
-  onGenerate: () => void;
+  onGenerate: (files: File[]) => void;
 }) {
   const frontInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
   const accept = 'image/jpeg,image/png,image/webp';
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
 
   function draft(file: File): DraftProductImage {
     return { key: `${Date.now()}-${Math.random()}`, file, previewUrl: URL.createObjectURL(file) };
@@ -292,48 +299,141 @@ function DraftImagesEditor({
     if (!file) return;
     setImages((current) => {
       if (current.front) URL.revokeObjectURL(current.front.previewUrl);
-      return { ...current, front: draft(file) };
+      const next = draft(file);
+      setSelectedKeys((selected) => {
+        const updated = new Set(selected);
+        if (current.front) updated.delete(current.front.key);
+        updated.add(next.key);
+        return updated;
+      });
+      return { ...current, front: next };
     });
   }
 
   function addGallery(files: FileList | null) {
     if (!files?.length) return;
-    setImages((current) => ({ ...current, gallery: [...current.gallery, ...Array.from(files).map(draft)] }));
+    const added = Array.from(files).map(draft);
+    setSelectedKeys((selected) => new Set([...selected, ...added.map((image) => image.key)]));
+    setImages((current) => ({ ...current, gallery: [...current.gallery, ...added] }));
   }
 
   function remove(image: DraftProductImage, target: 'front' | 'gallery') {
     URL.revokeObjectURL(image.previewUrl);
+    setSelectedKeys((selected) => {
+      const updated = new Set(selected);
+      updated.delete(image.key);
+      return updated;
+    });
     setImages((current) => target === 'front'
       ? { ...current, front: null }
       : { ...current, gallery: current.gallery.filter((item) => item.key !== image.key) });
   }
 
   const hasImages = images.front !== null || images.gallery.length > 0;
+  const all = [...(images.front ? [images.front] : []), ...images.gallery];
+  const selectedFiles = all.filter((image) => selectedKeys.has(image.key)).map((image) => image.file);
+  const allSelected = all.length > 0 && all.every((image) => selectedKeys.has(image.key));
+
+  function toggle(key: string) {
+    setSelectedKeys((selected) => {
+      const updated = new Set(selected);
+      updated.has(key) ? updated.delete(key) : updated.add(key);
+      return updated;
+    });
+  }
 
   return <div className="grid gap-4">
     <div className="grid gap-2">
       <LabelWithHelp label="Основно изображение" help="Ще се използва като предна снимка на продукта." />
-      {images.front ? <div className="relative w-40 overflow-hidden border border-border bg-muted aspect-[4/5]">
+      {images.front ? <div className={`relative w-40 overflow-hidden border bg-muted aspect-[4/5] ${selectedKeys.has(images.front.key) ? 'border-primary ring-2 ring-primary/25' : 'border-border'}`}>
         <img src={images.front.previewUrl} alt="Основно изображение" className="h-full w-full object-cover" />
+        <label className="absolute left-2 top-2 grid size-7 cursor-pointer place-items-center bg-background shadow-sm" title="Изпрати към AI">
+          <input className="size-4 accent-primary" type="checkbox" checked={selectedKeys.has(images.front.key)} onChange={() => toggle(images.front!.key)} aria-label="Избери основното изображение за AI" />
+        </label>
         <Button type="button" size="icon" variant="outline" className="absolute right-2 top-2 bg-background" aria-label="Премахни основното изображение" onClick={() => remove(images.front!, 'front')}><X /></Button>
       </div> : <Button type="button" variant="outline" className="w-fit" onClick={() => frontInput.current?.click()}><ImagePlus />Избери основно изображение</Button>}
       <input ref={frontInput} className="sr-only" type="file" accept={accept} onChange={(event) => { setFront(event.target.files?.[0]); event.target.value = ''; }} />
     </div>
     <div className="grid gap-2">
       <LabelWithHelp label="Галерия" help="Може да изберете няколко изображения още преди създаването." />
-      {images.gallery.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">{images.gallery.map((image) => <div key={image.key} className="relative overflow-hidden border border-border bg-muted aspect-[4/5]">
+      {images.gallery.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">{images.gallery.map((image) => <div key={image.key} className={`relative overflow-hidden border bg-muted aspect-[4/5] ${selectedKeys.has(image.key) ? 'border-primary ring-2 ring-primary/25' : 'border-border'}`}>
         <img src={image.previewUrl} alt={image.file.name} className="h-full w-full object-cover" />
+        <label className="absolute left-1 top-1 grid size-7 cursor-pointer place-items-center bg-background shadow-sm" title="Изпрати към AI">
+          <input className="size-4 accent-primary" type="checkbox" checked={selectedKeys.has(image.key)} onChange={() => toggle(image.key)} aria-label={`Избери ${image.file.name} за AI`} />
+        </label>
         <Button type="button" size="icon" variant="outline" className="absolute right-1 top-1 bg-background" aria-label="Премахни изображението" onClick={() => remove(image, 'gallery')}><X /></Button>
       </div>)}</div> : null}
       <Button type="button" variant="outline" className="w-fit" onClick={() => galleryInput.current?.click()}><Images />Добави към галерията</Button>
       <input ref={galleryInput} className="sr-only" type="file" accept={accept} multiple onChange={(event) => { addGallery(event.target.files); event.target.value = ''; }} />
     </div>
     <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-      <Button type="button" disabled={!hasImages || aiBusy} onClick={onGenerate}>
+      {hasImages ? <Button type="button" variant="outline" size="sm" onClick={() => setSelectedKeys(allSelected ? new Set() : new Set(all.map((image) => image.key)))}>
+        {allSelected ? 'Премахни избора' : 'Избери всички'}
+      </Button> : null}
+      <Button type="button" disabled={selectedFiles.length === 0 || aiBusy} onClick={() => onGenerate(selectedFiles)}>
         <Sparkles />
-        {aiBusy ? 'AI анализира…' : 'Генерирай с AI'}
+        {aiBusy ? 'AI анализира…' : `Генерирай с AI${selectedFiles.length ? ` (${selectedFiles.length})` : ''}`}
       </Button>
       <p className="m-0 text-sm text-muted-foreground">AI попълва само предложения във формата. Продуктът няма да бъде записан или публикуван автоматично.</p>
+    </div>
+  </div>;
+}
+
+function AttachedImagesAiPicker({
+  images,
+  busy,
+  onGenerate,
+}: {
+  images: ProductImage[];
+  busy: boolean;
+  onGenerate: (imageIds: number[]) => void;
+}) {
+  const [selected, setSelected] = useState<Set<number>>(() => new Set(images.map((image) => image.id)));
+
+  useEffect(() => {
+    const available = new Set(images.map((image) => image.id));
+    setSelected((current) => new Set([...current].filter((id) => available.has(id))));
+  }, [images]);
+
+  if (images.length === 0) return null;
+  const allSelected = images.every((image) => selected.has(image.id));
+
+  function toggle(id: number) {
+    setSelected((current) => {
+      const next = new Set(current);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  return <div className="mt-5 grid gap-3 border-t border-border pt-4">
+    <div>
+      <p className="m-0 font-semibold">Изображения за AI анализ</p>
+      <p className="mb-0 mt-1 text-sm text-muted-foreground">Маркирайте само снимките, които искате AI да анализира.</p>
+    </div>
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+      {images.map((image) => <button
+        key={image.id}
+        type="button"
+        className={`relative overflow-hidden border bg-muted text-left aspect-[4/5] ${selected.has(image.id) ? 'border-primary ring-2 ring-primary/25' : 'border-border'}`}
+        aria-pressed={selected.has(image.id)}
+        onClick={() => toggle(image.id)}
+      >
+        <img src={image.url} alt={image.alt || image.original_name} className="h-full w-full object-cover" loading="lazy" />
+        <span className="absolute left-2 top-2 grid size-7 place-items-center bg-background shadow-sm">
+          <input className="pointer-events-none size-4 accent-primary" type="checkbox" checked={selected.has(image.id)} readOnly tabIndex={-1} aria-hidden="true" />
+        </span>
+        <span className="absolute inset-x-0 bottom-0 bg-background/90 px-2 py-1 text-xs font-semibold">{image.role === 'front' ? 'Основна' : 'Допълнителна'}</span>
+      </button>)}
+    </div>
+    <div className="flex flex-wrap items-center gap-3">
+      <Button type="button" variant="outline" size="sm" onClick={() => setSelected(allSelected ? new Set() : new Set(images.map((image) => image.id)))}>
+        {allSelected ? 'Премахни избора' : 'Избери всички'}
+      </Button>
+      <Button type="button" disabled={selected.size === 0 || busy} onClick={() => onGenerate([...selected])}>
+        <Sparkles />
+        {busy ? 'AI анализира…' : `Генерирай с AI${selected.size ? ` (${selected.size})` : ''}`}
+      </Button>
     </div>
   </div>;
 }
@@ -959,6 +1059,35 @@ function SectionShell({
   );
 }
 
+function ProductTemplateSection({ token, product, selection, onSelectionChange, onApplied }: {
+  token: string; product: AdminProduct | null; selection: TemplateSelection;
+  onSelectionChange: (selection: TemplateSelection) => void; onApplied?: (product: AdminProduct) => void;
+}) {
+  const [templates, setTemplates] = useState<ProductAttributeTemplate[]>([]);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void listProductAttributeTemplates(token).then((response) => { if (!cancelled) setTemplates(response.data.templates); }).catch((error) => { if (!cancelled) toastError(error, 'Шаблоните не можаха да се заредят.'); });
+    return () => { cancelled = true; };
+  }, [token]);
+  const selected = templates.find((template) => template.id === selection?.templateId) ?? null;
+  const variantCount = selected?.options.reduce((count, option) => count * option.values.length, 1) ?? 0;
+  const sections = selection?.sections ?? ['parameters', 'options', 'variants'];
+  function setTemplate(id: string) { onSelectionChange(id === 'none' ? null : { templateId: Number(id), sections: ['parameters', 'options', 'variants'] }); }
+  function toggle(section: string) { if (!selection) return; const next = sections.includes(section) ? sections.filter((item) => item !== section) : [...sections, section]; onSelectionChange({ ...selection, sections: next }); }
+  async function apply() {
+    if (!product || !selection || !onApplied) return;
+    setBusy(true);
+    try { const response = await applyProductAttributeTemplate(token, product.id, selection.templateId, selection.sections); onApplied(response.data.product); toast.success(response.message || 'Шаблонът е приложен.'); }
+    catch (error) { toastError(error, 'Шаблонът не можа да бъде приложен.'); }
+    finally { setBusy(false); }
+  }
+  return <div className="grid gap-3">
+    <div className="field"><LabelWithHelp htmlFor="product-template" label="Шаблон" help="Копира данните в продукта. По-късните промени по шаблона не променят продукта." /><Select value={selection ? String(selection.templateId) : 'none'} onValueChange={setTemplate}><SelectTrigger id="product-template" className="w-full min-h-12 font-sans"><SelectValue placeholder="Без шаблон" /></SelectTrigger><SelectContent><SelectItem value="none">Без шаблон</SelectItem>{templates.map((template) => <SelectItem key={template.id} value={String(template.id)}>{template.name}{template.category ? ` · ${template.category.name}` : ''}</SelectItem>)}</SelectContent></Select></div>
+    {selected ? <><p className="m-0 text-sm text-muted-foreground">{selected.parameters.length} параметъра · {selected.options.length} опции · до {variantCount} комбинации.</p><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sections.includes('parameters')} onChange={() => toggle('parameters')} />Параметри</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sections.includes('options')} onChange={() => toggle('options')} />Опции</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sections.includes('variants')} onChange={() => toggle('variants')} />Генерирай липсващи варианти</label></div>{product ? <><p className="m-0 text-sm text-muted-foreground">Съществуващите редове и изображения не се изтриват. Добавят се само липсващи данни.</p><Button type="button" className="w-fit" disabled={busy || sections.length === 0} onClick={() => void apply()}><CopyPlus />{busy ? 'Прилагане…' : 'Приложи шаблона'}</Button></> : <p className="m-0 text-sm text-muted-foreground">Шаблонът ще се приложи след създаването на продукта.</p>}</> : <p className="m-0 text-sm text-muted-foreground">Създайте шаблон от „Продукти → Шаблони“.</p>}
+  </div>;
+}
+
 export function ProductEditPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const navigate = useNavigate();
@@ -972,6 +1101,7 @@ export function ProductEditPage() {
   const [draftImages, setDraftImages] = useState<DraftProductImages>({ front: null, gallery: [] });
   const [aiSuggestion, setAiSuggestion] = useState<ProductAiSuggestion | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
+  const [templateSelection, setTemplateSelection] = useState<TemplateSelection>(null);
   const draftImagesRef = useRef(draftImages);
   draftImagesRef.current = draftImages;
   useGlobalLoading(busy);
@@ -985,6 +1115,10 @@ export function ProductEditPage() {
   async function finishCreation(created: AdminProduct) {
     setBusy(true);
     try {
+      if (templateSelection) {
+        await applyProductAttributeTemplate(token, created.id, templateSelection.templateId, templateSelection.sections);
+        toast.success('Шаблонът е приложен към продукта.');
+      }
       if (draftImages.front) await uploadProductFrontImage(token, created.id, draftImages.front.file);
       for (const image of draftImages.gallery) await uploadProductGalleryImage(token, created.id, image.file);
       if (draftImages.front || draftImages.gallery.length) toast.success('Изображенията са качени и прикачени към продукта.');
@@ -995,12 +1129,7 @@ export function ProductEditPage() {
     }
   }
 
-  async function generateWithAi() {
-    const files = [
-      ...(draftImages.front ? [draftImages.front.file] : []),
-      ...draftImages.gallery.map((image) => image.file),
-    ];
-
+  async function generateWithAi(files: File[]) {
     if (files.length === 0) {
       toast.error('Добавете поне едно изображение на продукта.');
       return;
@@ -1009,6 +1138,20 @@ export function ProductEditPage() {
     setAiBusy(true);
     try {
       const response = await generateProductWithAi(token, files);
+      setAiSuggestion(response.data.suggestion);
+      toast.success(response.message || 'AI предложенията са попълнени. Прегледайте ги преди запис.');
+    } catch (error) {
+      toastError(error, 'AI предложенията не можаха да бъдат генерирани.');
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function generateWithAiFromAttached(imageIds: number[]) {
+    if (!product) return;
+    setAiBusy(true);
+    try {
+      const response = await generateProductWithAiFromAttachedImages(token, product.id, imageIds);
       setAiSuggestion(response.data.suggestion);
       toast.success(response.message || 'AI предложенията са попълнени. Прегледайте ги преди запис.');
     } catch (error) {
@@ -1145,7 +1288,7 @@ export function ProductEditPage() {
               images={draftImages}
               setImages={setDraftImages}
               aiBusy={aiBusy}
-              onGenerate={() => void generateWithAi()}
+              onGenerate={(files) => void generateWithAi(files)}
             />
           </SectionShell>
           <SectionShell title="Общи данни" icon={Shirt} help="Име, цена и статус. След запис се отваря пълната редакция.">
@@ -1157,6 +1300,9 @@ export function ProductEditPage() {
               aiSuggestion={aiSuggestion}
             />
           </SectionShell>
+          <SectionShell title="Шаблон за атрибути" icon={CopyPlus} help="Готови параметри, опции и автоматично генериране на варианти.">
+            <ProductTemplateSection token={token} product={null} selection={templateSelection} onSelectionChange={setTemplateSelection} />
+          </SectionShell>
         </div>
       ) : null}
 
@@ -1164,9 +1310,17 @@ export function ProductEditPage() {
         <div className="flex min-w-0 max-w-full flex-col gap-3">
           <SectionShell title="Изображения" icon={Images} help="Предна снимка и галерия. Качват се веднага, без запис на секцията.">
             <ProductImagesEditor product={product} token={token} onProductChange={setProduct} />
+            <AttachedImagesAiPicker
+              images={product.front_image ? [product.front_image, ...product.gallery_images] : product.gallery_images}
+              busy={aiBusy}
+              onGenerate={(imageIds) => void generateWithAiFromAttached(imageIds)}
+            />
           </SectionShell>
           <SectionShell title="Общи данни" icon={Shirt} help="Име, цена и статус в каталога. Записът важи само за тази секция.">
-            <GeneralForm key={`general-${product.id}`} product={product} token={token} onSaved={setProduct} />
+            <GeneralForm key={`general-${product.id}`} product={product} token={token} onSaved={setProduct} aiSuggestion={aiSuggestion} />
+          </SectionShell>
+          <SectionShell title="Шаблон за атрибути" icon={CopyPlus} help="Добавя данни от шаблон, без да премахва съществуващи варианти или изображения.">
+            <ProductTemplateSection token={token} product={product} selection={templateSelection} onSelectionChange={setTemplateSelection} onApplied={setProduct} />
           </SectionShell>
           <SectionShell title="Параметри" icon={List} help="Характеристики като материя и грамаж. Показват се в описанието на продукта.">
             <ParametersForm key={`parameters-${product.id}`} product={product} token={token} onSaved={setProduct} />

@@ -26,6 +26,7 @@ import { PagesPage } from '@/pages/PagesPage';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { ProductEditPage } from '@/pages/ProductEditPage';
 import { ProductViewPage } from '@/pages/ProductViewPage';
+import { ProductTemplatesPage } from '@/pages/ProductTemplatesPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { LoginPage } from '@/pages/LoginPage';
@@ -66,6 +67,7 @@ export function App() {
               <Route path={routes.invoicesShow} element={<InvoiceDetailsPage />} />
               <Route path={routes.invoices} element={<InvoicesPage />} />
               <Route path={routes.productsNew} element={<ProductEditPage />} />
+              <Route path={routes.productTemplates} element={<ProductTemplatesPage />} />
               <Route path={routes.productsEdit} element={<ProductEditPage />} />
               <Route path={routes.productsShow} element={<ProductViewPage />} />
               <Route path={routes.products} element={<ProductsPage />} />
