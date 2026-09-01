@@ -27,7 +27,7 @@ final class AccountingService
         $from = $this->date((string) ($input['date_from'] ?? $first), 'date_from');
         $to = $this->date((string) ($input['date_to'] ?? $last), 'date_to');
         if ($from > $to) throw new ValidationException(['date_to'=>['Крайната дата трябва да е след началната.']]);
-        return ['date_from'=>$from,'date_to'=>$to,'order_status'=>$this->choice($input['order_status'] ?? 'all', ['all','pending','confirmed','paid','processing','shipped','delivered','cancelled']), 'payment_method'=>$this->choice($input['payment_method'] ?? 'all', array_merge(['all'], self::METHODS)), 'invoiced'=>$this->choice($input['invoiced'] ?? 'all', ['all','yes','no']), 'paid'=>$this->choice($input['paid'] ?? 'all', ['all','yes','no'])];
+        return ['date_from'=>$from,'date_to'=>$to,'order_status'=>$this->choice($input['order_status'] ?? 'all', ['all','pending','confirmed','processing','shipped','delivered','paid','cancelled']), 'payment_method'=>$this->choice($input['payment_method'] ?? 'all', array_merge(['all'], self::METHODS)), 'invoiced'=>$this->choice($input['invoiced'] ?? 'all', ['all','yes','no']), 'paid'=>$this->choice($input['paid'] ?? 'all', ['all','yes','no'])];
     }
 
     public function dashboard(array $input): array
@@ -44,8 +44,8 @@ final class AccountingService
         foreach ($credits as $credit) { $turnover += (float)$credit->total_gross; $net += (float)$credit->subtotal_net-(float)$credit->discount_net+(float)$credit->shipping_net; $vat += (float)$credit->tax_amount; }
         $transactions = AccountingTransaction::query()->whereIn('order_id',$orderIds ?: [0])->where('status','completed')->whereBetween('occurred_at',[$filters['date_from'].' 00:00:00',$filters['date_to'].' 23:59:59'])->get();
         $payments=$transactions->where('type','payment'); $refunds=$transactions->where('type','refund'); $paidIds=$payments->groupBy('order_id')->filter(fn($rows,$id)=>(float)$rows->sum('amount') >= (float)($orders->firstWhere('id',(int)$id)?->total ?? PHP_FLOAT_MAX)-0.009)->keys();
-        $byMethod=[]; foreach(self::METHODS as $method) $byMethod[$method]=round((float)$payments->where('method',$method)->sum('amount'),2);
-        return ['filters'=>$filters,'summary'=>['turnover'=>round($turnover,2),'tax_base'=>round($net,2),'vat'=>round($vat,2),'paid_orders'=>$paidIds->count(),'unpaid_orders'=>max(0,$orders->count()-$paidIds->count()),'refunded_amount'=>round((float)$refunds->sum('amount'),2),'credit_notes_count'=>$credits->count(),'credit_notes_amount'=>round(abs((float)$credits->sum('total_gross')),2),'orders_count'=>$orders->count(),'currency'=>'EUR'],'payment_methods'=>$byMethod,'closures'=>$this->closures()];
+        $paidOrders=$orders->where('status','paid'); $paidOrderIds=$paidOrders->pluck('id')->all(); $paidCredits=$credits->whereIn('order_id',$paidOrderIds); $paidOrdersAmount=round((float)$paidOrders->sum('total')-abs((float)$paidCredits->sum('total_gross')),2); $byMethod=[]; foreach(self::METHODS as $method) $byMethod[$method]=round((float)$payments->where('method',$method)->sum('amount'),2);
+        return ['filters'=>$filters,'summary'=>['turnover'=>round($turnover,2),'tax_base'=>round($net,2),'vat'=>round($vat,2),'paid_orders'=>$paidOrders->count(),'paid_orders_amount'=>$paidOrdersAmount,'unpaid_orders'=>max(0,$orders->count()-$paidOrders->count()),'refunded_amount'=>round((float)$refunds->sum('amount'),2),'credit_notes_count'=>$credits->count(),'credit_notes_amount'=>round(abs((float)$credits->sum('total_gross')),2),'orders_count'=>$orders->count(),'currency'=>'EUR'],'payment_methods'=>$byMethod,'closures'=>$this->closures()];
     }
 
     public function report(string $type, array $input): array

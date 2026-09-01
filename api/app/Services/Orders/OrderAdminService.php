@@ -7,6 +7,7 @@ namespace App\Services\Orders;
 use App\Exceptions\AuthException;
 use App\Exceptions\ValidationException;
 use App\Models\Order;
+use App\Models\SiteSetting;
 use App\Resources\OrderResource;
 use App\Services\Accounting\AccountingAuditService;
 use App\Services\Accounting\AccountingPeriodLock;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class OrderAdminService
 {
-    public const STATUSES = ['pending', 'confirmed', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
+    public const STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'paid', 'cancelled'];
 
     public function __construct(private readonly AccountingPeriodLock $periodLock = new AccountingPeriodLock(), private readonly AccountingAuditService $audit = new AccountingAuditService()) {}
 
@@ -80,6 +81,10 @@ class OrderAdminService
         $trackingNumber = is_string($trackingNumber) ? strtoupper(trim($trackingNumber)) : '';
         if ($trackingNumber !== '' && preg_match('/^[A-Z0-9-]{6,64}$/', $trackingNumber) !== 1) {
             throw new ValidationException(['tracking_number' => ['Номерът трябва да съдържа между 6 и 64 цифри, букви или тирета.']]);
+        }
+        $previousTrackingNumber = strtoupper(trim((string) ($order->tracking_number ?? '')));
+        if ($trackingNumber !== $previousTrackingNumber && !(bool) SiteSetting::query()->firstOrCreate([])->econt_operations_enabled) {
+            throw new ValidationException(['tracking_number' => ['Товарителниците и заявяването на куриер са изключени от Настройки.']]);
         }
         $order->status = $status;
         $order->tracking_number = $trackingNumber !== '' ? $trackingNumber : null;

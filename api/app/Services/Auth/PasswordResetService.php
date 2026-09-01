@@ -50,7 +50,7 @@ class PasswordResetService
             ]
         );
 
-        $base = rtrim((string) ($this->config['admin_public_url'] ?? 'http://localhost:5173'), '/');
+        $base = rtrim((string) ($this->config['admin_public_url'] ?? 'http://localhost:3000'), '/');
         $url = $base . '/reset-password?' . http_build_query([
             'email' => $email,
             'token' => $plain,

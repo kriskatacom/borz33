@@ -26,6 +26,7 @@ $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOT
 $currentUser = $currentUser ?? null;
 $accountTheme = null;
 $viteOrigin = \Store\Core\Vite::origin();
+$devReloadEnabled = filter_var(getenv('DEV_RELOAD_ENABLED') ?: false, FILTER_VALIDATE_BOOL);
 $freeShippingNotice = $freeShippingNotice ?? null;
 $freeShippingUnlocked = $freeShippingNotice !== null && $freeShippingNotice['subtotal'] > $freeShippingNotice['threshold'];
 $freeShippingRemaining = $freeShippingNotice !== null ? max(0.01, round($freeShippingNotice['threshold'] + 0.01 - $freeShippingNotice['subtotal'], 2)) : 0.0;
@@ -143,6 +144,11 @@ function store_asset(string $path): string
     <script type="module" src="<?= htmlspecialchars($viteOrigin, ENT_QUOTES, 'UTF-8') ?>/src/app.js"></script>
     <?php else: ?>
     <script type="module" src="<?= htmlspecialchars(store_asset('/build/app.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
+    <?php endif; ?>
+    <?php if ($devReloadEnabled): ?>
+    <script>
+        new EventSource('/__dev/reload').addEventListener('reload', function () { window.location.reload(); });
+    </script>
     <?php endif; ?>
 </head>
 <body class="min-h-full bg-canvas text-ink antialiased">

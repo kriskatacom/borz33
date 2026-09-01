@@ -42,6 +42,11 @@ export default defineConfig(({ command }) => {
       strictPort: true,
       cors: true,
       allowedHosts: true,
+      hmr: {
+        protocol: 'ws',
+        clientPort: 4000,
+        path: '/__vite_hmr',
+      },
       watch: {
         usePolling: true,
         interval: 300,

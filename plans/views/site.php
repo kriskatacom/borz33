@@ -36,6 +36,11 @@ function render_header(string $active, string $title, string $description): void
     <title><?= htmlspecialchars($title) ?> · <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="/assets/css/app.css">
     <script src="/assets/js/app.js" defer></script>
+    <?php if (filter_var(getenv('DEV_RELOAD_ENABLED') ?: false, FILTER_VALIDATE_BOOL)): ?>
+    <script>
+        new EventSource('/__dev/reload').addEventListener('reload', function () { window.location.reload(); });
+    </script>
+    <?php endif; ?>
 </head>
 <body class="min-h-screen antialiased">
 <div class="bg-forest px-4 py-2 text-center text-xs font-bold tracking-wide text-sage">

@@ -2,13 +2,13 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Borz33 API",
-    "description": "JSON API на Borz33. Локален адрес: http://localhost:8080 (Docker). Променливата `baseUrl` се сменя от Variables на колекцията.",
+    "description": "JSON API на Borz33. Локален адрес: http://localhost:5000 (Docker). Променливата `baseUrl` се сменя от Variables на колекцията.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080"
+      "value": "http://localhost:5000"
     },
     {
       "key": "productId",

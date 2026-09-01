@@ -78,6 +78,6 @@ export function getOrder(token: string, id: number) {
   return apiRequest<{ order: AdminOrder }>(`/admin/orders/${id}`, { token });
 }
 
-export function updateOrderStatus(token: string, id: number, status: OrderStatus, trackingNumber: string) {
-  return apiRequest<{ order: AdminOrder; status_changed: boolean; tracking_changed: boolean; email_sent: boolean }>(`/admin/orders/${id}`, { method: 'PATCH', token, body: { status, tracking_number: trackingNumber } });
+export function updateOrderStatus(token: string, id: number, status: OrderStatus, trackingNumber: string, recordPayment = false) {
+  return apiRequest<{ order: AdminOrder; status_changed: boolean; tracking_changed: boolean; email_sent: boolean; payment_recorded: boolean }>(`/admin/orders/${id}`, { method: 'PATCH', token, body: { status, tracking_number: trackingNumber, record_payment: recordPayment } });
 }

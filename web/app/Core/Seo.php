@@ -12,7 +12,7 @@ final class Seo
     public static function build(array $data): array
     {
         $siteName = trim((string) ($_ENV['COMPANY_NAME'] ?? 'Borz33')) ?: 'Borz33';
-        $baseUrl = rtrim((string) ($_ENV['WEB_PUBLIC_URL'] ?? 'http://localhost:8082'), '/');
+        $baseUrl = rtrim((string) ($_ENV['WEB_PUBLIC_URL'] ?? 'http://localhost:4000'), '/');
         $path = (string) ($data['currentPath'] ?? '/');
         $title = trim((string) ($data['title'] ?? $siteName));
         $description = trim((string) ($data['metaDescription'] ?? self::description($path, $siteName)));

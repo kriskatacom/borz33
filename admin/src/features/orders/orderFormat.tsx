@@ -4,12 +4,22 @@ import { cn } from '@/lib/utils';
 export const ORDER_STATUSES: Array<{ value: OrderStatus; label: string }> = [
   { value: 'pending', label: 'Нова' },
   { value: 'confirmed', label: 'Потвърдена' },
-  { value: 'paid', label: 'Платена' },
   { value: 'processing', label: 'Обработва се' },
   { value: 'shipped', label: 'Изпратена' },
   { value: 'delivered', label: 'Доставена' },
+  { value: 'paid', label: 'Платена' },
   { value: 'cancelled', label: 'Отказана' },
 ];
+
+const CASH_ON_DELIVERY_STATUS_FLOW: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'paid'];
+
+/** The delivery-first flow applies only to cash-on-delivery orders. */
+export function isPreviousOrderStatus(current: OrderStatus, candidate: OrderStatus, paymentMethod: string): boolean {
+  if (paymentMethod !== 'cash_on_delivery' || current === 'cancelled') return false;
+  const currentIndex = CASH_ON_DELIVERY_STATUS_FLOW.indexOf(current);
+  const candidateIndex = CASH_ON_DELIVERY_STATUS_FLOW.indexOf(candidate);
+  return currentIndex !== -1 && candidateIndex !== -1 && candidateIndex < currentIndex;
+}
 
 export function orderStatusLabel(status: string): string {
   return ORDER_STATUSES.find((item) => item.value === status)?.label ?? status;

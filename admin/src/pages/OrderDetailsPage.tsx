@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Mail, MapPin, Package, Phone, Save, Truck } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { getOrder, updateOrderStatus, type AdminOrder, type OrderStatus } from '@/api/orders';
+import { getSiteSettings } from '@/api/settings';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
 import { useGlobalLoading } from '@/components/loading-provider';
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { deliveryLabel, ORDER_STATUSES, OrderStatusBadge, paymentLabel } from '@/features/orders/orderFormat';
+import { deliveryLabel, isPreviousOrderStatus, ORDER_STATUSES, OrderStatusBadge, paymentLabel } from '@/features/orders/orderFormat';
 import { formatDateTime, formatMoney } from '@/lib/format';
 import { toast, toastError } from '@/lib/toast';
 
@@ -21,6 +22,7 @@ export function OrderDetailsPage() {
   const [order, setOrder] = useState<AdminOrder | null>(null);
   const [status, setStatus] = useState<OrderStatus>('pending');
   const [trackingNumber, setTrackingNumber] = useState('');
+  const [econtOperationsEnabled, setEcontOperationsEnabled] = useState(false);
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -38,14 +40,26 @@ export function OrderDetailsPage() {
     return () => { cancelled = true; };
   }, [id, token]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void getSiteSettings(token).then((response) => {
+      if (!cancelled) setEcontOperationsEnabled(response.data.settings.econt_operations_enabled);
+    }).catch((error) => { if (!cancelled) toastError(error, 'Настройките за товарителници не можаха да се заредят.'); });
+    return () => { cancelled = true; };
+  }, [token]);
+
   async function saveStatus() {
     if (!order || (status === order.status && trackingNumber.trim() === (order.tracking_number ?? ''))) return;
+    const recordPayment = status === 'paid' && order.status !== 'paid' && order.payment_method === 'cash_on_delivery'
+      ? window.confirm('Да отбележим ли и полученото плащане в Счетоводство?\n\n„Да“ създава платежен запис с пълната сума по наложен платеж.\n„Отказ“ запазва само статуса „Платена“ и позволява да въведете плащането по-късно.')
+      : false;
     setSaving(true);
     try {
-      const response = await updateOrderStatus(token, order.id, status, trackingNumber.trim());
+      const response = await updateOrderStatus(token, order.id, status, trackingNumber.trim(), recordPayment);
       setOrder(response.data.order);
       setTrackingNumber(response.data.order.tracking_number ?? '');
-      if (!response.data.status_changed || response.data.email_sent) toast.success(response.message || 'Поръчката е обновена.');
+      if (response.data.payment_recorded) toast.success('Статусът е обновен и плащането е записано в Счетоводство.');
+      else if (!response.data.status_changed || response.data.email_sent) toast.success(response.message || 'Поръчката е обновена.');
       else toast.error(response.message || 'Статусът е обновен, но имейлът не можа да бъде изпратен.');
     } catch (error) {
       toastError(error, 'Статусът не можа да се обнови.');
@@ -59,8 +73,8 @@ export function OrderDetailsPage() {
     <div className="page">
       <PageHeader title={`Поръчка #${order.number}`} help={`Получена ${formatDateTime(order.created_at)}`} crumbs={[{ label: 'Табло', to: routes.home }, { label: 'Поръчки', to: routes.orders }, { label: `#${order.number}` }]} actions={<Button asChild variant="outline"><Link to={routes.orders}><ArrowLeft />Назад</Link></Button>} />
       <div className="mb-4 grid gap-3 border border-border bg-card p-4 md:grid-cols-[minmax(15rem,1fr)_minmax(16rem,1fr)_auto] md:items-end">
-        <div className="field"><LabelWithHelp htmlFor="order-status" label="Статус на поръчката" help="Променете етапа според реалното изпълнение." /><Select value={status} onValueChange={(value) => setStatus(value as OrderStatus)}><SelectTrigger id="order-status" className="min-h-12 w-full sm:w-72"><SelectValue /></SelectTrigger><SelectContent>{ORDER_STATUSES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select></div>
-        <Field id="tracking-number" label="Номер на товарителница" help="Незадължителен. Ако е въведен, клиентът ще получи линк за проследяване." value={trackingNumber} placeholder="Напр. 5562000542851" onChange={(event) => setTrackingNumber(event.target.value)} />
+        <div className="field"><LabelWithHelp htmlFor="order-status" label="Статус на поръчката" help={order.payment_method === 'cash_on_delivery' ? 'При наложен платеж преминатите етапи са заключени. „Отказана“ остава достъпна от всеки етап.' : 'Последователността на статусите се определя от избрания метод на плащане.'} /><Select value={status} onValueChange={(value) => setStatus(value as OrderStatus)}><SelectTrigger id="order-status" className="min-h-12 w-full sm:w-72"><SelectValue /></SelectTrigger><SelectContent>{ORDER_STATUSES.map((item) => <SelectItem key={item.value} value={item.value} disabled={isPreviousOrderStatus(order.status, item.value, order.payment_method)}>{item.label}</SelectItem>)}</SelectContent></Select></div>
+        <Field id="tracking-number" label="Номер на товарителница" help={econtOperationsEnabled ? 'Незадължителен. Ако е въведен, клиентът ще получи линк за проследяване.' : 'Заключено е, защото създаването на товарителници и заявяването на куриер са изключени в Настройки.'} disabled={!econtOperationsEnabled} value={trackingNumber} placeholder="Напр. 5562000542851" onChange={(event) => setTrackingNumber(event.target.value)} />
         <Button disabled={saving || (status === order.status && trackingNumber.trim() === (order.tracking_number ?? ''))} onClick={() => void saveStatus()}><Save />{saving ? 'Запис…' : 'Запази'}</Button>
       </div>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)]">

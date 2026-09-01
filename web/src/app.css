@@ -3593,6 +3593,12 @@ body.store-quick-open { overflow: hidden; }
     text-align: center;
 }
 
+.store-favorites-page.is-empty {
+    width: min(600px, 100%);
+    margin-right: auto;
+    margin-left: auto;
+}
+
 .store-favorites-head p {
     margin-top: 0.45rem;
     color: var(--muted);
@@ -3639,33 +3645,14 @@ body.store-quick-open { overflow: hidden; }
     font-size: 0.9rem;
 }
 
-.store-favorites-empty {
-    width: 100%;
-    min-height: clamp(24rem, 58vh, 38rem);
-    margin-top: 1.5rem;
-    padding: 2rem;
-    border: 1px solid var(--line);
-    border-right: 0;
-    border-left: 0;
-    border-radius: 0;
-    background: var(--section);
-    text-align: center;
-}
-
-#content:has(> .store-favorites-page > [data-favorites-empty]:not([hidden])),
 #content:has(> .store-cart .store-empty-state--cart) {
     width: 100%;
 }
 
-#content:has(> .store-favorites-page > [data-favorites-empty]:not([hidden])) .store-favorites-head,
 #content:has(> .store-cart .store-empty-state--cart) .store-cart-title {
     width: min(1120px, calc(100% - 2rem));
     margin-right: auto;
     margin-left: auto;
-}
-
-.store-favorites-empty p {
-    margin: 0 0 0.75rem;
 }
 
 @media (max-width: 52rem) {

@@ -30,12 +30,6 @@ function updateFavoritesPage(productId, favorite) {
     document.querySelector(`[data-favorite-card="${productId}"]`)?.remove();
   }
 
-  const grid = document.querySelector('[data-favorites-grid]');
-  const empty = document.querySelector('[data-favorites-empty]');
-
-  if (grid && empty) {
-    empty.hidden = grid.querySelector('[data-favorite-card]') !== null;
-  }
 }
 
 export function registerStoreFavorites() {

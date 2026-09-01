@@ -6,6 +6,7 @@ namespace App\Services\Reports;
 
 use App\Core\Auth;
 use App\Exceptions\ValidationException;
+use App\Models\Invoice;
 use App\Models\MonthlyRevenueReport;
 use App\Models\Order;
 use App\Resources\MonthlyRevenueReportResource;
@@ -36,21 +37,41 @@ class MonthlyRevenueReportService
             $ordersCount = (clone $base)->count();
             $delivered = (clone $base)->where('status', 'delivered');
             $deliveredCount = (clone $delivered)->count();
+            $paidOrders = (clone $base)->where('status', 'paid')->with('items')->get();
+            $paidOrderIds = $paidOrders->pluck('id')->all();
+            $paidOrdersCount = $paidOrders->count();
             $cancelledCount = (clone $base)->where('status', 'cancelled')->count();
-            $recognized = (float) (clone $delivered)->sum('total');
-            $productRevenue = (float) (clone $delivered)->sum('subtotal');
-            $shippingRevenue = (float) (clone $delivered)->sum('shipping_amount');
-            $gross = (float) (clone $base)->where('status', '!=', 'cancelled')->sum('total');
+            $gross = round((float) $paidOrders->sum('total'), 2);
+            $creditNotes = Invoice::query()->whereIn('order_id', $paidOrderIds ?: [0])->where('type', 'credit_note')->whereIn('status', ['issued', 'credited'])->get();
+            $creditNotesAmount = round(abs((float) $creditNotes->sum('total_gross')), 2);
+            $creditedProductAmount = 0.0;
+            foreach ($creditNotes as $creditNote) foreach ($creditNote->items_snapshot as $item) $creditedProductAmount += abs((float) ($item['gross_total'] ?? 0));
+            $productRevenue = round((float) $paidOrders->sum('subtotal') - $creditedProductAmount, 2);
+            $recognized = round($gross - $creditNotesAmount, 2);
+            $shippingRevenue = round($recognized - $productRevenue, 2);
             $statusBreakdown = (clone $base)->selectRaw('status, COUNT(*) as count, COALESCE(SUM(total), 0) as total')->groupBy('status')->get()->mapWithKeys(static fn ($row) => [(string) $row->status => ['count' => (int) $row->count, 'total' => number_format((float) $row->total, 2, '.', '')]])->all();
-            $itemsQuery = DB::table('order_items')->join('orders', 'orders.id', '=', 'order_items.order_id')->where('orders.currency', 'EUR')->where('orders.status', 'delivered')->whereBetween('orders.created_at', [$from, $to]);
-            $itemsSold = (int) (clone $itemsQuery)->sum('order_items.qty');
-            $topProducts = (clone $itemsQuery)->selectRaw('order_items.name, order_items.sku, SUM(order_items.qty) as qty, SUM(order_items.total) as revenue')->groupBy('order_items.name', 'order_items.sku')->orderByDesc('qty')->limit(10)->get()->map(static fn ($row) => ['name' => (string) $row->name, 'sku' => $row->sku, 'qty' => (int) $row->qty, 'revenue' => number_format((float) $row->revenue, 2, '.', '')])->all();
+            // Credit notes contain negative quantities and amounts. Apply them to the
+            // matching sold items so product counts and rankings reflect net sales.
+            $productTotals = [];
+            $addProduct = static function (array &$totals, string $name, ?string $sku, int $qty, float $revenue): void {
+                $key = $name . "\0" . ($sku ?? '');
+                if (!isset($totals[$key])) $totals[$key] = ['name' => $name, 'sku' => $sku, 'qty' => 0, 'revenue' => 0.0];
+                $totals[$key]['qty'] += $qty;
+                $totals[$key]['revenue'] += $revenue;
+            };
+            foreach ($paidOrders as $order) foreach ($order->items as $item) $addProduct($productTotals, (string) $item->name, $item->sku === null ? null : (string) $item->sku, (int) $item->qty, (float) $item->total);
+            foreach ($creditNotes as $creditNote) foreach ($creditNote->items_snapshot as $item) $addProduct($productTotals, (string) ($item['name'] ?? ''), isset($item['sku']) ? (string) $item['sku'] : null, (int) ($item['qty'] ?? 0), (float) ($item['gross_total'] ?? 0));
+            $productTotals = array_values(array_filter($productTotals, static fn (array $product): bool => $product['qty'] > 0));
+            usort($productTotals, static fn (array $left, array $right): int => $right['qty'] <=> $left['qty'] ?: $right['revenue'] <=> $left['revenue'] ?: $left['name'] <=> $right['name']);
+            $itemsSold = array_sum(array_column($productTotals, 'qty'));
+            $topProducts = array_map(static fn (array $product): array => ['name' => $product['name'], 'sku' => $product['sku'], 'qty' => $product['qty'], 'revenue' => number_format(round($product['revenue'], 2), 2, '.', '')], array_slice($productTotals, 0, 10));
 
             $report = MonthlyRevenueReport::query()->updateOrCreate(['year' => $year, 'month' => $month, 'currency' => 'EUR'], [
                 'period_start' => $startLocal->format('Y-m-d'), 'period_end' => $endLocal->format('Y-m-d'), 'orders_count' => $ordersCount,
-                'delivered_orders_count' => $deliveredCount, 'cancelled_orders_count' => $cancelledCount, 'items_sold' => $itemsSold,
+                'delivered_orders_count' => $deliveredCount, 'paid_orders_count' => $paidOrdersCount, 'cancelled_orders_count' => $cancelledCount, 'items_sold' => $itemsSold,
                 'gross_turnover' => $gross, 'recognized_revenue' => $recognized, 'product_revenue' => $productRevenue, 'shipping_revenue' => $shippingRevenue,
-                'average_order_value' => $deliveredCount > 0 ? round($recognized / $deliveredCount, 2) : 0,
+                'average_order_value' => $paidOrdersCount > 0 ? round($recognized / $paidOrdersCount, 2) : 0,
+                'credit_notes_count' => $creditNotes->count(), 'credit_notes_amount' => $creditNotesAmount,
                 'status_breakdown' => $statusBreakdown, 'top_products' => $topProducts, 'generated_by' => Auth::user()?->id, 'generated_at' => CarbonImmutable::now('UTC'),
             ]);
             return $report->load('generator');

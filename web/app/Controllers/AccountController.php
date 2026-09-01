@@ -318,7 +318,7 @@ class AccountController extends Controller
         $ordersPerPage = 10;
         $ordersPage = max(1, (int) Request::query('page', 1));
         $orderStatus = (string) Request::query('status', 'all');
-        $validOrderStatuses = ['pending', 'confirmed', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
+        $validOrderStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'paid', 'cancelled'];
         if (!in_array($orderStatus, $validOrderStatuses, true)) $orderStatus = 'all';
         $ordersQuery = $user->orders()->with('items');
         if ($orderStatus !== 'all') $ordersQuery->where('status', $orderStatus);

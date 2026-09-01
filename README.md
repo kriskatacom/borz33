@@ -29,17 +29,21 @@
 
 | Услуга | Адрес |
 |---|---|
-| Сайт с плановете | http://localhost:8000 |
-| API | http://localhost:8080 |
-| API health (Postman) | http://localhost:8080/health |
-| Магазин (клиенти) | http://localhost:8082 |
+| Сайт с плановете | http://localhost:2000 |
+| API | http://localhost:5000 |
+| API health (Postman) | http://localhost:5000/health |
+| Магазин (клиенти) | http://localhost:4000 |
 | phpMyAdmin | http://localhost:8081 |
 | Mailpit (имейли) | http://localhost:8026 |
-| Админ панел | http://localhost:5173 |
+| Админ панел | http://localhost:3000 |
 | MySQL от хоста | `localhost:3307` |
 | MySQL между контейнерите | хост `mysql`, порт `3306` |
 
 MySQL към хоста е на **3307**, защото 3306 често вече е зает. Вътре в Docker мрежата портът остава 3306.
+
+### Автопрезареждане при разработка
+
+В `.env` е активирано `DEV_RELOAD_ENABLED=true`. При промяна на PHP шаблони, API код или файловете на сайта с плановете, отворените локални страници се презареждат автоматично. Админ панелът и клиентският магазин запазват Vite HMR за JavaScript, TypeScript, Vue и CSS промени. PHP OPcache е изключен само в Docker Compose development режима, затова API промените влизат в сила при следващата заявка без рестартиране на контейнера.
 
 ### Вход в MySQL
 
@@ -117,7 +121,7 @@ $mailer->sendTemplate('user@example.com', 'Заглавие', 'verify-registrati
 
 Сесия: `GET /auth/me` и `POST /auth/logout` с `Authorization: Bearer`.
 
-Забравена парола (само админ): `POST /auth/admin/password/forgot` и `POST /auth/admin/password/reset`. Линкът в писмото води към `ADMIN_PUBLIC_URL` (по подразбиране http://localhost:5173/reset-password).
+Забравена парола (само админ): `POST /auth/admin/password/forgot` и `POST /auth/admin/password/reset`. Линкът в писмото води към `ADMIN_PUBLIC_URL` (по подразбиране http://localhost:3000/reset-password).
 
 ### Потребители (админ)
 
@@ -241,7 +245,7 @@ docker compose exec php composer migrate
 docker compose up -d
 ```
 
-Първото пускане билдва PHP образа и при нужда инсталира Composer зависимостите. След това магазинът е на `http://localhost:8082`, API-то на `http://localhost:8080`, администрацията на `http://localhost:5173`, сайтът с плановете на `:8000`, phpMyAdmin на `:8081`, а Mailpit на `:8026`.
+Първото пускане билдва PHP образа и при нужда инсталира Composer зависимостите. След това магазинът е на `http://localhost:4000`, API-то на `http://localhost:5000`, администрацията на `http://localhost:3000`, сайтът с плановете на `:2000`, phpMyAdmin на `:8081`, а Mailpit на `:8026`.
 
 Статус:
 
@@ -280,7 +284,7 @@ CLOUDFLARE_WEB_HOST=dev.example.com
 CLOUDFLARE_API_HOST=api-dev.example.com
 STORE_VITE_PUBLIC_ORIGIN=https://dev.example.com
 WEB_PUBLIC_URL=https://dev.example.com
-CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8082,https://dev.example.com
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:4000,https://dev.example.com
 ```
 
 `CLOUDFLARE_TUNNEL_TOKEN` е секрет: не го commit-вайте. API CORS допуска само
@@ -305,9 +309,9 @@ docker compose logs -f cloudflared
 
 Локалните адреси продължават да работят едновременно с публичните:
 
-- `http://localhost:8082` — магазин;
-- `http://localhost:8080` — API;
-- `http://localhost:5173` — администрация.
+- `http://localhost:4000` — магазин;
+- `http://localhost:5000` — API;
+- `http://localhost:3000` — администрация.
 
 #### 3. Ограничаване с Cloudflare Access
 
@@ -360,7 +364,7 @@ docker compose down -v
 
 Импорт: **File → Import** и избери `postman/Borz33-API.postman_collection.json`.
 
-Колекцията ползва `baseUrl` = `http://localhost:8080`. Docker стекът трябва да е пуснат. Първата заявка за тест е **Health → Health check** (`GET /health`).
+Колекцията ползва `baseUrl` = `http://localhost:5000`. Docker стекът трябва да е пуснат. Първата заявка за тест е **Health → Health check** (`GET /health`).
 
 ### React админ
 
@@ -393,7 +397,7 @@ openssl rand -base64 32
 docker compose exec php php tests/econt_configuration_test.php
 ```
 
-Адрес: http://localhost:5173. Браузърът говори само с Vite; `/auth` и `/health` се проксират към API (`http://nginx:8080` в Docker, или `http://127.0.0.1:8080` при `npm run dev` на хоста).
+Адрес: http://localhost:3000. Браузърът говори само с Vite; `/auth` и `/health` се проксират към API (`http://nginx:8080` в Docker, или `http://127.0.0.1:5000` при `npm run dev` на хоста).
 
 Има работещ вход, забравена парола, табло и пълно управление на потребителите. Регистрация в админ панела няма.
 

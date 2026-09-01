@@ -19,6 +19,12 @@
         }
       })();
     </script>
+    <script type="module">
+      if (import.meta.env.DEV) {
+        const source = new EventSource('/__dev/reload');
+        source.addEventListener('reload', () => window.location.reload());
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

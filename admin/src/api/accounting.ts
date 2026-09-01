@@ -1,7 +1,7 @@
 import { apiRequest } from '@/api/client';
 
 export type AccountingFilters={date_from:string;date_to:string;order_status:string;payment_method:string;invoiced:string;paid:string};
-export type AccountingSummary={turnover:number;tax_base:number;vat:number;paid_orders:number;unpaid_orders:number;refunded_amount:number;credit_notes_count:number;credit_notes_amount:number;orders_count:number;currency:string};
+export type AccountingSummary={turnover:number;tax_base:number;vat:number;paid_orders:number;paid_orders_amount:number;unpaid_orders:number;refunded_amount:number;credit_notes_count:number;credit_notes_amount:number;orders_count:number;currency:string};
 export type AccountingDashboard={filters:AccountingFilters;summary:AccountingSummary;payment_methods:Record<string,number>;closures:Array<{id:number;period:string;status:string;closed_at:string;has_package:boolean}>;audit_log:Array<{id:number;action:string;entity_type:string;entity_id:number|null;created_at:string}>};
 export const getAccounting=(token:string,filters:AccountingFilters)=>apiRequest<AccountingDashboard>('/admin/accounting',{token,query:filters});
 export const getAccountingReport=(token:string,type:string,filters:AccountingFilters)=>apiRequest<{type:string;rows:Array<Record<string,unknown>>}>(`/admin/accounting/reports/${type}`,{token,query:filters});

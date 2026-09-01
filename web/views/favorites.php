@@ -9,20 +9,12 @@ use Store\Core\Html;
 $products = $products ?? [];
 $cartProductIds = $cartProductIds ?? [];
 ?>
-<section class="store-favorites-page">
+<section class="store-favorites-page <?= $products === [] ? 'is-empty' : '' ?>">
     <header class="store-favorites-head">
         <h1>Любими продукти</h1>
-        <p>Запазените продукти са на едно място.</p>
+        <p>Събирайте тук продуктите, които харесвате, за да ги откривате бързо при следващо посещение.</p>
+        <a class="store-empty-state-action" href="/catalog">Разгледайте каталога</a>
     </header>
-
-    <div class="store-empty-state store-empty-state--compact store-favorites-empty" data-favorites-empty <?= $products !== [] ? 'hidden' : '' ?>>
-        <span class="store-empty-state-icon" aria-hidden="true"><?= Html::iconSvg('heart') ?></span>
-        <div class="store-empty-state-copy">
-            <h2>Запазете продуктите, които харесвате</h2>
-            <p>Натиснете сърцето върху продукт и той ще се появи тук.</p>
-            <a class="store-empty-state-action" href="/catalog">Разгледайте каталога</a>
-        </div>
-    </div>
 
     <div class="store-favorites-grid" data-favorites-grid>
         <?php foreach ($products as $product): ?>
