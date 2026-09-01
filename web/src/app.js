@@ -13,6 +13,7 @@ import { mountCatalogGrid } from './catalog.js';
 import { mountStoreCheckout } from './checkout.js';
 import { mountAccountMessages } from './account-messages.js';
 import { mountFreeShippingNotice } from './free-shipping-notice.js';
+import { mountStoreAuth } from './auth.js';
 import './app.css';
 
 window.Alpine = Alpine;
@@ -31,4 +32,5 @@ mountCatalogGrid();
 mountStoreCheckout();
 mountAccountMessages();
 mountFreeShippingNotice();
+mountStoreAuth();
 mountProductReviews();

@@ -344,7 +344,7 @@ $jsonLd = [
                             <p class="store-review-form-error" data-review-error hidden role="alert"></p>
                             <footer class="store-review-form-actions">
                                 <button type="button" class="store-button-secondary" data-review-cancel>Отказ</button>
-                                <button type="submit" class="store-submit" data-review-submit>Публикувай отзив</button>
+                                <button type="submit" class="store-submit store-button" data-review-submit>Публикувай отзив</button>
                             </footer>
                         </form>
                     </dialog>

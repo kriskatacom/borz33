@@ -50,13 +50,16 @@ class AuthController extends Controller
     public function login(): never
     {
         if (Auth::user() !== null) {
+            if ($this->wantsJson()) {
+                $this->json(['success' => true, 'data' => ['redirect' => '/account']]);
+            }
             $this->redirect('/account');
         }
 
-        $this->assertCsrf();
         $step = (string) Request::input('step', 'credentials');
 
         try {
+            $this->assertCsrf();
             if ($step === 'device') {
                 $payload = $this->deviceValidator->validate($this->loginInput());
                 $result = $this->login->verifyDevice($payload);
@@ -65,6 +68,9 @@ class AuthController extends Controller
                 $result = $this->login->login($payload);
             }
         } catch (ValidationException $exception) {
+            if ($this->wantsJson()) {
+                $this->authJsonError($exception->getMessage(), 422, $exception->errors());
+            }
             $this->authPage([
                 'step' => $step === 'device' ? 'device' : 'credentials',
                 'email' => (string) Request::input('email', ''),
@@ -73,6 +79,9 @@ class AuthController extends Controller
                 'isError' => true,
             ]);
         } catch (AuthException $exception) {
+            if ($this->wantsJson()) {
+                $this->authJsonError($exception->getMessage(), $exception->status());
+            }
             $this->authPage([
                 'step' => $step === 'device' ? 'device' : 'credentials',
                 'email' => (string) Request::input('email', ''),
@@ -82,6 +91,16 @@ class AuthController extends Controller
         }
 
         if ($result->requiresDeviceVerification) {
+            if ($this->wantsJson()) {
+                $this->json([
+                    'success' => true,
+                    'message' => 'Вход от ново устройство. Изпратихме код на имейла Ви.',
+                    'data' => [
+                        'requires_device_verification' => true,
+                        'email' => (string) ($payload['email'] ?? Request::input('email', '')),
+                    ],
+                ]);
+            }
             $this->authPage([
                 'step' => 'device',
                 'email' => (string) ($payload['email'] ?? Request::input('email', '')),
@@ -91,6 +110,9 @@ class AuthController extends Controller
         }
 
         if ($result->token === null) {
+            if ($this->wantsJson()) {
+                $this->authJsonError('Входът не беше успешен.', 401);
+            }
             $this->authPage([
                 'email' => (string) Request::input('email', ''),
                 'message' => 'Входът не беше успешен.',
@@ -99,7 +121,11 @@ class AuthController extends Controller
         }
 
         StoreAuth::persistToken($result->token, $result->expiresAt);
-        $this->redirect($this->returnPath((string) Request::input('return', '')) ?: '/account');
+        $redirect = $this->returnPath((string) Request::input('return', '')) ?: '/account';
+        if ($this->wantsJson()) {
+            $this->json(['success' => true, 'message' => 'Входът е успешен.', 'data' => ['redirect' => $redirect]]);
+        }
+        $this->redirect($redirect);
     }
 
     public function resendCode(): never
@@ -108,12 +134,14 @@ class AuthController extends Controller
             $this->redirect('/account');
         }
 
-        $this->assertCsrf();
-
         try {
+            $this->assertCsrf();
             $payload = $this->resendValidator->validate($this->loginInput());
             $this->login->resendDeviceCode($payload);
         } catch (ValidationException $exception) {
+            if ($this->wantsJson()) {
+                $this->authJsonError($exception->getMessage(), 422, $exception->errors());
+            }
             $this->authPage([
                 'step' => 'device',
                 'email' => (string) Request::input('email', ''),
@@ -121,6 +149,20 @@ class AuthController extends Controller
                 'message' => $exception->getMessage(),
                 'isError' => true,
             ]);
+        } catch (AuthException $exception) {
+            if ($this->wantsJson()) {
+                $this->authJsonError($exception->getMessage(), $exception->status());
+            }
+            $this->authPage([
+                'step' => 'device',
+                'email' => (string) Request::input('email', ''),
+                'message' => $exception->getMessage(),
+                'isError' => true,
+            ]);
+        }
+
+        if ($this->wantsJson()) {
+            $this->json(['success' => true, 'message' => 'Ако е нужен код за това устройство, изпратихме нов.']);
         }
 
         $this->authPage([
@@ -134,15 +176,20 @@ class AuthController extends Controller
     public function register(): never
     {
         if (Auth::user() !== null) {
+            if ($this->wantsJson()) {
+                $this->json(['success' => true, 'data' => ['redirect' => '/account/profile']]);
+            }
             $this->redirect('/account');
         }
 
-        $this->assertCsrf();
-
         try {
+            $this->assertCsrf();
             $payload = $this->registerValidator->validate($this->registerInput());
             $user = $this->register->register($payload);
         } catch (ValidationException $exception) {
+            if ($this->wantsJson()) {
+                $this->authJsonError($exception->getMessage(), 422, $exception->errors());
+            }
             $this->authPage([
                 'register' => $this->registerFields(),
                 'registerErrors' => $exception->errors(),
@@ -150,6 +197,9 @@ class AuthController extends Controller
                 'registerIsError' => true,
             ]);
         } catch (AuthException $exception) {
+            if ($this->wantsJson()) {
+                $this->authJsonError($exception->getMessage(), $exception->status());
+            }
             $this->authPage([
                 'register' => $this->registerFields(),
                 'registerMessage' => $exception->getMessage(),
@@ -163,6 +213,13 @@ class AuthController extends Controller
         $issued = $this->tokens->issue($user, $device);
 
         StoreAuth::persistToken($issued['token'], $issued['expires_at']);
+        if ($this->wantsJson()) {
+            $this->json([
+                'success' => true,
+                'message' => 'Профилът Ви е създаден.',
+                'data' => ['redirect' => '/account/profile'],
+            ]);
+        }
         $this->redirect('/account/profile');
     }
 
@@ -297,6 +354,16 @@ class AuthController extends Controller
         }
 
         return $path;
+    }
+
+    /** @param array<string, mixed> $errors */
+    private function authJsonError(string $message, int $status, array $errors = []): never
+    {
+        $payload = ['success' => false, 'message' => $message];
+        if ($errors !== []) {
+            $payload['errors'] = $errors;
+        }
+        $this->json($payload, $status);
     }
 
     /** @return array<string, mixed> */

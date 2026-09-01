@@ -25,7 +25,10 @@ $catalogActive = store_nav_active('/catalog', $currentPath);
 $accountLabel = $currentUser !== null ? 'Акаунт' : 'Вход';
 $accountActive = $currentPath === '/login' || store_nav_active('/account', $currentPath);
 ?>
-<header class="sticky top-0 z-50 overflow-visible border-b border-line bg-canvas">
+<header
+    class="store-site-header sticky top-0 z-50 overflow-visible border-b border-line bg-canvas"
+    :class="{ 'is-hidden': headerHidden }"
+>
     <div class="mx-auto grid w-[min(1120px,calc(100%-2rem))] grid-cols-[1fr_auto] items-center gap-x-3 gap-y-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(12rem,36rem)_minmax(0,1fr)]">
         <a class="store-logo justify-self-start" href="/" aria-label="<?= htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8') ?>, начало">
             <?php if ($siteLogo !== null): ?>

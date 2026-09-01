@@ -807,7 +807,8 @@ select.store-input {
     color: var(--danger);
 }
 
-.store-submit {
+.store-submit,
+.store-button {
     display: inline-flex;
     height: 42px;
     width: fit-content;
@@ -823,7 +824,8 @@ select.store-input {
     cursor: pointer;
 }
 
-.store-submit-spinner {
+.store-submit-spinner,
+.store-button-spinner {
     width: 0.95rem;
     height: 0.95rem;
     border: 2px solid color-mix(in srgb, var(--on-accent) 28%, transparent);
@@ -832,10 +834,56 @@ select.store-input {
     animation: store-spin 0.65s linear infinite;
 }
 
+.store-button:disabled,
+.store-submit:disabled { cursor: wait; opacity: 0.66; }
+
+.store-button:hover:not(:disabled),
+.store-submit:hover:not(:disabled) { filter: brightness(1.06); box-shadow: 0 0.65rem 1.25rem color-mix(in srgb, var(--accent) 28%, transparent); }
+
+.store-auth { display: grid; align-items: start; gap: 2.5rem; }
+.store-auth--device { max-width: 30rem; }
+.store-auth-column h1,
+.store-auth-column h2 { margin: 0; font-size: 1.55rem; line-height: 1.25; font-weight: 650; }
+.store-auth-lead { margin: 0.75rem 0 0; color: var(--muted); }
+.store-auth-register { padding-top: 2.5rem; border-top: 1px solid var(--line); }
+.store-auth-form { display: grid; gap: 1rem; margin-top: 1.25rem; }
+.store-auth-form label { display: grid; gap: 0.4rem; font-size: 0.88rem; font-weight: 650; }
+.store-auth-form input { width: 100%; height: 42px; border: 1px solid var(--line); background: var(--canvas); padding: 0 0.75rem; color: var(--ink); font: inherit; font-weight: 400; }
+.store-auth-form input:focus { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 1px; border-color: var(--accent); }
+.store-auth-form small { color: var(--danger); font-size: 0.78rem; font-weight: 550; }
+.store-auth-row { display: grid; gap: 1rem; }
+.store-auth-password { display: flex; align-items: stretch; gap: 0.35rem; }
+.store-auth-password button { min-width: 5rem; border: 1px solid var(--line); background: var(--section); color: var(--ink); font: inherit; font-size: 0.78rem; font-weight: 650; cursor: pointer; }
+.store-auth-message { margin: 1rem 0 0; border: 1px solid var(--line); background: var(--section); padding: 0.75rem; }
+.store-auth-message.is-error { border-color: var(--danger); color: var(--danger); }
+.store-auth-optional { color: var(--muted); font-weight: 400; }
+.store-auth-back { display: block; margin-top: 0.8rem; padding: 0; border: 0; background: transparent; color: var(--muted); text-decoration: underline; cursor: pointer; }
+
+@media (min-width: 768px) {
+    .store-auth:not(.store-auth--device) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3.5rem; }
+    .store-auth-register { padding-top: 0; padding-left: 3.5rem; border-top: 0; border-left: 1px solid var(--line); }
+    .store-auth-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @keyframes store-spin {
     to {
         transform: rotate(360deg);
     }
+}
+
+.store-site-header {
+    transform: translateY(0);
+    transition: transform 220ms ease, box-shadow 180ms ease;
+    will-change: transform;
+}
+
+.store-site-header.is-hidden {
+    transform: translateY(calc(-100% - 2px));
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .store-site-header { transition-duration: 1ms; }
 }
 
 .store-address-card.is-saving {
@@ -2750,7 +2798,10 @@ select.store-input {
     font-size: 1.02rem;
 }
 
-.store-product-tab-panel { max-width: 48rem; }
+.store-product-tab-panel {
+    width: 100%;
+    max-width: none;
+}
 .store-product-tab-panel h2 { margin-bottom: 1rem; font-size: clamp(1.1rem, 2vw, 1.3rem); }
 .store-product-tab-empty { margin: 0; color: var(--muted); line-height: 1.6; }
 
@@ -2781,7 +2832,8 @@ select.store-input {
 .store-pdp-specs-table td { color: var(--ink); }
 
 .store-pdp-copy {
-    max-width: 42rem;
+    width: 100%;
+    max-width: none;
     line-height: 1.65;
 }
 
@@ -2839,8 +2891,12 @@ select.store-input {
 }
 
 .store-pdp-reviews {
-    max-width: 46rem;
+    width: 100%;
+    max-width: none;
 }
+
+.store-reviews-list,
+.store-review { width: 100%; }
 
 .store-pdp-reviews-head {
     display: flex;

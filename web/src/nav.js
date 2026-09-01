@@ -28,8 +28,45 @@ export function registerStoreHeader(Alpine) {
       searchLoading: false,
       searchAbort: null,
       featuredCache: null,
+      headerHidden: false,
+      lastScrollY: Math.max(0, window.scrollY),
+      scrollFrame: null,
+      scrollHandler: null,
+
+      init() {
+        this.scrollHandler = () => {
+          if (this.scrollFrame !== null) return;
+          this.scrollFrame = window.requestAnimationFrame(() => {
+            this.scrollFrame = null;
+            this.updateHeaderVisibility();
+          });
+        };
+        window.addEventListener('scroll', this.scrollHandler, { passive: true });
+      },
+
+      destroy() {
+        if (this.scrollHandler) window.removeEventListener('scroll', this.scrollHandler);
+        if (this.scrollFrame !== null) window.cancelAnimationFrame(this.scrollFrame);
+      },
+
+      updateHeaderVisibility() {
+        const current = Math.max(0, window.scrollY);
+        const delta = current - this.lastScrollY;
+        const panelOpen = this.menuOpen || this.accountOpen || this.openCat !== 0 || this.searchOpen || this.mobileSearchOpen;
+
+        if (current < 80 || panelOpen) {
+          this.headerHidden = false;
+        } else if (delta > 6) {
+          this.headerHidden = true;
+        } else if (delta < -4) {
+          this.headerHidden = false;
+        }
+
+        this.lastScrollY = current;
+      },
 
       openCategory(id) {
+        this.headerHidden = false;
         clearTimeout(this.closeTimer);
         this.openCat = id;
         this.accountOpen = false;
@@ -45,6 +82,7 @@ export function registerStoreHeader(Alpine) {
       },
 
       toggleCategory(id) {
+        this.headerHidden = false;
         clearTimeout(this.closeTimer);
         this.openCat = this.openCat === id ? 0 : id;
         this.accountOpen = false;
@@ -53,6 +91,7 @@ export function registerStoreHeader(Alpine) {
       },
 
       toggleAccount() {
+        this.headerHidden = false;
         this.accountOpen = !this.accountOpen;
         this.menuOpen = false;
         this.openCat = 0;
@@ -61,6 +100,7 @@ export function registerStoreHeader(Alpine) {
       },
 
       toggleMenu() {
+        this.headerHidden = false;
         this.menuOpen = !this.menuOpen;
         this.accountOpen = false;
         this.openCat = 0;
@@ -78,6 +118,7 @@ export function registerStoreHeader(Alpine) {
       },
 
       openMobileSearch() {
+        this.headerHidden = false;
         this.mobileSearchOpen = true;
         this.searchOpen = true;
         this.accountOpen = false;
@@ -94,6 +135,7 @@ export function registerStoreHeader(Alpine) {
       },
 
       openSearch() {
+        this.headerHidden = false;
         this.searchOpen = true;
         this.accountOpen = false;
         this.openCat = 0;
