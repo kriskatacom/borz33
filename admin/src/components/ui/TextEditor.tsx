@@ -55,6 +55,14 @@ function ToolbarButton({
   );
 }
 
+function bannerSlugFromInput(value: string): string {
+  const input = value.trim();
+  const shortcode = input.match(/^\[banner:([a-z0-9]+(?:-[a-z0-9]+)*)\]$/i)
+    ?? input.match(/^\[banner\s+slug\s*=\s*["']([a-z0-9]+(?:-[a-z0-9]+)*)["']\s*\]$/i);
+
+  return (shortcode?.[1] ?? input).trim().toLowerCase();
+}
+
 export function TextEditor({ id, label, help, value, onChange, error, disabled = false }: TextEditorProps) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
@@ -131,7 +139,7 @@ export function TextEditor({ id, label, help, value, onChange, error, disabled =
 
   function insertBanner() {
     if (!editor) return;
-    const slug = bannerSlug.trim().toLowerCase();
+    const slug = bannerSlugFromInput(bannerSlug);
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return;
     editor.chain().focus().insertContent(`<p>[banner:${slug}]</p>`).run();
     setBannerSlug('');
@@ -341,13 +349,22 @@ export function TextEditor({ id, label, help, value, onChange, error, disabled =
               placeholder="proletna-promociya"
               autoFocus
               onChange={(event) => setBannerSlug(event.target.value)}
+              onPaste={(event) => {
+                const pasted = event.clipboardData.getData('text');
+                const slug = bannerSlugFromInput(pasted);
+
+                if (slug !== pasted.trim().toLowerCase() && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+                  event.preventDefault();
+                  setBannerSlug(slug);
+                }
+              }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') { event.preventDefault(); insertBanner(); }
                 if (event.key === 'Escape') { event.preventDefault(); setBannerOpen(false); editor?.commands.focus(); }
               }}
             />
-            <span className="text-sm text-muted-foreground">Код: [banner:{bannerSlug.trim().toLowerCase() || 'slug'}]</span>
-            <button type="button" disabled={!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(bannerSlug.trim().toLowerCase())} onClick={insertBanner}>Вмъкни банер</button>
+            <span className="text-sm text-muted-foreground">Код: [banner:{bannerSlugFromInput(bannerSlug) || 'slug'}]</span>
+            <button type="button" disabled={!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(bannerSlugFromInput(bannerSlug))} onClick={insertBanner}>Вмъкни банер</button>
           </div>
         ) : null}
         <EditorContent editor={editor} />

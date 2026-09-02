@@ -14,6 +14,10 @@ export type BannerListItem = {
   title: string;
   slug: string;
   layout: string;
+  height: number | null;
+  width_mode: 'container' | 'full';
+  image_position: string;
+  content_position: string;
   media_file_id: number;
   media: MediaFile | null;
   is_active: boolean;
@@ -60,6 +64,10 @@ export type BannerPayload = {
   slug?: string | null;
   text: string;
   layout: string;
+  height?: number | null;
+  width_mode: 'container' | 'full';
+  image_position: string;
+  content_position: string;
   media_file_id: number;
   is_active: boolean;
   sort_order?: number;

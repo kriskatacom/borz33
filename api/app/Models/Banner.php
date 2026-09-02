@@ -24,11 +24,41 @@ class Banner extends Model
         self::LAYOUT_STACK,
     ];
 
+    /** @var array<string, string> */
+    public const IMAGE_POSITIONS = [
+        'top-left' => 'left top',
+        'top' => 'center top',
+        'top-right' => 'right top',
+        'left' => 'left center',
+        'center' => 'center center',
+        'right' => 'right center',
+        'bottom-left' => 'left bottom',
+        'bottom' => 'center bottom',
+        'bottom-right' => 'right bottom',
+    ];
+
+    /** @var array<string, array{horizontal: string, vertical: string}> */
+    public const CONTENT_POSITIONS = [
+        'top-left' => ['horizontal' => 'flex-start', 'vertical' => 'flex-start'],
+        'top' => ['horizontal' => 'center', 'vertical' => 'flex-start'],
+        'top-right' => ['horizontal' => 'flex-end', 'vertical' => 'flex-start'],
+        'left' => ['horizontal' => 'flex-start', 'vertical' => 'center'],
+        'center' => ['horizontal' => 'center', 'vertical' => 'center'],
+        'right' => ['horizontal' => 'flex-end', 'vertical' => 'center'],
+        'bottom-left' => ['horizontal' => 'flex-start', 'vertical' => 'flex-end'],
+        'bottom' => ['horizontal' => 'center', 'vertical' => 'flex-end'],
+        'bottom-right' => ['horizontal' => 'flex-end', 'vertical' => 'flex-end'],
+    ];
+
     protected $fillable = [
         'title',
         'slug',
         'text',
         'layout',
+        'height',
+        'width_mode',
+        'image_position',
+        'content_position',
         'media_file_id',
         'is_active',
         'sort_order',
@@ -38,6 +68,10 @@ class Banner extends Model
     {
         return [
             'media_file_id' => 'integer',
+            'height' => 'integer',
+            'width_mode' => 'string',
+            'image_position' => 'string',
+            'content_position' => 'string',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];

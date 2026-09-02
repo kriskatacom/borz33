@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Store\Services\ProductPage;
 use Store\Core\Html;
 use App\Resources\OrderResource;
+use App\Resources\ProductImageResource;
 
 /** @var \Illuminate\Support\Collection<int, \App\Models\Order> $orders */
 /** @var int $orderCount */
@@ -90,13 +91,31 @@ $statuses = [
                     <div class="store-account-order-details">
                         <ul>
                             <?php foreach ($order->items as $item): ?>
+                                <?php
+                                $itemProduct = $item->product;
+                                $itemImage = $itemProduct?->frontImage;
+                                $itemImageData = $itemImage !== null ? ProductImageResource::toArray($itemImage) : null;
+                                ?>
                                 <li>
                                     <span><?= (int) $item->qty ?>×</span>
-                                    <div>
-                                        <strong><?= $escape($item->name) ?></strong>
-                                        <?php if ($item->options): ?><small><?= $escape($item->options) ?></small><?php endif; ?>
-                                        <?php if ($item->notes): ?><small><?= nl2br($escape($item->notes)) ?></small><?php endif; ?>
-                                    </div>
+                                    <?php if ($itemProduct !== null): ?>
+                                        <a class="store-account-order-product" href="/products/<?= $escape($itemProduct->slug) ?>">
+                                            <span class="store-account-order-product-image">
+                                                <?php if ($itemImageData !== null): ?><img src="<?= $escape($itemImageData['url']) ?>" alt="" width="56" height="56" loading="lazy"><?php else: ?><?= Html::iconSvg('package') ?><?php endif; ?>
+                                            </span>
+                                            <span class="store-account-order-product-copy">
+                                                <strong><?= $escape($item->name) ?></strong>
+                                                <?php if ($item->options): ?><small><?= $escape($item->options) ?></small><?php endif; ?>
+                                                <?php if ($item->notes): ?><small><?= nl2br($escape($item->notes)) ?></small><?php endif; ?>
+                                            </span>
+                                        </a>
+                                    <?php else: ?>
+                                        <div class="store-account-order-product-copy">
+                                            <strong><?= $escape($item->name) ?></strong>
+                                            <?php if ($item->options): ?><small><?= $escape($item->options) ?></small><?php endif; ?>
+                                            <?php if ($item->notes): ?><small><?= nl2br($escape($item->notes)) ?></small><?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
                                     <b><?= $escape(ProductPage::money($item->total)) ?></b>
                                 </li>
                             <?php endforeach; ?>

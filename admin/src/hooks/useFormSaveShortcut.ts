@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 
 function isSaveShortcut(event: KeyboardEvent): boolean {
-  return (event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 's';
+  const isSKey = event.code === 'KeyS' || event.key.toLowerCase() === 's';
+
+  return (event.ctrlKey || event.metaKey) && !event.altKey && isSKey;
 }
 
 function formFromNode(node: EventTarget | null): HTMLFormElement | null {

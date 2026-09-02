@@ -1256,7 +1256,17 @@ a.stat-card {
 .banner-preview-panel > header > span { padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted-foreground); font-size: .7rem; }
 .banner-preview-viewport { padding: 14px; background-color: var(--paper); background-image: linear-gradient(45deg, color-mix(in srgb, var(--line) 38%, transparent) 25%, transparent 25%), linear-gradient(-45deg, color-mix(in srgb, var(--line) 38%, transparent) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--line) 38%, transparent) 75%), linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--line) 38%, transparent) 75%); background-position: 0 0, 0 6px, 6px -6px, -6px 0; background-size: 12px 12px; }
 .banner-preview-banner { display: grid; overflow: hidden; border: 1px solid var(--line); background: var(--card); color: var(--foreground); box-shadow: 0 12px 30px rgb(0 0 0 / 9%); }
-.banner-preview-media { display: grid; min-width: 0; min-height: 190px; place-items: center; background: var(--muted); }
+.banner-preview-banner.has-custom-height { min-height: 0; }
+.banner-preview-banner.has-full-width { outline: 2px dashed var(--primary); outline-offset: 3px; }
+.banner-image-position-picker { display: grid; max-width: 25rem; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.banner-image-position-picker button { min-height: 38px; border: 1px solid var(--border); background: var(--field); color: var(--muted-foreground); cursor: pointer; font: inherit; font-size: .75rem; transition: border-color .15s, background .15s, color .15s; }
+.banner-image-position-picker button:hover { border-color: var(--primary); color: var(--foreground); }
+.banner-image-position-picker button.is-selected { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 13%, var(--field)); color: var(--foreground); font-weight: 750; box-shadow: inset 0 0 0 1px var(--primary); }
+.banner-preview-media { display: grid; min-width: 0; min-height: 190px; place-items: center; background-color: var(--muted); background-position: center center; background-repeat: no-repeat; background-size: cover; }
+.banner-preview-banner.has-custom-height .banner-preview-media,
+.banner-preview-banner.has-custom-height .banner-preview-media img,
+.banner-preview-banner.has-custom-height.is-overlay .banner-preview-media,
+.banner-preview-banner.has-custom-height.is-overlay .banner-preview-media img { min-height: 0; }
 .banner-preview-media img { display: block; width: 100%; height: 100%; min-height: 190px; object-fit: cover; }
 .banner-preview-media > div { display: grid; justify-items: center; gap: 8px; color: var(--muted-foreground); font-size: .78rem; }
 .banner-preview-media svg { width: 1.6rem; height: 1.6rem; }
@@ -1339,6 +1349,29 @@ a.stat-card {
   display: grid;
   gap: 16px;
   align-items: start;
+}
+
+.banner-general-fields {
+  display: grid;
+  gap: 16px;
+}
+
+.banner-display-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 30rem) {
+  .banner-display-settings {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 640px) {
+  .banner-general-fields {
+    grid-column: 1 / -1;
+  }
 }
 
 .check {

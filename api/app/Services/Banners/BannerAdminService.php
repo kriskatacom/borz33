@@ -173,6 +173,10 @@ class BannerAdminService
                 'slug' => $slug,
                 'text' => $data['text'],
                 'layout' => $this->resolvedLayout($data['layout'] ?? null),
+                'height' => array_key_exists('height', $data) && $data['height'] !== null ? (int) $data['height'] : null,
+                'width_mode' => $this->resolvedWidthMode($data['width_mode'] ?? null),
+                'image_position' => $this->resolvedImagePosition($data['image_position'] ?? null),
+                'content_position' => $this->resolvedContentPosition($data['content_position'] ?? null),
                 'media_file_id' => $this->resolvedMediaFileId($data['media_file_id'] ?? null),
                 'is_active' => (bool) $data['is_active'],
                 'sort_order' => (int) ($data['sort_order'] ?? 0),
@@ -203,6 +207,22 @@ class BannerAdminService
             $attributes['layout'] = $this->resolvedLayout($data['layout']);
         }
 
+        if (array_key_exists('height', $data)) {
+            $attributes['height'] = $data['height'] !== null ? (int) $data['height'] : null;
+        }
+
+        if (array_key_exists('width_mode', $data)) {
+            $attributes['width_mode'] = $this->resolvedWidthMode($data['width_mode']);
+        }
+
+        if (array_key_exists('image_position', $data)) {
+            $attributes['image_position'] = $this->resolvedImagePosition($data['image_position']);
+        }
+
+        if (array_key_exists('content_position', $data)) {
+            $attributes['content_position'] = $this->resolvedContentPosition($data['content_position']);
+        }
+
         if (array_key_exists('is_active', $data)) {
             $attributes['is_active'] = (bool) $data['is_active'];
         }
@@ -222,17 +242,14 @@ class BannerAdminService
     private function syncButtons(Banner $banner, array $data): void
     {
         if (!array_key_exists('buttons', $data)) {
-            if (!$banner->buttons()->exists()) {
-                throw new ValidationException(['buttons' => ['Банерът трябва да има поне един бутон.']]);
-            }
-
             return;
         }
 
         $rows = is_array($data['buttons']) ? $data['buttons'] : [];
 
         if ($rows === []) {
-            throw new ValidationException(['buttons' => ['Банерът трябва да има поне един бутон.']]);
+            BannerButton::query()->where('banner_id', $banner->id)->delete();
+            return;
         }
 
         $keep = [];
@@ -251,10 +268,6 @@ class BannerAdminService
                 'sort_order' => (int) ($row['sort_order'] ?? $index),
             ])->save();
             $keep[] = (int) $button->id;
-        }
-
-        if ($keep === []) {
-            throw new ValidationException(['buttons' => ['Банерът трябва да има поне един бутон.']]);
         }
 
         BannerButton::query()
@@ -308,6 +321,39 @@ class BannerAdminService
         }
 
         return $layout;
+    }
+
+    private function resolvedWidthMode(mixed $value): string
+    {
+        $mode = is_string($value) ? trim($value) : '';
+
+        if (!in_array($mode, ['container', 'full'], true)) {
+            throw new ValidationException(['width_mode' => ['Изберете валидна ширина на банера.']]);
+        }
+
+        return $mode;
+    }
+
+    private function resolvedImagePosition(mixed $value): string
+    {
+        $position = is_string($value) ? trim($value) : '';
+
+        if (!array_key_exists($position, Banner::IMAGE_POSITIONS)) {
+            throw new ValidationException(['image_position' => ['Изберете валидна позиция на изображението.']]);
+        }
+
+        return $position;
+    }
+
+    private function resolvedContentPosition(mixed $value): string
+    {
+        $position = is_string($value) ? trim($value) : '';
+
+        if (!array_key_exists($position, Banner::CONTENT_POSITIONS)) {
+            throw new ValidationException(['content_position' => ['Изберете валидна позиция на съдържанието.']]);
+        }
+
+        return $position;
     }
 
     private function resolvedMediaFileId(mixed $value): int

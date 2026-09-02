@@ -52,10 +52,6 @@ class Banners
             $buttons[] = $button;
         }
 
-        if ($buttons === []) {
-            return;
-        }
-
         $file = dirname(__DIR__, 2) . '/views/partials/banner.php';
 
         require $file;

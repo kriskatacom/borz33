@@ -29,7 +29,7 @@ $renderAttachments = static function ($attachments) use ($escape, $formatSize): 
         <span aria-hidden="true"><?= Html::iconSvg('mail') ?></span>
         <h3>Все още нямате разговори</h3>
         <p>Изпратете ни запитване и ще можете да продължите разговора оттук.</p>
-        <a class="store-btn" href="/contact">Ново запитване</a>
+        <a class="store-button" href="/contact">Ново запитване</a>
     </section>
 <?php else: ?>
     <div class="store-account-messages-layout">
@@ -60,7 +60,7 @@ $renderAttachments = static function ($attachments) use ($escape, $formatSize): 
                     <input type="hidden" name="_token" value="<?= $escape($csrf) ?>">
                     <label for="account-message-reply">Вашият отговор</label>
                     <textarea id="account-message-reply" name="body" minlength="2" maxlength="10000" required placeholder="Напишете отговор…"></textarea>
-                    <div><small data-account-message-status>Отговорът ще бъде добавен към този разговор.</small><button class="store-account-message-send" type="submit"><span data-submit-label>Изпрати</span><span class="store-account-message-send-icon" aria-hidden="true"><?= Html::iconSvg('send') ?></span></button></div>
+                    <div><small data-account-message-status>Отговорът ще бъде добавен към този разговор.</small><button class="store-submit store-account-message-send" type="submit"><span data-submit-label>Изпрати</span><span class="store-account-message-send-icon" aria-hidden="true"><?= Html::iconSvg('send') ?></span></button></div>
                 </form>
             </section>
         <?php endif; ?>

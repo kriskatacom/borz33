@@ -1,0 +1,32 @@
+Borz33 — библиотеки и технологии
+
+Обща инфраструктура:
+- Docker Compose, Nginx, MySQL 8.4
+- PHP 8.4
+- Phinx — миграции и seed-ове
+
+API и backend:
+- Illuminate Database/Eloquent — ORM и модели
+- Illuminate Validation/Translation/Filesystem/Events
+- Symfony Mailer — имейли
+- Dompdf — PDF документи
+- Faker — тестови данни
+
+Администрация:
+- React 19 + TypeScript
+- Vite
+- Tailwind CSS
+- Radix UI
+- Redux Toolkit
+- TanStack Table
+- Tiptap — текстов редактор
+- React Router
+- date-fns, Lucide React
+
+Магазин:
+- PHP шаблони
+- Vite
+- Vue 3 и Alpine.js
+- Tailwind CSS
+- PhotoSwipe — галерии
+- Vue Sonner — известия

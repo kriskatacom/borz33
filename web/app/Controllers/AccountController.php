@@ -320,7 +320,7 @@ class AccountController extends Controller
         $orderStatus = (string) Request::query('status', 'all');
         $validOrderStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'paid', 'cancelled'];
         if (!in_array($orderStatus, $validOrderStatuses, true)) $orderStatus = 'all';
-        $ordersQuery = $user->orders()->with('items');
+        $ordersQuery = $user->orders()->with('items.product.frontImage');
         if ($orderStatus !== 'all') $ordersQuery->where('status', $orderStatus);
         $filteredOrderCount = $section === 'orders' ? $ordersQuery->count() : 0;
         $ordersLastPage = max(1, (int) ceil($filteredOrderCount / $ordersPerPage));

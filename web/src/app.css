@@ -1579,13 +1579,13 @@ select.store-input {
 }
 
 .store-account-orders-head p { margin: 0; }
-.store-account-orders-head p { color: var(--muted); font-size: 0.84rem; }
+.store-account-orders-head p { color: var(--muted); font-size: 0.9rem; }
 .store-account-orders-head > a {
     padding: 0.65rem 0.85rem;
     border: 1px solid var(--ink);
     background: var(--ink);
     color: var(--on-accent);
-    font-size: 0.76rem;
+    font-size: 0.84rem;
     font-weight: 700;
     text-decoration: none;
 }
@@ -1593,6 +1593,7 @@ select.store-input {
 .store-account-orders {
     display: grid;
     gap: 0.8rem;
+    font-size: 1.05rem;
 }
 
 .store-account-pagination { display:flex; justify-content:center; gap:.4rem; margin:1.5rem 0 0; }
@@ -1620,14 +1621,14 @@ select.store-input {
 
 .store-account-order > header p,
 .store-account-order > header h3 { margin: 0; }
-.store-account-order > header p { color: var(--muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.store-account-order > header h3 { margin-top: 0.15rem; font-size: 0.98rem; }
+.store-account-order > header p { color: var(--muted); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.store-account-order > header h3 { margin-top: 0.15rem; font-size: 1.08rem; }
 .store-account-order-status {
     padding: 0.35rem 0.55rem;
     border-radius: 2rem;
     background: var(--section);
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     font-weight: 700;
 }
 
@@ -1656,8 +1657,8 @@ select.store-input {
 }
 
 .store-account-order-meta > div:first-child { padding-left: 0; border-left: 0; }
-.store-account-order-meta span { color: var(--muted); font-size: 0.72rem; }
-.store-account-order-meta strong { font-size: 0.84rem; }
+.store-account-order-meta span { color: var(--muted); font-size: 0.78rem; }
+.store-account-order-meta strong { font-size: 0.92rem; }
 .store-account-order details { border-top: 1px solid var(--line); }
 .store-account-order summary {
     display: flex;
@@ -1666,7 +1667,7 @@ select.store-input {
     gap: 1rem;
     padding: 0.8rem 1.1rem;
     color: var(--muted);
-    font-size: 0.78rem;
+    font-size: 0.86rem;
     font-weight: 650;
     cursor: pointer;
     list-style: none;
@@ -1703,18 +1704,23 @@ select.store-input {
     place-items: center;
     background: var(--section);
     color: var(--muted);
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     font-weight: 700;
 }
 
-.store-account-order-details li > div { display: grid; min-width: 0; gap: 0.15rem; }
-.store-account-order-details li strong { overflow: hidden; font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
-.store-account-order-details li small { color: var(--muted); font-size: 0.67rem; line-height: 1.35; }
-.store-account-order-details li b { font-size: 0.72rem; white-space: nowrap; }
+.store-account-order-product { display: flex; min-width: 0; align-items: center; gap: 0.7rem; color: inherit; text-decoration: none; }
+.store-account-order-product:hover .store-account-order-product-copy strong { text-decoration: underline; text-underline-offset: 0.15em; }
+.store-account-order-product-image { display: grid; flex: 0 0 3.25rem; width: 3.25rem; height: 3.25rem; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 0.45rem; background: var(--canvas); color: var(--muted); }
+.store-account-order-product-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.store-account-order-product-image svg { width: 1.25rem; height: 1.25rem; }
+.store-account-order-product-copy { display: grid; min-width: 0; gap: 0.15rem; }
+.store-account-order-product-copy strong { overflow: hidden; font-size: 0.94rem; text-overflow: ellipsis; white-space: nowrap; }
+.store-account-order-details li small { color: var(--muted); font-size: 0.78rem; line-height: 1.4; }
+.store-account-order-details li b { font-size: 0.84rem; white-space: nowrap; }
 .store-account-order-details dl { display: grid; align-content: start; gap: 0.65rem; margin: 0; padding-left: 1rem; border-left: 1px solid var(--line); }
 .store-account-order-details dl div { display: grid; gap: 0.15rem; }
-.store-account-order-details dt { color: var(--muted); font-size: 0.66rem; }
-.store-account-order-details dd { margin: 0; font-size: 0.72rem; font-weight: 650; line-height: 1.4; }
+.store-account-order-details dt { color: var(--muted); font-size: 0.74rem; }
+.store-account-order-details dd { margin: 0; font-size: 0.82rem; font-weight: 650; line-height: 1.4; }
 
 .store-account-dash {
     display: grid;
@@ -1794,11 +1800,38 @@ select.store-input {
     line-height: normal;
 }
 
+.store-banner[data-height],
+.store-banner[data-height].store-banner--split,
+.store-banner[data-height].store-banner--overlay {
+    min-height: 0;
+    height: var(--store-banner-height);
+}
+
+.store-banner[data-height] .store-banner-media,
+.store-banner[data-height].store-banner--overlay .store-banner-media {
+    min-height: 0;
+}
+
+.store-banner--width-full {
+    width: 100vw;
+    max-width: 100vw;
+    margin-inline-start: calc(50% - 50vw);
+    margin-inline-end: 0;
+}
+
+html:has(.store-banner--width-full),
+body:has(.store-banner--width-full) {
+    overflow-x: clip;
+}
+
 .store-banner-media {
     display: grid;
     min-height: 14rem;
     min-width: 0;
     background: var(--line);
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: cover;
 }
 
 .store-banner-media img {

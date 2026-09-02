@@ -12,6 +12,8 @@ $newProducts = $newProducts ?? [];
 $favoriteIds = $favoriteIds ?? [];
 $bestSellers = $bestSellers ?? [];
 ?>
+<?php Banners::render('home-page-banner'); ?>
+
 <div class="store-hero">
     <?php Banners::render('proletna-promociya'); ?>
 </div>

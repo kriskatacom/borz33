@@ -15,7 +15,7 @@ class BannerValidator
     /** @param array<string, mixed> $data */
     public function validate(array $data, ?int $bannerId = null): array
     {
-        $data = $this->blankToNull($data, ['slug', 'media_file_id']);
+        $data = $this->blankToNull($data, ['slug', 'height', 'media_file_id']);
         $data = $this->normalizeNullableId($data, 'media_file_id');
 
         if (!array_key_exists('media_file_id', $data) && array_key_exists('media_id', $data)) {
@@ -110,10 +110,14 @@ class BannerValidator
             ],
             'text' => ['required', 'string'],
             'layout' => ['required', 'string', Rule::in(Banner::LAYOUTS)],
+            'height' => ['nullable', 'integer', 'min:120', 'max:1000'],
+            'width_mode' => ['required', 'string', Rule::in(['container', 'full'])],
+            'image_position' => ['required', 'string', Rule::in(array_keys(Banner::IMAGE_POSITIONS))],
+            'content_position' => ['required', 'string', Rule::in(array_keys(Banner::CONTENT_POSITIONS))],
             'is_active' => ['required', 'boolean'],
             'media_file_id' => ['required', 'integer', 'min:1', Rule::exists('media_files', 'id')],
             'sort_order' => ['nullable', 'integer', 'min:0'],
-            'buttons' => [$bannerId === null ? 'required' : 'nullable', 'array', 'min:1'],
+            'buttons' => ['nullable', 'array'],
             'buttons.*.id' => ['nullable', 'integer', 'min:1'],
             'buttons.*.label' => ['required', 'string', 'max:191'],
             'buttons.*.url' => ['required', 'string', 'max:500'],
@@ -166,6 +170,10 @@ class BannerValidator
             'slug' => 'адрес',
             'text' => 'текст',
             'layout' => 'дизайн',
+            'height' => 'височина',
+            'width_mode' => 'ширина на банера',
+            'image_position' => 'позиция на изображението',
+            'content_position' => 'позиция на съдържанието',
             'is_active' => 'активен',
             'media_file_id' => 'изображение',
             'sort_order' => 'ред',

@@ -31,6 +31,10 @@ type FormState = {
   slug: string;
   text: string;
   layout: string;
+  height: string;
+  width_mode: 'container' | 'full';
+  image_position: string;
+  content_position: string;
   is_active: boolean;
   sort_order: string;
 };
@@ -48,6 +52,10 @@ const emptyForm: FormState = {
   slug: '',
   text: '',
   layout: 'split',
+  height: '',
+  width_mode: 'container',
+  image_position: 'center',
+  content_position: 'center',
   is_active: true,
   sort_order: '0',
 };
@@ -68,10 +76,6 @@ function emptyButton(): ButtonDraft {
 }
 
 function mapButtons(rows: BannerButton[]): ButtonDraft[] {
-  if (rows.length === 0) {
-    return [emptyButton()];
-  }
-
   return rows.map((row) => ({
     key: `b-${row.id}`,
     id: row.id,
@@ -84,6 +88,30 @@ function mapButtons(rows: BannerButton[]): ButtonDraft[] {
 function fieldError(errors: Record<string, string>, key: string): string | undefined {
   return errors[key];
 }
+
+const IMAGE_POSITIONS = [
+  ['top-left', 'Горе ляво'],
+  ['top', 'Горе'],
+  ['top-right', 'Горе дясно'],
+  ['left', 'Вляво'],
+  ['center', 'В средата'],
+  ['right', 'Вдясно'],
+  ['bottom-left', 'Долу ляво'],
+  ['bottom', 'Долу'],
+  ['bottom-right', 'Долу дясно'],
+] as const;
+
+const CONTENT_POSITION_STYLES: Record<string, { alignItems: string; justifyContent: string; textAlign: 'left' | 'center' | 'right' }> = {
+  'top-left': { alignItems: 'flex-start', justifyContent: 'flex-start', textAlign: 'left' },
+  top: { alignItems: 'center', justifyContent: 'flex-start', textAlign: 'center' },
+  'top-right': { alignItems: 'flex-end', justifyContent: 'flex-start', textAlign: 'right' },
+  left: { alignItems: 'flex-start', justifyContent: 'center', textAlign: 'left' },
+  center: { alignItems: 'center', justifyContent: 'center', textAlign: 'center' },
+  right: { alignItems: 'flex-end', justifyContent: 'center', textAlign: 'right' },
+  'bottom-left': { alignItems: 'flex-start', justifyContent: 'flex-end', textAlign: 'left' },
+  bottom: { alignItems: 'center', justifyContent: 'flex-end', textAlign: 'center' },
+  'bottom-right': { alignItems: 'flex-end', justifyContent: 'flex-end', textAlign: 'right' },
+};
 
 function SwitchField({
   id,
@@ -110,15 +138,22 @@ function SwitchField({
 
 function BannerPreview({ form, buttons, media }: { form: FormState; buttons: ButtonDraft[]; media: MediaFile | null }) {
   const visibleButtons = buttons.filter((button) => button.label.trim() !== '');
+  const previewHeight = Number.parseInt(form.height, 10);
+  const previewImagePosition = form.image_position === 'center' ? 'center center' : form.image_position.replace('-', ' ');
+  const previewContentPosition = CONTENT_POSITION_STYLES[form.content_position] ?? CONTENT_POSITION_STYLES.center;
   return <aside className="banner-preview-panel" aria-label="Преглед на банера">
-    <header><div><p>Преглед на живо</p><h2>Как ще изглежда в сайта</h2></div><span>{BANNER_LAYOUTS.find((item) => item.value === form.layout)?.label ?? 'Разделен'}</span></header>
+    <header><div><p>Преглед на живо</p><h2>Как ще изглежда в сайта</h2></div><div className="flex flex-wrap justify-end gap-1.5"><span>{BANNER_LAYOUTS.find((item) => item.value === form.layout)?.label ?? 'Разделен'}</span><span>{form.width_mode === 'full' ? 'Цял екран' : 'Контейнер'}</span></div></header>
     <div className="banner-preview-viewport">
-      <section className={`banner-preview-banner is-${form.layout}`}>
-        <div className="banner-preview-media">{media ? <img src={media.url} alt={media.alt?.trim() || form.title || ''} /> : <div><Image aria-hidden /><span>Изберете изображение</span></div>}</div>
-        <div className="banner-preview-copy">
+      <section className={`banner-preview-banner is-${form.layout}${Number.isFinite(previewHeight) && previewHeight > 0 ? ' has-custom-height' : ''}${form.width_mode === 'full' ? ' has-full-width' : ''}`} style={Number.isFinite(previewHeight) && previewHeight > 0 ? { height: `${previewHeight}px` } : undefined}>
+        <div className="banner-preview-media" style={media ? { backgroundImage: `url("${media.url}")`, backgroundPosition: previewImagePosition } : undefined}>{media ? <span className="sr-only">{media.alt?.trim() || form.title || ''}</span> : <div><Image aria-hidden /><span>Изберете изображение</span></div>}</div>
+        <div className="banner-preview-copy" style={previewContentPosition}>
           <h3>{form.title.trim() || 'Заглавие на банера'}</h3>
           <div className={`banner-preview-text ${form.text.trim() === '' ? 'is-placeholder' : ''}`} dangerouslySetInnerHTML={{ __html: form.text.trim() || '<p>Текстът на банера ще се покаже тук.</p>' }} />
-          <div className="banner-preview-actions">{visibleButtons.length > 0 ? visibleButtons.map((button, index) => <span key={button.key} className={index === 0 ? '' : 'is-ghost'}>{button.label}</span>) : <span>Основен бутон</span>}</div>
+          {visibleButtons.length > 0 ? (
+            <div className="banner-preview-actions">
+              {visibleButtons.map((button, index) => <span key={button.key} className={index === 0 ? '' : 'is-ghost'}>{button.label}</span>)}
+            </div>
+          ) : null}
         </div>
       </section>
     </div>
@@ -133,7 +168,7 @@ export function BannerFormPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [buttons, setButtons] = useState<ButtonDraft[]>([emptyButton()]);
+  const [buttons, setButtons] = useState<ButtonDraft[]>([]);
   const [media, setMedia] = useState<MediaFile | null>(null);
   const [mediaFileId, setMediaFileId] = useState<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -185,6 +220,10 @@ export function BannerFormPage() {
       slug: banner.slug,
       text: banner.text,
       layout: isBannerLayout(banner.layout) ? banner.layout : 'split',
+      height: banner.height === null ? '' : String(banner.height),
+      width_mode: banner.width_mode === 'full' ? 'full' : 'container',
+      image_position: IMAGE_POSITIONS.some(([value]) => value === banner.image_position) ? banner.image_position : 'center',
+      content_position: Object.hasOwn(CONTENT_POSITION_STYLES, banner.content_position) ? banner.content_position : 'center',
       is_active: banner.is_active,
       sort_order: String(banner.sort_order),
     });
@@ -221,6 +260,10 @@ export function BannerFormPage() {
       slug: form.slug.trim() === '' ? null : form.slug.trim(),
       text: form.text.trim(),
       layout: form.layout,
+      height: form.height.trim() === '' ? null : Number.parseInt(form.height, 10),
+      width_mode: form.width_mode,
+      image_position: form.image_position,
+      content_position: form.content_position,
       media_file_id: mediaFileId ?? 0,
       is_active: form.is_active,
       sort_order: Math.max(0, Number.parseInt(form.sort_order, 10) || 0),
@@ -270,7 +313,7 @@ export function BannerFormPage() {
     <div className="page min-w-0">
       <PageHeader
         title={isNew ? title : form.title.trim() ? `Редакция · ${form.title}` : title}
-        help="Заглавие, текст, изображение и поне един бутон. Адресът (slug) се ползва за вграждане в сайта."
+        help="Заглавие, текст и изображение. По желание можете да добавите бутон. Адресът (slug) се ползва за вграждане в сайта."
         crumbs={[
           { label: 'Табло', to: routes.home },
           { label: 'Банери', to: routes.banners },
@@ -308,59 +351,92 @@ export function BannerFormPage() {
             help="Заглавие, адрес за вграждане и съдържание. Празен адрес се генерира от заглавието."
           >
             <div className="form-grid">
-              <Field
-                id="title"
-                label="Заглавие"
-                help="Заглавието в панела и върху банера в сайта."
-                value={form.title}
-                onChange={(event) => patchForm('title', event.target.value)}
-                error={errors.title}
-              />
-              <Field
-                id="slug"
-                label="Адрес (slug)"
-                help="Ключ за вграждане, напр. home. Празно поле се попълва от заглавието."
-                value={form.slug}
-                onChange={(event) => patchForm('slug', event.target.value)}
-                error={errors.slug}
-              />
-              <div className="field">
-                <LabelWithHelp label="Кратък код" help="Поставете този код като отделен ред в съдържанието на CMS страница." />
-                <div className="flex min-h-12 items-center gap-2 border border-border bg-field px-3">
-                  <code className="min-w-0 flex-1 truncate text-sm">[banner:{form.slug.trim().toLowerCase() || 'slug-na-banera'}]</code>
-                  <Button type="button" variant="ghost" size="icon" aria-label="Копирай краткия код" disabled={form.slug.trim() === ''} onClick={() => {
-                    const code = `[banner:${form.slug.trim().toLowerCase()}]`;
-                    void navigator.clipboard.writeText(code).then(() => toast.success('Краткият код е копиран.'));
-                  }}><Copy /></Button>
-                </div>
-              </div>
-              <div className="field">
-                <LabelWithHelp
-                  htmlFor="layout"
-                  label="Дизайн"
-                  help="Оформлението в сайта. „Разделен“ е текущият вид на „Пролетна промоция“."
+              <div className="banner-general-fields">
+                <Field
+                  id="title"
+                  label="Заглавие"
+                  help="Заглавието в панела и върху банера в сайта."
+                  value={form.title}
+                  onChange={(event) => patchForm('title', event.target.value)}
+                  error={errors.title}
                 />
-                <Select value={form.layout} onValueChange={(value) => patchForm('layout', value)}>
-                  <SelectTrigger id="layout" className="w-full min-h-12 font-sans">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BANNER_LAYOUTS.map((layout) => (
-                      <SelectItem key={layout.value} value={layout.value}>
-                        {layout.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.layout ? (
-                  <p className="field-error" role="alert">
-                    {errors.layout}
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground m-0 text-sm">
-                    {BANNER_LAYOUTS.find((layout) => layout.value === form.layout)?.help}
-                  </p>
-                )}
+                <Field
+                  id="slug"
+                  label="Адрес (slug)"
+                  help="Ключ за вграждане, напр. home. Празно поле се попълва от заглавието."
+                  value={form.slug}
+                  onChange={(event) => patchForm('slug', event.target.value)}
+                  error={errors.slug}
+                />
+                <div className="field">
+                  <LabelWithHelp label="Кратък код" help="Поставете този код като отделен ред в съдържанието на CMS страница." />
+                  <div className="flex min-h-12 items-center gap-2 border border-border bg-field px-3">
+                    <code className="min-w-0 flex-1 truncate text-sm">[banner:{form.slug.trim().toLowerCase() || 'slug-na-banera'}]</code>
+                    <Button type="button" variant="ghost" size="icon" aria-label="Копирай краткия код" disabled={form.slug.trim() === ''} onClick={() => {
+                      const code = `[banner:${form.slug.trim().toLowerCase()}]`;
+                      void navigator.clipboard.writeText(code).then(() => toast.success('Краткият код е копиран.'));
+                    }}><Copy /></Button>
+                  </div>
+                </div>
+                <div className="field">
+                  <LabelWithHelp
+                    htmlFor="layout"
+                    label="Дизайн"
+                    help="Оформлението в сайта. „Разделен“ е текущият вид на „Пролетна промоция“."
+                  />
+                  <Select value={form.layout} onValueChange={(value) => patchForm('layout', value)}>
+                    <SelectTrigger id="layout" className="w-full min-h-12 font-sans">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BANNER_LAYOUTS.map((layout) => (
+                        <SelectItem key={layout.value} value={layout.value}>
+                          {layout.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.layout ? (
+                    <p className="field-error" role="alert">
+                      {errors.layout}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground m-0 text-sm">
+                      {BANNER_LAYOUTS.find((layout) => layout.value === form.layout)?.help}
+                    </p>
+                  )}
+                </div>
+                <div className="banner-display-settings">
+                <Field
+                  id="height"
+                  label="Височина (px)"
+                  type="number"
+                  min="120"
+                  max="1000"
+                  placeholder="Автоматично"
+                  help="Незадължително. Оставете празно, за да се използва автоматичната височина."
+                  value={form.height}
+                  onChange={(event) => patchForm('height', event.target.value)}
+                  error={errors.height}
+                />
+                <div className="field">
+                  <LabelWithHelp
+                    htmlFor="width_mode"
+                    label="Ширина на банера"
+                    help="Изберете дали банерът да следва контейнера или да се разтегне по цялата ширина на екрана."
+                  />
+                  <Select value={form.width_mode} onValueChange={(value) => patchForm('width_mode', value as FormState['width_mode'])}>
+                    <SelectTrigger id="width_mode" className="w-full min-h-12 font-sans">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="container">Ширина на контейнера</SelectItem>
+                      <SelectItem value="full">Цял екран</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.width_mode ? <p className="field-error" role="alert">{errors.width_mode}</p> : null}
+                </div>
+                </div>
               </div>
               <Field
                 id="sort_order"
@@ -388,6 +464,27 @@ export function BannerFormPage() {
               onChange={(html) => patchForm('text', html)}
               error={errors.text}
             />
+            <div className="field">
+              <div className="flex items-center gap-1">
+                <label>Позиция на съдържанието</label>
+                <span className="text-muted-foreground text-sm">Подредба на заглавието, текста и бутоните в банера.</span>
+              </div>
+              <div className="banner-image-position-picker" role="group" aria-label="Позиция на съдържанието">
+                {IMAGE_POSITIONS.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={form.content_position === value ? 'is-selected' : ''}
+                    aria-label={label}
+                    aria-pressed={form.content_position === value}
+                    onClick={() => patchForm('content_position', value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {errors.content_position ? <p className="field-error" role="alert">{errors.content_position}</p> : null}
+            </div>
             <div className="field">
               <LabelWithHelp
                 label="Изображение"
@@ -425,6 +522,26 @@ export function BannerFormPage() {
                   {errors.media_file_id}
                 </p>
               ) : null}
+              <div className="field">
+                <div className="flex items-center gap-1">
+                  <label>Позиция на изображението</label>
+                  <span className="text-muted-foreground text-sm">Изберете коя част от снимката да остане видима.</span>
+                </div>
+                <div className="banner-image-position-picker" role="group" aria-label="Позиция на изображението">
+                  {IMAGE_POSITIONS.map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={form.image_position === value ? 'is-selected' : ''}
+                      aria-label={label}
+                      aria-pressed={form.image_position === value}
+                      onClick={() => patchForm('image_position', value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </CollapsibleSection>
 
@@ -432,7 +549,7 @@ export function BannerFormPage() {
             title="Бутони"
             icon={Plus}
             persistKey="banner.buttons"
-            help="Нужен е поне един бутон. Първият е основен. Редът тук е редът върху банера."
+            help="Бутоните са по желание. Първият е основен. Редът тук е редът върху банера."
           >
             {errors.buttons ? (
               <p className="form-message is-error" role="alert">
@@ -480,8 +597,7 @@ export function BannerFormPage() {
                         size="icon"
                         className="size-8"
                         aria-label="Премахни бутон"
-                        disabled={buttons.length === 1}
-                        onClick={() => setButtons((current) => (current.length === 1 ? current : current.filter((_, item) => item !== index)))}
+                        onClick={() => setButtons((current) => current.filter((_, item) => item !== index))}
                       >
                         <Trash2 />
                       </Button>
