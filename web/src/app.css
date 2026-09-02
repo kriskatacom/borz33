@@ -2899,15 +2899,21 @@ select.store-input {
 .store-review { width: 100%; }
 
 .store-pdp-reviews-head {
-    display: flex;
-    align-items: end;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0;
+    padding: clamp(1.15rem, 3vw, 1.7rem);
+    border: 1px solid var(--line);
+    background: linear-gradient(135deg, var(--section), var(--canvas));
+    box-shadow: 0 0.75rem 2rem color-mix(in srgb, var(--ink) 7%, transparent);
 }
 
+.store-reviews-intro { display: grid; align-content: center; gap: 0.35rem; }
 .store-pdp-reviews-head p {
-    margin: 0 0 0.2rem;
+    margin: 0;
     color: var(--muted);
     font-size: 0.72rem;
     font-weight: 700;
@@ -2916,8 +2922,9 @@ select.store-input {
 }
 
 .store-pdp-reviews-head h2 { margin-bottom: 0; }
+.store-reviews-intro > small { max-width: 30rem; color: var(--muted); font-size: 0.82rem; line-height: 1.45; }
 .store-pdp-reviews-head h2 span { color: var(--muted); font-size: 0.8em; font-weight: 500; }
-.store-reviews-summary { display: grid; justify-items: end; gap: 0.3rem; }
+.store-reviews-summary { display: grid; justify-items: end; align-content: center; gap: 0.45rem; min-width: 10rem; padding-left: 1rem; border-left: 1px solid var(--line); }
 .store-reviews-summary small { max-width: 16rem; color: var(--muted); font-size: 0.76rem; line-height: 1.4; text-align: right; }
 
 .store-review-stars {
@@ -3085,8 +3092,29 @@ select.store-input {
 }
 .store-review-edit:hover { border-color: var(--accent); background: var(--section); color: var(--accent); transform: translateY(-1px); }
 .store-review-edit:active { transform: translateY(0); }
-.store-review-create { margin-top: 1rem; border-color: var(--accent); background: var(--accent); color: var(--on-accent); box-shadow: 0 0.45rem 1rem color-mix(in srgb, var(--accent) 18%, transparent); }
-.store-review-create:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 0.65rem 1.25rem color-mix(in srgb, var(--accent) 28%, transparent); }
+.store-review-create {
+    position: relative;
+    display: block;
+    min-width: min(15rem, 100%);
+    min-height: 3rem;
+    margin: 0.85rem auto 0;
+    overflow: hidden;
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+    box-shadow: 0 0.55rem 1.2rem color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.store-review-create::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 -35%;
+    width: 24%;
+    background: rgb(255 255 255 / 22%);
+    transform: skewX(-20deg);
+    transition: left 420ms ease;
+}
+.store-review-create:hover { filter: brightness(1.06); transform: translateY(-2px); box-shadow: 0 0.8rem 1.6rem color-mix(in srgb, var(--accent) 30%, transparent); }
+.store-review-create:hover::after { left: 115%; }
 .store-review-create:active { transform: translateY(0); }
 .store-review-create:disabled,
 .store-review-edit:disabled { cursor: wait; opacity: 0.65; }
@@ -4016,7 +4044,7 @@ body.store-quick-open { overflow: hidden; }
 }
 
 #content:has(> .store-cart .store-empty-state--cart) .store-cart-title {
-    width: min(1120px, calc(100% - 2rem));
+    width: min(1320px, calc(100% - 2rem));
     margin-right: auto;
     margin-left: auto;
 }
@@ -4068,8 +4096,8 @@ body.store-quick-open { overflow: hidden; }
         grid-template-columns: 1fr 1fr;
     }
 
-    .store-pdp-reviews-head { align-items: start; flex-direction: column; }
-    .store-reviews-summary { justify-items: start; }
+    .store-pdp-reviews-head { grid-template-columns: 1fr; align-items: start; }
+    .store-reviews-summary { justify-items: start; min-width: 0; padding-top: 0.85rem; padding-left: 0; border-top: 1px solid var(--line); border-left: 0; }
     .store-reviews-summary small { max-width: none; text-align: left; }
     .store-review-rating-picker { grid-template-columns: 1fr; gap: 0.35rem; }
     .store-product-tabs { margin-top: 2.25rem; }
@@ -4092,7 +4120,7 @@ body.store-quick-open { overflow: hidden; }
 }
 
 .store-recently-viewed {
-    width: min(1120px, calc(100% - 2rem));
+    width: min(1320px, calc(100% - 2rem));
     margin: clamp(2.5rem, 6vw, 4.5rem) auto 0;
     padding-top: clamp(1.5rem, 4vw, 2.25rem);
     border-top: 1px solid var(--line);
@@ -5640,7 +5668,7 @@ html.is-cart-open {
 }
 
 .store-footer-inner {
-    width: min(1120px, calc(100% - 2rem));
+    width: min(1320px, calc(100% - 2rem));
     margin: 0 auto;
 }
 

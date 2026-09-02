@@ -8,12 +8,11 @@ use App\Exceptions\AuthException;
 use App\Models\AdminNotification;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\SiteSetting;
 use Illuminate\Support\Carbon;
 
 final class AdminNotificationService
 {
-    private const LOW_STOCK = 5;
-
     /** @return array{notifications: list<array<string, mixed>>, unread_count: int, pagination: array{page: int, per_page: int, total: int, last_page: int}} */
     public function list(int $page = 1, int $perPage = 20, bool $archived = false): array
     {
@@ -68,7 +67,8 @@ final class AdminNotificationService
     public function lowStock(Product $product, ProductVariant $variant, int $previousStock): void
     {
         $stock = (int) $variant->stock;
-        if ($stock >= $previousStock || $stock > self::LOW_STOCK) return;
+        $threshold = (int) (SiteSetting::query()->value('low_stock_threshold') ?? 5);
+        if ($threshold <= 0 || $stock >= $previousStock || $stock >= $threshold) return;
         $alreadyOpen = AdminNotification::query()->where('type', 'product.low_stock')->where('subject_id', $variant->id)->whereNull('read_at')->exists();
         if ($alreadyOpen) return;
         $variantName = trim((string) $variant->name);

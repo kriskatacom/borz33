@@ -47,6 +47,7 @@ export function ProductsPage() {
       q: params.get('q') ?? '',
       status: params.get('status') ?? 'all',
       category: params.get('category') ?? 'all',
+      low_stock: params.get('low_stock') ?? 'all',
       page: Number(params.get('page') ?? '1') || 1,
       per_page: parsePageSize(params.get('per_page')),
     }),
@@ -219,6 +220,22 @@ export function ProductsPage() {
           ]}
           onValueChange={(value) => updateParams({ category: value === 'all' ? '' : value })}
         />
+        <div className="field">
+          <LabelWithHelp
+            htmlFor="low-stock"
+            label="Наличност"
+            help="Показва продукти, при които поне един вариант е под минималната наличност, зададена в Настройки."
+          />
+          <Select value={filters.low_stock} onValueChange={(value) => updateParams({ low_stock: value === 'all' ? '' : value })}>
+            <SelectTrigger id="low-stock" className="w-full min-h-12 font-sans">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Всички наличности</SelectItem>
+              <SelectItem value="1">Под минималната наличност</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </form>
 
       {message ? (

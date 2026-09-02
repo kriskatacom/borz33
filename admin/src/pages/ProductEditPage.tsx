@@ -45,6 +45,7 @@ import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
 import { flattenCategoryTree } from '@/features/categories/categoryTree';
 import { PageTreeSelect } from '@/features/pages/PageTreeSelect';
 import { VariantImageField } from '@/features/products/VariantImageField';
+import { getSiteSettings } from '@/api/settings';
 
 type ParameterDraft = { key: string; id?: number; name: string; value: string };
 type OptionValueDraft = { key: string; id?: number; name: string; slug: string; hex_color: string };
@@ -681,7 +682,7 @@ function mapOptions(options: ProductOption[]): OptionDraft[] {
   }));
 }
 
-function VariantsForm({ product, token, onSaved, focusVariantId }: SectionFormProps & { focusVariantId?: number }) {
+function VariantsForm({ product, token, onSaved, focusVariantId, lowStockThreshold }: SectionFormProps & { focusVariantId?: number; lowStockThreshold: number }) {
   const [rows, setRows] = useState<VariantDraft[]>(() => mapVariants(product.variants));
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -887,15 +888,18 @@ function VariantsForm({ product, token, onSaved, focusVariantId }: SectionFormPr
         </Button>
       </div>
       {rows.length === 0 ? <p className="m-0 text-muted-foreground">Няма варианти. Добавете комбинация от опциите.</p> : null}
-      {rows.map((row, index) => (
-        <div id={row.id === focusVariantId ? `product-variant-${row.id}` : undefined} key={row.key} className={row.id === focusVariantId ? 'product-variant-target' : undefined}>
+      {rows.map((row, index) => {
+        const lowStock = lowStockThreshold > 0 && (Number.parseInt(row.stock, 10) || 0) < lowStockThreshold;
+
+        return (
+        <div id={row.id === focusVariantId ? `product-variant-${row.id}` : undefined} key={row.key} className={`${row.id === focusVariantId ? 'product-variant-target ' : ''}${lowStock ? 'rounded-[6px] border border-amber-500/60 bg-amber-500/5 p-1' : ''}`}>
         <CollapsibleSection
           heading="h3"
           persistKey={row.id ? `variant:${row.id}` : undefined}
           forceOpen={allVariantsOpen === true || row.id === focusVariantId}
           forceClosed={allVariantsOpen === false}
           onOpenChange={(open) => updateVariantOpenState(row.key, open)}
-          title={<VariantCardTitle row={row} options={product.options} />}
+          title={<VariantCardTitle row={row} options={product.options} lowStockThreshold={lowStockThreshold} />}
           actions={
             <Button
               type="button"
@@ -970,7 +974,8 @@ function VariantsForm({ product, token, onSaved, focusVariantId }: SectionFormPr
           </div>
         </CollapsibleSection>
         </div>
-      ))}
+        );
+      })}
       <Button type="button" variant="outline" onClick={() => addVariant()}>
         <Plus />
         Вариант
@@ -1112,7 +1117,7 @@ function mapVariants(variants: ProductVariant[]): VariantDraft[] {
   }));
 }
 
-function VariantCardTitle({ row, options }: { row: VariantDraft; options: ProductOption[] }) {
+function VariantCardTitle({ row, options, lowStockThreshold }: { row: VariantDraft; options: ProductOption[]; lowStockThreshold: number }) {
   const optionLabel = options
     .map((option) => option.values.find((value) => value.slug === row.option_values[option.slug])?.name)
     .filter(Boolean)
@@ -1124,6 +1129,7 @@ function VariantCardTitle({ row, options }: { row: VariantDraft; options: Produc
       {optionLabel ? <span className="truncate font-medium tracking-normal text-muted-foreground">{optionLabel}</span> : null}
       {row.is_default ? <span className="badge info">По подразбиране</span> : null}
       {!row.is_active ? <span className="badge idle">Неактивен</span> : null}
+      {lowStockThreshold > 0 && (Number.parseInt(row.stock, 10) || 0) < lowStockThreshold ? <span className="badge warn">Ниска наличност · {row.stock || '0'} / {lowStockThreshold} бр.</span> : null}
     </span>
   );
 }
@@ -1357,6 +1363,7 @@ export function ProductEditPage() {
   const productId = Number(id);
   const requestedVariantId = Number(searchParams.get('variant'));
   const [product, setProduct] = useState<AdminProduct | null>(null);
+  const [lowStockThreshold, setLowStockThreshold] = useState(5);
   const [busy, setBusy] = useState(!isNew);
   const [message, setMessage] = useState<string | null>(null);
   const [confirmStatus, setConfirmStatus] = useState<'delete' | 'restore' | null>(null);
@@ -1374,6 +1381,18 @@ export function ProductEditPage() {
     if (current.front) URL.revokeObjectURL(current.front.previewUrl);
     current.gallery.forEach((image) => URL.revokeObjectURL(image.previewUrl));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getSiteSettings(token)
+      .then((response) => {
+        if (!cancelled) setLowStockThreshold(response.data.settings.low_stock_threshold);
+      })
+      .catch(() => undefined);
+
+    return () => { cancelled = true; };
+  }, [token]);
 
   async function finishCreation(created: AdminProduct) {
     setBusy(true);
@@ -1600,7 +1619,7 @@ export function ProductEditPage() {
             <OptionsForm key={`options-${product.id}-${attributeSectionsRevision}`} product={product} token={token} onSaved={setProduct} />
           </SectionShell>
           <SectionShell title="Варианти" icon={Layers} help="Комбинации за покупка. Всяка може да има своя цена, наличност и снимка.">
-            <VariantsForm key={`variants-${product.id}-${attributeSectionsRevision}`} product={product} token={token} onSaved={setProduct} focusVariantId={focusVariantId} />
+            <VariantsForm key={`variants-${product.id}-${attributeSectionsRevision}`} product={product} token={token} onSaved={setProduct} focusVariantId={focusVariantId} lowStockThreshold={lowStockThreshold} />
           </SectionShell>
           <SectionShell title="Персонализация" icon={Type} help="Текст, който клиентът въвежда преди добавяне в количката, например име върху тениска.">
             <PersonalizationForm key={`personalization-${product.id}`} product={product} token={token} onSaved={setProduct} />

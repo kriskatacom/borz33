@@ -211,6 +211,11 @@ class ProductAdminService
             $query->where('category_id', (int) $category);
         }
 
+        if ((string) ($filters['low_stock'] ?? '') === '1') {
+            $threshold = (int) (SiteSetting::query()->value('low_stock_threshold') ?? 5);
+            $query->whereHas('variants', static fn (Builder $builder) => $builder->where('stock', '<', $threshold));
+        }
+
         return $query;
     }
 

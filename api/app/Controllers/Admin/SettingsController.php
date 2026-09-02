@@ -36,6 +36,7 @@ class SettingsController extends Controller
             'admin_background_overlay' => ['sometimes', 'integer', 'min:0', 'max:80'],
             'vat_enabled' => ['sometimes', 'boolean'],
             'free_shipping_threshold' => ['sometimes', 'numeric', 'min:0', 'max:999999.99'],
+            'low_stock_threshold' => ['sometimes', 'integer', 'min:0', 'max:999999'],
             'econt_operations_enabled' => ['sometimes', 'boolean'],
             'econt_environment' => ['sometimes', 'string', Rule::in(['demo', 'production'])],
             'econt_production_username' => ['sometimes', 'nullable', 'string', 'max:191'],
@@ -62,6 +63,7 @@ class SettingsController extends Controller
         if (array_key_exists('admin_background_overlay', $data)) $settings->admin_background_overlay = (int) $data['admin_background_overlay'];
         if (array_key_exists('vat_enabled', $data)) $settings->vat_enabled = (bool) $data['vat_enabled'];
         if (array_key_exists('free_shipping_threshold', $data)) $settings->free_shipping_threshold = round((float) $data['free_shipping_threshold'], 2);
+        if (array_key_exists('low_stock_threshold', $data)) $settings->low_stock_threshold = (int) $data['low_stock_threshold'];
         if (array_key_exists('econt_operations_enabled', $data)) $settings->econt_operations_enabled = (bool) $data['econt_operations_enabled'];
         $credentialsChanged = false;
         if (array_key_exists('econt_production_username', $data)) {
@@ -187,6 +189,7 @@ class SettingsController extends Controller
             'admin_background_overlay' => (int) ($settings->admin_background_overlay ?? 48),
             'vat_enabled' => (bool) $settings->vat_enabled,
             'free_shipping_threshold' => (float) $settings->free_shipping_threshold,
+            'low_stock_threshold' => (int) ($settings->low_stock_threshold ?? 5),
             'econt_operations_enabled' => (bool) $settings->econt_operations_enabled,
             'econt' => [
                 'environment' => in_array($settings->econt_environment, ['demo', 'production'], true) ? $settings->econt_environment : 'demo',

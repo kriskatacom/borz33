@@ -17,8 +17,9 @@ import { toast, toastError } from '@/lib/toast';
 export function SettingsPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const uploadRef = useRef<HTMLInputElement>(null);
-  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, admin_background: null, admin_background_overlay: 48, vat_enabled: true, free_shipping_threshold: 0, econt_operations_enabled: true, econt: { environment: 'demo', production_username: '', production_password_configured: false, production_password_masked: '', production_verified_at: null } });
+  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, admin_background: null, admin_background_overlay: 48, vat_enabled: true, free_shipping_threshold: 0, low_stock_threshold: 5, econt_operations_enabled: true, econt: { environment: 'demo', production_username: '', production_password_configured: false, production_password_masked: '', production_verified_at: null } });
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('');
+  const [lowStockThreshold, setLowStockThreshold] = useState('5');
   const [econtForm, setEcontForm] = useState({ environment: 'demo' as 'demo' | 'production', username: '', password: '' });
   const [busy, setBusy] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -28,7 +29,7 @@ export function SettingsPage() {
     let cancelled = false;
     setBusy(true);
     void getSiteSettings(token)
-      .then((response) => { if (!cancelled) { setSettings(response.data.settings); setFreeShippingThreshold(response.data.settings.free_shipping_threshold.toFixed(2)); setEcontForm({ environment: response.data.settings.econt.environment, username: response.data.settings.econt.production_username, password: '' }); } })
+      .then((response) => { if (!cancelled) { setSettings(response.data.settings); setFreeShippingThreshold(response.data.settings.free_shipping_threshold.toFixed(2)); setLowStockThreshold(String(response.data.settings.low_stock_threshold)); setEcontForm({ environment: response.data.settings.econt.environment, username: response.data.settings.econt.production_username, password: '' }); } })
       .catch((error) => { if (!cancelled) toastError(error, 'Настройките не можаха да се заредят.'); })
       .finally(() => { if (!cancelled) setBusy(false); });
     return () => { cancelled = true; };
@@ -127,6 +128,25 @@ export function SettingsPage() {
     }
   }
 
+  async function saveLowStockThreshold() {
+    const threshold = Number(lowStockThreshold);
+    if (!Number.isInteger(threshold) || threshold < 0) {
+      toast.error('Въведете валидно цяло число за минималната наличност.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const response = await updateSiteSettings(token, { low_stock_threshold: threshold });
+      setSettings(response.data.settings);
+      setLowStockThreshold(String(response.data.settings.low_stock_threshold));
+      toast.success('Минималната наличност е обновена.');
+    } catch (error) {
+      toastError(error, 'Минималната наличност не можа да се запази.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function testEcont() {
     setBusy(true);
     try {
@@ -159,6 +179,13 @@ export function SettingsPage() {
           <div className="grid max-w-xl gap-3 rounded-[6px] border border-border bg-card p-4">
             <Label htmlFor="free-shipping-threshold" className="grid gap-2 font-sans"><span>Праг за безплатна доставка (€)</span><input id="free-shipping-threshold" type="number" min="0" max="999999.99" step="0.01" className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" value={freeShippingThreshold} onChange={(event) => setFreeShippingThreshold(event.target.value)} /><small className="leading-relaxed text-muted-foreground">Магазинът може да плати доставката само когато стойността на продуктите е строго над този праг.</small></Label>
             <div><Button type="button" disabled={busy} onClick={() => void saveFreeShippingThreshold()}><PackageCheck />Запази прага</Button></div>
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Наличности" icon={PackageCheck} persistKey="settings.inventory" help="Определя кога продукт или негов вариант се счита за ниско наличен в администрацията.">
+          <div className="grid max-w-xl gap-3 rounded-[6px] border border-border bg-card p-4">
+            <Label htmlFor="low-stock-threshold" className="grid gap-2 font-sans"><span>Минимална наличност (бр.)</span><input id="low-stock-threshold" type="number" min="0" max="999999" step="1" className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" value={lowStockThreshold} onChange={(event) => setLowStockThreshold(event.target.value)} /><small className="leading-relaxed text-muted-foreground">Вариант с наличност под тази стойност се отбелязва в редакцията на продукта. Филтърът „Под минималната наличност“ показва продуктите с поне един такъв вариант. Стойност 0 изключва отбелязването.</small></Label>
+            <div><Button type="button" disabled={busy} onClick={() => void saveLowStockThreshold()}><PackageCheck />Запази минималната наличност</Button></div>
           </div>
         </CollapsibleSection>
 

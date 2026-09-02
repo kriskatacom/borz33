@@ -121,6 +121,7 @@ export type ProductListFilters = {
   q?: string;
   status?: string;
   category?: string;
+  low_stock?: string;
   page?: number;
   per_page?: number;
 };

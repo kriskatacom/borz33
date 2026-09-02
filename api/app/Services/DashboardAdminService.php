@@ -12,12 +12,11 @@ use App\Models\Invoice;
 use App\Models\Page;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\SiteSetting;
 use App\Models\User;
 
 class DashboardAdminService
 {
-    public const LOW_STOCK = 5;
-
     /** @return array<string, int> */
     public function summary(): array
     {
@@ -25,16 +24,17 @@ class DashboardAdminService
         $monthStart = date('Y-m-01');
         $ordersToday = Order::query()->whereDate('created_at', $today);
         $ordersMonth = Order::query()->whereBetween('created_at', [$monthStart . ' 00:00:00', date('Y-m-d') . ' 23:59:59']);
+        $lowStockThreshold = (int) (SiteSetting::query()->value('low_stock_threshold') ?? 5);
 
         return [
             'products_active' => Product::query()->where('is_active', true)->count(),
-            'low_stock' => ProductVariant::query()
+            'low_stock' => $lowStockThreshold > 0 ? ProductVariant::query()
                 ->where('is_active', true)
-                ->where('stock', '<=', self::LOW_STOCK)
+                ->where('stock', '<', $lowStockThreshold)
                 ->whereHas('product', static function ($query): void {
                     $query->where('is_active', true);
                 })
-                ->count(),
+                ->count() : 0,
             'banners_active' => Banner::query()->where('is_active', true)->count(),
             'customers' => User::query()->where('role', User::ROLE_CUSTOMER)->count(),
             'categories_active' => Category::query()->where('is_active', true)->count(),

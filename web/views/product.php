@@ -302,9 +302,10 @@ $jsonLd = [
 
             <section id="reviews" class="store-product-tab-panel store-pdp-reviews" role="tabpanel" aria-labelledby="product-tab-reviews" x-cloak x-show="activeTab === 'reviews'" data-product-reviews data-review-create-url="<?= htmlspecialchars($reviewCreateAction, ENT_QUOTES, 'UTF-8') ?>">
                 <header class="store-pdp-reviews-head">
-                    <div>
+                    <div class="store-reviews-intro">
                         <p>Мнения от клиенти</p>
                         <h2>Отзиви <span data-review-count><?= $reviewCount ?></span></h2>
+                        <small>Истински впечатления от хора, които вече избраха този продукт.</small>
                     </div>
                     <div class="store-reviews-summary">
                         <span class="store-review-stars" data-review-average<?= $averageRating === null ? ' hidden' : '' ?> aria-label="<?= $averageRating === null ? '' : 'Средна оценка ' . number_format($averageRating, 1, ',', '') . ' от 5' ?>"><i aria-hidden="true"><?= $averageRating === null ? '' : str_repeat('★', (int) round($averageRating)) . str_repeat('☆', 5 - (int) round($averageRating)) ?></i><strong><?= $averageRating === null ? '' : number_format($averageRating, 1, ',', '') ?></strong></span>

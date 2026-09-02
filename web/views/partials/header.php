@@ -29,7 +29,7 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
     class="store-site-header sticky top-0 z-50 overflow-visible border-b border-line bg-canvas"
     :class="{ 'is-hidden': headerHidden }"
 >
-    <div class="mx-auto grid w-[min(1120px,calc(100%-2rem))] grid-cols-[1fr_auto] items-center gap-x-3 gap-y-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(12rem,36rem)_minmax(0,1fr)]">
+    <div class="mx-auto grid w-[min(1320px,calc(100%-2rem))] grid-cols-[1fr_auto] items-center gap-x-3 gap-y-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(12rem,36rem)_minmax(0,1fr)]">
         <a class="store-logo justify-self-start" href="/" aria-label="<?= htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8') ?>, начало">
             <?php if ($siteLogo !== null): ?>
                 <img class="store-logo-image" src="<?= htmlspecialchars($siteLogo['url'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($siteLogo['alt'] !== '' ? $siteLogo['alt'] : $siteName, ENT_QUOTES, 'UTF-8') ?>">
@@ -190,7 +190,7 @@ $accountActive = $currentPath === '/login' || store_nav_active('/account', $curr
     </div>
 
     <nav class="overflow-visible border-t border-line" aria-label="Категории">
-        <div class="mx-auto flex w-[min(1120px,calc(100%-2rem))] flex-wrap items-center justify-center gap-x-1 gap-y-1 py-1.5">
+        <div class="mx-auto flex w-[min(1320px,calc(100%-2rem))] flex-wrap items-center justify-center gap-x-1 gap-y-1 py-1.5">
             <?php foreach ($navCategories as $category): ?>
                 <?php
                 $href = '/catalog/' . $category->slug;

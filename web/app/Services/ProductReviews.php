@@ -70,6 +70,14 @@ final class ProductReviews
             throw new \DomainException('Само клиент, който е закупил продукта, може да остави отзив.');
         }
 
+        if ($body === '' && ProductReview::query()
+            ->where('product_id', $product->id)
+            ->where('user_id', $user->id)
+            ->where('body', '')
+            ->exists()) {
+            throw new \LogicException('Вече сте публикували отзив само с оценка за този продукт.');
+        }
+
         if ($rating < 1 || $rating > 5) {
             throw new \InvalidArgumentException('Изберете оценка от 1 до 5 звезди.');
         }

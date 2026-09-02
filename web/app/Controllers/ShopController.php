@@ -297,6 +297,8 @@ class ShopController extends Controller
 
         try {
             $review = $this->reviews->create($user, $product, $rating, $body);
+        } catch (\LogicException $exception) {
+            $this->reviewFailure($product, $exception->getMessage(), 409);
         } catch (\DomainException) {
             $this->reviewFailure($product, 'Можете да оставите отзив само след доставена или платена поръчка за този продукт.', 403);
         } catch (\Throwable) {
