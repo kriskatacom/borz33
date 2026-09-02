@@ -11,6 +11,7 @@ import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
 import { toast, toastError } from '@/lib/toast';
 
@@ -167,25 +168,27 @@ export function SettingsPage() {
   return (
     <div className="page">
       <PageHeader title="Настройки" help="Външен вид на администрацията и визуална идентичност на магазина." crumbs={[{ label: 'Табло', to: routes.home }, { label: 'Настройки' }]} />
-      <div className="grid gap-3">
+      <Tabs defaultValue="general">
+        <TabsList className="h-auto w-full justify-start overflow-x-auto">
+          <TabsTrigger value="general">Основни</TabsTrigger>
+          <TabsTrigger value="delivery">Доставки</TabsTrigger>
+          <TabsTrigger value="taxes">Данъци</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="taxes" className="grid gap-3">
         <CollapsibleSection title="Данъчно облагане" icon={Landmark} persistKey="settings.vat" help="Важи за поръчки, създадени след промяната. Вече създадените поръчки и документи пазят използваната ставка.">
           <div className="flex max-w-xl items-center justify-between gap-5 rounded-[6px] border border-border bg-card p-4">
             <div><h3 className="m-0 text-base">Фирмата е регистрирана по ДДС</h3><p className="mt-1 mb-0 text-sm leading-relaxed text-muted-foreground">При „Да“ сумите се изчисляват автоматично по ставката от фирмените настройки. При „Не“ фактурите не начисляват ДДС.</p></div>
             <Switch checked={settings.vat_enabled} disabled={busy} aria-label="Фирмата е регистрирана по ДДС" onCheckedChange={(checked) => void saveVatEnabled(checked)} />
           </div>
         </CollapsibleSection>
+        </TabsContent>
 
+        <TabsContent value="delivery" className="grid gap-3">
         <CollapsibleSection title="Доставка" icon={PackageCheck} persistKey="settings.shipping" help="Управлява кога магазинът може да поеме куриерската такса за нова поръчка.">
           <div className="grid max-w-xl gap-3 rounded-[6px] border border-border bg-card p-4">
             <Label htmlFor="free-shipping-threshold" className="grid gap-2 font-sans"><span>Праг за безплатна доставка (€)</span><input id="free-shipping-threshold" type="number" min="0" max="999999.99" step="0.01" className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" value={freeShippingThreshold} onChange={(event) => setFreeShippingThreshold(event.target.value)} /><small className="leading-relaxed text-muted-foreground">Магазинът може да плати доставката само когато стойността на продуктите е строго над този праг.</small></Label>
             <div><Button type="button" disabled={busy} onClick={() => void saveFreeShippingThreshold()}><PackageCheck />Запази прага</Button></div>
-          </div>
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Наличности" icon={PackageCheck} persistKey="settings.inventory" help="Определя кога продукт или негов вариант се счита за ниско наличен в администрацията.">
-          <div className="grid max-w-xl gap-3 rounded-[6px] border border-border bg-card p-4">
-            <Label htmlFor="low-stock-threshold" className="grid gap-2 font-sans"><span>Минимална наличност (бр.)</span><input id="low-stock-threshold" type="number" min="0" max="999999" step="1" className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" value={lowStockThreshold} onChange={(event) => setLowStockThreshold(event.target.value)} /><small className="leading-relaxed text-muted-foreground">Вариант с наличност под тази стойност се отбелязва в редакцията на продукта. Филтърът „Под минималната наличност“ показва продуктите с поне един такъв вариант. Стойност 0 изключва отбелязването.</small></Label>
-            <div><Button type="button" disabled={busy} onClick={() => void saveLowStockThreshold()}><PackageCheck />Запази минималната наличност</Button></div>
           </div>
         </CollapsibleSection>
 
@@ -228,6 +231,16 @@ export function SettingsPage() {
           </div>
         </CollapsibleSection>
 
+        </TabsContent>
+
+        <TabsContent value="general" className="grid gap-3">
+        <CollapsibleSection title="Наличности" icon={PackageCheck} persistKey="settings.inventory" help="Определя кога продукт или негов вариант се счита за ниско наличен в администрацията.">
+          <div className="grid max-w-xl gap-3 rounded-[6px] border border-border bg-card p-4">
+            <Label htmlFor="low-stock-threshold" className="grid gap-2 font-sans"><span>Минимална наличност (бр.)</span><input id="low-stock-threshold" type="number" min="0" max="999999" step="1" className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" value={lowStockThreshold} onChange={(event) => setLowStockThreshold(event.target.value)} /><small className="leading-relaxed text-muted-foreground">Вариант с наличност под тази стойност се отбелязва в редакцията на продукта. Филтърът „Под минималната наличност“ показва продуктите с поне един такъв вариант. Стойност 0 изключва отбелязването.</small></Label>
+            <div><Button type="button" disabled={busy} onClick={() => void saveLowStockThreshold()}><PackageCheck />Запази минималната наличност</Button></div>
+          </div>
+        </CollapsibleSection>
+
         <CollapsibleSection title="Лого на сайта" icon={Image} persistKey="settings.logo" help="Показва се в header-а и footer-а. Без лого остава името на сайта.">
           <div className="grid gap-4 lg:grid-cols-[minmax(16rem,24rem)_minmax(0,1fr)] lg:items-start">
             <div className="flex min-h-40 items-center justify-center rounded-[6px] border border-border bg-muted p-5">
@@ -246,7 +259,8 @@ export function SettingsPage() {
             </div>
           </div>
         </CollapsibleSection>
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {pickerOpen ? <MediaPickerDialog token={token} title="Избор на лого" onSelect={(files) => { setPickerOpen(false); const file = files[0]; if (file) void saveLogo(file.id); }} onClose={() => setPickerOpen(false)} /> : null}
     </div>
