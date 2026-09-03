@@ -283,11 +283,13 @@ function DraftImagesEditor({
   images,
   setImages,
   aiBusy,
+  aiEnabled,
   onGenerate,
 }: {
   images: DraftProductImages;
   setImages: Dispatch<SetStateAction<DraftProductImages>>;
   aiBusy: boolean;
+  aiEnabled: boolean;
   onGenerate: (files: File[]) => void;
 }) {
   const frontInput = useRef<HTMLInputElement>(null);
@@ -351,9 +353,9 @@ function DraftImagesEditor({
       <LabelWithHelp label="Основно изображение" help="Ще се използва като предна снимка на продукта." />
       {images.front ? <div className={`relative w-40 overflow-hidden border bg-muted aspect-[4/5] ${selectedKeys.has(images.front.key) ? 'border-primary ring-2 ring-primary/25' : 'border-border'}`}>
         <img src={images.front.previewUrl} alt="Основно изображение" className="h-full w-full object-cover" />
-        <label className="absolute left-2 top-2 grid size-7 cursor-pointer place-items-center bg-background shadow-sm" title="Изпрати към AI">
+        {aiEnabled ? <label className="absolute left-2 top-2 grid size-7 cursor-pointer place-items-center bg-background shadow-sm" title="Изпрати към AI">
           <input className="size-4 accent-primary" type="checkbox" checked={selectedKeys.has(images.front.key)} onChange={() => toggle(images.front!.key)} aria-label="Избери основното изображение за AI" />
-        </label>
+        </label> : null}
         <Button type="button" size="icon" variant="outline" className="absolute right-2 top-2 bg-background" aria-label="Премахни основното изображение" onClick={() => remove(images.front!, 'front')}><X /></Button>
       </div> : <Button type="button" variant="outline" className="w-fit" onClick={() => frontInput.current?.click()}><ImagePlus />Избери основно изображение</Button>}
       <input ref={frontInput} className="sr-only" type="file" accept={accept} onChange={(event) => { setFront(event.target.files?.[0]); event.target.value = ''; }} />
@@ -362,15 +364,15 @@ function DraftImagesEditor({
       <LabelWithHelp label="Галерия" help="Може да изберете няколко изображения още преди създаването." />
       {images.gallery.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">{images.gallery.map((image) => <div key={image.key} className={`relative overflow-hidden border bg-muted aspect-[4/5] ${selectedKeys.has(image.key) ? 'border-primary ring-2 ring-primary/25' : 'border-border'}`}>
         <img src={image.previewUrl} alt={image.file.name} className="h-full w-full object-cover" />
-        <label className="absolute left-1 top-1 grid size-7 cursor-pointer place-items-center bg-background shadow-sm" title="Изпрати към AI">
+        {aiEnabled ? <label className="absolute left-1 top-1 grid size-7 cursor-pointer place-items-center bg-background shadow-sm" title="Изпрати към AI">
           <input className="size-4 accent-primary" type="checkbox" checked={selectedKeys.has(image.key)} onChange={() => toggle(image.key)} aria-label={`Избери ${image.file.name} за AI`} />
-        </label>
+        </label> : null}
         <Button type="button" size="icon" variant="outline" className="absolute right-1 top-1 bg-background" aria-label="Премахни изображението" onClick={() => remove(image, 'gallery')}><X /></Button>
       </div>)}</div> : null}
       <Button type="button" variant="outline" className="w-fit" onClick={() => galleryInput.current?.click()}><Images />Добави към галерията</Button>
       <input ref={galleryInput} className="sr-only" type="file" accept={accept} multiple onChange={(event) => { addGallery(event.target.files); event.target.value = ''; }} />
     </div>
-    <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+    {aiEnabled ? <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
       {hasImages ? <Button type="button" variant="outline" size="sm" onClick={() => setSelectedKeys(allSelected ? new Set() : new Set(all.map((image) => image.key)))}>
         {allSelected ? 'Премахни избора' : 'Избери всички'}
       </Button> : null}
@@ -379,7 +381,7 @@ function DraftImagesEditor({
         {aiBusy ? 'AI анализира…' : `Генерирай с AI${selectedFiles.length ? ` (${selectedFiles.length})` : ''}`}
       </Button>
       <p className="m-0 text-sm text-muted-foreground">AI попълва само предложения във формата. Продуктът няма да бъде записан или публикуван автоматично.</p>
-    </div>
+    </div> : null}
   </div>;
 }
 
@@ -1355,6 +1357,7 @@ function ProductTemplateSection({ token, product, selection, onSelectionChange, 
 }
 
 export function ProductEditPage() {
+  const aiEnabled = import.meta.env.VITE_ADMIN_ASSISTANT_ENABLED !== 'false';
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -1578,6 +1581,7 @@ export function ProductEditPage() {
               images={draftImages}
               setImages={setDraftImages}
               aiBusy={aiBusy}
+              aiEnabled={aiEnabled}
               onGenerate={(files) => void generateWithAi(files)}
             />
           </SectionShell>
@@ -1600,11 +1604,11 @@ export function ProductEditPage() {
         <div className="flex min-w-0 max-w-full flex-col gap-3">
           <SectionShell title="Изображения" icon={Images} help="Предна снимка и галерия. Качват се веднага, без запис на секцията.">
             <ProductImagesEditor product={product} token={token} onProductChange={setProduct} />
-            <AttachedImagesAiPicker
+            {aiEnabled ? <AttachedImagesAiPicker
               images={product.front_image ? [product.front_image, ...product.gallery_images] : product.gallery_images}
               busy={aiBusy}
               onGenerate={(imageIds) => void generateWithAiFromAttached(imageIds)}
-            />
+            /> : null}
           </SectionShell>
           <SectionShell title="Общи данни" icon={Shirt} help="Име, цена и статус в каталога. Записът важи само за тази секция.">
             <GeneralForm key={`general-${product.id}`} product={product} token={token} onSaved={setProduct} aiSuggestion={aiSuggestion} />

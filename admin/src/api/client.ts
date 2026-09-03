@@ -1,5 +1,15 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') ||
+  window.location.origin;
+
+export function apiUrl(path: string): URL {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  return new URL(normalizedPath, `${API_BASE_URL}/`);
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -59,7 +69,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers.Authorization = `Bearer ${options.token}`;
   }
 
-  const url = new URL(path, window.location.origin);
+  const url = apiUrl(path);
 
   if (options.query) {
     for (const [key, value] of Object.entries(options.query)) {
@@ -69,7 +79,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }
   }
 
-  const response = await fetch(`${url.pathname}${url.search}`, {
+  const response = await fetch(url.toString(), {
     method: options.method ?? 'GET',
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
@@ -91,7 +101,7 @@ type UploadOptions = {
 export function apiUpload<T>(path: string, options: UploadOptions): Promise<ApiEnvelope<T>> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open(options.method ?? 'POST', path);
+    xhr.open(options.method ?? 'POST', apiUrl(path).toString());
     xhr.responseType = 'json';
     xhr.setRequestHeader('Accept', 'application/json');
 

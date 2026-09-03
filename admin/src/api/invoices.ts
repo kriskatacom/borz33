@@ -1,4 +1,4 @@
-import { apiRequest } from '@/api/client';
+import { apiRequest, apiUrl } from '@/api/client';
 
 export type InvoiceStatus = 'draft' | 'issued' | 'cancelled' | 'credited';
 export type InvoiceType = 'invoice' | 'credit_note';
@@ -12,7 +12,7 @@ export function createCreditNote(token:string,id:number,reason:string,items:Arra
   return apiRequest<{invoice:Invoice}>(`/admin/invoices/${id}/credit-notes`, { method:'POST', token, body:{ reason, items, refund_shipping: refundShipping } });
 }
 export function cancelInvoice(token:string,id:number,reason:string) { return apiRequest<{invoice:Invoice}>(`/admin/invoices/${id}/cancel`,{method:'POST',token,body:{reason}}); }
-export async function downloadInvoice(token:string,id:number,fileName:string) { const response=await fetch(`/admin/invoices/${id}/download`,{headers:{Authorization:`Bearer ${token}`}}); if(!response.ok) throw new Error('Файлът не можа да бъде изтеглен.'); saveBlob(await response.blob(),fileName); }
-export async function previewInvoice(token:string,id:number) { const response=await fetch(`/admin/invoices/${id}/preview`,{headers:{Authorization:`Bearer ${token}`}}); if(!response.ok) throw new Error('PDF файлът не можа да бъде отворен.'); return URL.createObjectURL(await response.blob()); }
-export async function exportInvoices(token:string,filters:InvoiceFilters) { const url=new URL('/admin/invoices/export',window.location.origin); Object.entries(filters).forEach(([key,value])=>{if(value)url.searchParams.set(key,String(value));}); const response=await fetch(url.pathname+url.search,{headers:{Authorization:`Bearer ${token}`}}); if(!response.ok) throw new Error('Експортът не можа да бъде създаден.'); const prefix=filters.type==='credit_note'?'kreditni-izvestia':'fakturi'; saveBlob(await response.blob(),`${prefix}-${filters.date_from||'nachalo'}-${filters.date_to||'dnes'}.csv`); }
+export async function downloadInvoice(token:string,id:number,fileName:string) { const response=await fetch(apiUrl(`/admin/invoices/${id}/download`),{headers:{Authorization:`Bearer ${token}`}}); if(!response.ok) throw new Error('Файлът не можа да бъде изтеглен.'); saveBlob(await response.blob(),fileName); }
+export async function previewInvoice(token:string,id:number) { const response=await fetch(apiUrl(`/admin/invoices/${id}/preview`),{headers:{Authorization:`Bearer ${token}`}}); if(!response.ok) throw new Error('PDF файлът не можа да бъде отворен.'); return URL.createObjectURL(await response.blob()); }
+export async function exportInvoices(token:string,filters:InvoiceFilters) { const url=apiUrl('/admin/invoices/export'); Object.entries(filters).forEach(([key,value])=>{if(value)url.searchParams.set(key,String(value));}); const response=await fetch(url,{headers:{Authorization:`Bearer ${token}`}}); if(!response.ok) throw new Error('Експортът не можа да бъде създаден.'); const prefix=filters.type==='credit_note'?'kreditni-izvestia':'fakturi'; saveBlob(await response.blob(),`${prefix}-${filters.date_from||'nachalo'}-${filters.date_to||'dnes'}.csv`); }
 function saveBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;link.click();URL.revokeObjectURL(url);}

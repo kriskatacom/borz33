@@ -54,7 +54,7 @@ export function App() {
       <LoadingProvider>
         <Toaster />
         <VoiceDictationProvider />
-        <BrowserRouter>
+        <BrowserRouter basename="/admin">
           <Routes>
             <Route element={<GuestOnly />}>
               <Route path={routes.login} element={<LoginPage />} />

@@ -12,6 +12,7 @@ import { listMessages } from '@/api/messages';
 import { listNotifications } from '@/api/notifications';
 import { getSiteSettings } from '@/api/settings';
 import { adminBackgroundCss } from '@/app/adminBackgrounds';
+import { AdminAssistant } from '@/components/admin-assistant';
 
 type AdminLayoutProps = {
   children: ReactNode;
@@ -204,6 +205,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           Още
         </button>
       </nav>
+      <AdminAssistant />
     </div>
   );
 }

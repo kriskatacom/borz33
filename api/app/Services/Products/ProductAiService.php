@@ -28,6 +28,9 @@ final class ProductAiService
      */
     public function generate(array $images): array
     {
+        if (($this->config['admin_assistant_enabled'] ?? true) !== true) {
+            throw new AuthException('AI помощта за продуктови данни е изключена от конфигурацията.', 503);
+        }
         if ($images === []) {
             throw new AuthException('Добавете поне едно изображение на продукта.', 422);
         }

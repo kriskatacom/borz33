@@ -3,7 +3,14 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath, URL } from 'node:url';
 
-export default defineConfig({
+function serveAdminSpaForHtml(req: { headers: Record<string, string | string[] | undefined> }) {
+  const accept = req.headers.accept;
+
+  return typeof accept === 'string' && accept.includes('text/html') ? '/index.html' : undefined;
+}
+
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/admin/' : '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -31,9 +38,10 @@ export default defineConfig({
         target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:5000',
         changeOrigin: true,
       },
-      '/admin/': {
+      '/admin': {
         target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:5000',
         changeOrigin: true,
+        bypass: serveAdminSpaForHtml,
       },
       '/uploads': {
         target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:5000',
@@ -45,4 +53,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

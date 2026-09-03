@@ -17,7 +17,7 @@ class OrderNotificationService
     private string $adminEmail;
 
     public function __construct(
-        private readonly MailerInterface $mailer = new MailService()
+        private readonly ?MailerInterface $mailer = null
     ) {
         $this->company = require dirname(__DIR__, 4) . '/config/company.php';
         $mail = require dirname(__DIR__, 4) . '/config/mail.php';
@@ -113,7 +113,7 @@ class OrderNotificationService
     private function attempt(string $to, string $subject, string $template, array $data, string $text): bool
     {
         try {
-            $this->mailer->sendTemplate($to, $subject, $template, $data, $text);
+            $this->mailer()->sendTemplate($to, $subject, $template, $data, $text);
 
             return true;
         } catch (\Throwable $exception) {
@@ -126,6 +126,11 @@ class OrderNotificationService
 
             return false;
         }
+    }
+
+    private function mailer(): MailerInterface
+    {
+        return $this->mailer ?? new MailService();
     }
 
     private function customerText(Order $order): string

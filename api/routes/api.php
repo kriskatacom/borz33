@@ -20,6 +20,7 @@ use App\Controllers\Admin\ProductsController;
 use App\Controllers\Admin\SettingsController;
 use App\Controllers\Admin\UsersController;
 use App\Controllers\Admin\VoiceTranscriptionController;
+use App\Controllers\Admin\AdminAssistantController;
 use App\Controllers\Auth\EmailVerificationController;
 use App\Controllers\Auth\LoginController;
 use App\Controllers\Auth\PasswordResetController;
@@ -62,6 +63,7 @@ $router->delete('/admin/notifications/{id}', [NotificationsController::class, 'd
 $router->post('/admin/notifications/archive-all', [NotificationsController::class, 'archiveAll'], $admin);
 $router->delete('/admin/notifications', [NotificationsController::class, 'deleteAll'], $admin);
 $router->post('/admin/ai/transcribe', [VoiceTranscriptionController::class, 'store'], $admin);
+$router->post('/admin/assistant', [AdminAssistantController::class, 'ask'], $admin);
 $router->get('/admin/settings', [SettingsController::class, 'show'], $admin);
 $router->get('/admin/settings/admin-backgrounds', [SettingsController::class, 'adminBackgrounds'], $admin);
 $router->patch('/admin/settings', [SettingsController::class, 'update'], $admin);

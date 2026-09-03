@@ -10,7 +10,7 @@ use App\Services\Mail\MailService;
 
 final class InvoiceNotificationService
 {
-    public function __construct(private readonly MailerInterface $mailer = new MailService()) {}
+    public function __construct(private readonly ?MailerInterface $mailer = null) {}
 
     public function send(Invoice $invoice): bool
     {
@@ -26,7 +26,7 @@ final class InvoiceNotificationService
         $filename = ($credit ? 'credit-note-' : 'invoice-') . $invoice->number . '.pdf';
 
         try {
-            $this->mailer->sendTemplateWithAttachments(
+            $this->mailer()->sendTemplateWithAttachments(
                 $email,
                 ucfirst($document) . ' Ви · ' . $invoice->number,
                 'invoice-document',
@@ -45,5 +45,10 @@ final class InvoiceNotificationService
     {
         $invoice->loadMissing('order');
         return (bool) ($invoice->order?->invoice_requested ?? false);
+    }
+
+    private function mailer(): MailerInterface
+    {
+        return $this->mailer ?? new MailService();
     }
 }

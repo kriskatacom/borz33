@@ -18,7 +18,7 @@ class DeviceLoginService
     private array $config;
 
     public function __construct(
-        private readonly MailerInterface $mailer = new MailService()
+        private readonly ?MailerInterface $mailer = null
     ) {
         $this->config = require dirname(__DIR__, 4) . '/config/auth.php';
     }
@@ -108,7 +108,7 @@ class DeviceLoginService
             $company['website'],
         ]);
 
-        $this->mailer->sendTemplate(
+        $this->mailer()->sendTemplate(
             $user->email,
             $subject,
             'device-login',
@@ -121,6 +121,11 @@ class DeviceLoginService
             ],
             $text
         );
+    }
+
+    private function mailer(): MailerInterface
+    {
+        return $this->mailer ?? new MailService();
     }
 
     private function hashCode(string $email, string $deviceUuid, string $code): string

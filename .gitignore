@@ -12,3 +12,4 @@ admin/.npm-cache/
 api/public/uploads/**
 !api/public/uploads/.gitkeep
 storage/
+.env.production

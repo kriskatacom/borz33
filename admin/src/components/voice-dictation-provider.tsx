@@ -50,6 +50,7 @@ function appendTranscript(field: Editable, transcript: string) {
 }
 
 export function VoiceDictationProvider() {
+  const assistantEnabled = import.meta.env.VITE_ADMIN_ASSISTANT_ENABLED !== 'false';
   const token = useAppSelector((state) => state.auth.token);
   const [field, setField] = useState<Editable | null>(null);
   const [state, setState] = useState<DictationState>('idle');
@@ -147,7 +148,7 @@ export function VoiceDictationProvider() {
     return () => { document.removeEventListener('focusin', focus); document.removeEventListener('focusout', blur); window.removeEventListener('scroll', reposition, true); window.removeEventListener('resize', reposition); clearTimer(); stopStream(); };
   }, []);
 
-  if (!token || !field) return null;
+  if (!assistantEnabled || !token || !field) return null;
   const recording = state === 'recording';
   const transcribing = state === 'transcribing';
   const label = recording ? 'Спри записа' : transcribing ? 'Транскрибиране…' : `Диктувай в ${fieldLabel(field)}`;

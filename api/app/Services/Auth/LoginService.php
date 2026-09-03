@@ -59,6 +59,12 @@ class LoginService
             return $this->complete($user, $trusted);
         }
 
+        if ($adminOnly && !$this->adminDeviceVerificationEnabled()) {
+            $device = $this->deviceService->trust($user, $deviceUuid, $deviceName);
+
+            return $this->complete($user, $device);
+        }
+
         if (!$this->deviceService->hasTrustedDevice($user)) {
             $device = $this->deviceService->trust($user, $deviceUuid, $deviceName);
 
@@ -121,5 +127,16 @@ class LoginService
             $issued['token'],
             $issued['expires_at']
         );
+    }
+
+    private function adminDeviceVerificationEnabled(): bool
+    {
+        $configured = getenv('AUTH_ADMIN_DEVICE_VERIFICATION_ENABLED');
+
+        if (!is_string($configured) || trim($configured) === '') {
+            return (getenv('APP_ENV') ?: 'development') !== 'production';
+        }
+
+        return filter_var($configured, FILTER_VALIDATE_BOOL);
     }
 }

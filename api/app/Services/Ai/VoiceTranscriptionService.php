@@ -21,6 +21,9 @@ final class VoiceTranscriptionService
     /** @param array<string, mixed>|null $audio */
     public function transcribe(?array $audio): string
     {
+        if (($this->config['admin_assistant_enabled'] ?? true) !== true) {
+            throw new AuthException('Гласовото въвеждане е изключено от конфигурацията.', 503);
+        }
         if ($audio === null || (int) ($audio['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
             throw new AuthException('Добавете валиден аудио запис.', 422);
         }

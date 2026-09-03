@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'admin_assistant_enabled' => filter_var(getenv('ADMIN_ASSISTANT_ENABLED') ?: 'true', FILTER_VALIDATE_BOOLEAN),
     'api_key' => (string) (getenv('OPENAI_API_KEY') ?: ''),
     'api_url' => rtrim((string) (getenv('OPENAI_API_URL') ?: 'https://api.openai.com/v1'), '/'),
     'product_model' => (string) (getenv('OPENAI_PRODUCT_MODEL') ?: 'gpt-4.1-mini'),
