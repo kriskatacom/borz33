@@ -54,4 +54,21 @@ test.describe('Администрация – Счетоводство', () => {
     await page.waitForTimeout(250);
     expect(requests.some(url => url.includes('date_from=') && url.includes('date_to='))).toBeTruthy();
   });
+
+  test('страницира справката и сменя броя записи на страница', async ({ page }) => {
+    const rows = Array.from({ length: 25 }, (_, index) => ({
+      date: '2026-09-01', order: `TEST-${index + 1}`, customer: 'Тест', status: 'pending',
+      payment_method: 'cash_on_delivery', invoiced: false, tax_base: 1, vat: 0, total: 1,
+    }));
+    await page.route('**/admin/accounting/reports/sales*', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: { type: 'sales', columns: ['date', 'order', 'customer', 'status', 'payment_method', 'invoiced', 'tax_base', 'vat', 'total'], rows } }) });
+    });
+    await page.reload();
+    await expect(page.getByText('Страница 1 от 3 · 25 записа')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Следваща страница' })).toBeEnabled();
+    await page.getByRole('button', { name: 'Страница 2' }).click();
+    await expect(page.getByText('Страница 2 от 3 · 25 записа')).toBeVisible();
+    await page.getByLabel('Записи на страница').selectOption('20');
+    await expect(page.getByText('Страница 1 от 2 · 25 записа')).toBeVisible();
+  });
 });

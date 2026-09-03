@@ -56,8 +56,10 @@ try {
 
         foreach (['sales','invoices','credit_notes','payments','refunds','card','bank_transfer','cash_on_delivery','deliveries'] as $type) {
             $result = $accounting->report($type, $filters);
-            $assert(isset($result['rows']) && isset($result['date_basis']), "Невалиден резултат за {$type}.");
+            $assert(isset($result['rows']) && isset($result['columns']) && $result['columns'] !== [] && isset($result['date_basis']), "Невалиден резултат за {$type}.");
         }
+        $emptyReport = $accounting->report('sales', array_merge($filters, ['date_from'=>'2099-01-01','date_to'=>'2099-01-31']));
+        $assert($emptyReport['rows'] === [] && $emptyReport['columns'] === ['date','order','customer','status','payment_method','invoiced','tax_base','vat','total'], 'Празната справка няма предварително зададени колони.');
         $expectFailure(static fn()=>$accounting->dashboard(array_merge($filters,['date_from'=>'2026-09-01','date_to'=>'2026-08-01'])), 'Невалиден период е приет.');
         $expectFailure(static fn()=>$accounting->report('unknown',$filters), 'Невалиден вид справка е приет.');
 
