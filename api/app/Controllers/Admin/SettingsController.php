@@ -53,6 +53,21 @@ class SettingsController extends Controller
             'admin_background' => ['sometimes', 'nullable', 'string', 'max:191', Rule::in(array_merge([''], $this->adminBackgroundValues(), $this->adminColorValues()))],
             'admin_background_overlay' => ['sometimes', 'integer', 'min:0', 'max:80'],
             'storefront_status' => ['sometimes', 'required', 'string', Rule::in(['live', 'development'])],
+            'storefront_indexing_enabled' => ['sometimes', 'boolean'],
+            'company_name' => ['sometimes', 'nullable', 'string', 'max:191'],
+            'company_legal_name' => ['sometimes', 'nullable', 'string', 'max:191'],
+            'company_eik' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'company_vat' => ['sometimes', 'nullable', 'string', 'max:32'],
+            'company_mol' => ['sometimes', 'nullable', 'string', 'max:191'],
+            'company_address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'company_city' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'company_postal_code' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'company_country' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'company_phone' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'company_email' => ['sometimes', 'nullable', 'email', 'max:191'],
+            'company_website' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'company_privacy_url' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'company_terms_url' => ['sometimes', 'nullable', 'url', 'max:255'],
             'vat_enabled' => ['sometimes', 'boolean'],
             'free_shipping_threshold' => ['sometimes', 'numeric', 'min:0', 'max:999999.99'],
             'low_stock_threshold' => ['sometimes', 'integer', 'min:0', 'max:999999'],
@@ -81,6 +96,10 @@ class SettingsController extends Controller
         if (array_key_exists('admin_background', $data)) $settings->admin_background = $data['admin_background'] !== '' ? $data['admin_background'] : null;
         if (array_key_exists('admin_background_overlay', $data)) $settings->admin_background_overlay = (int) $data['admin_background_overlay'];
         if (array_key_exists('storefront_status', $data)) $settings->storefront_status = $data['storefront_status'];
+        if (array_key_exists('storefront_indexing_enabled', $data)) $settings->storefront_indexing_enabled = (bool) $data['storefront_indexing_enabled'];
+        foreach (['company_name', 'company_legal_name', 'company_eik', 'company_vat', 'company_mol', 'company_address', 'company_city', 'company_postal_code', 'company_country', 'company_phone', 'company_email', 'company_website', 'company_privacy_url', 'company_terms_url'] as $field) {
+            if (array_key_exists($field, $data)) $settings->{$field} = trim((string) ($data[$field] ?? '')) ?: null;
+        }
         if (array_key_exists('vat_enabled', $data)) $settings->vat_enabled = (bool) $data['vat_enabled'];
         if (array_key_exists('free_shipping_threshold', $data)) $settings->free_shipping_threshold = round((float) $data['free_shipping_threshold'], 2);
         if (array_key_exists('low_stock_threshold', $data)) $settings->low_stock_threshold = (int) $data['low_stock_threshold'];
@@ -208,6 +227,21 @@ class SettingsController extends Controller
             'admin_background' => $settings->admin_background,
             'admin_background_overlay' => (int) ($settings->admin_background_overlay ?? 48),
             'storefront_status' => in_array($settings->storefront_status, ['live', 'development'], true) ? $settings->storefront_status : 'live',
+            'storefront_indexing_enabled' => (bool) ($settings->storefront_indexing_enabled ?? false),
+            'company_name' => $settings->company_name,
+            'company_legal_name' => $settings->company_legal_name,
+            'company_eik' => $settings->company_eik,
+            'company_vat' => $settings->company_vat,
+            'company_mol' => $settings->company_mol,
+            'company_address' => $settings->company_address,
+            'company_city' => $settings->company_city,
+            'company_postal_code' => $settings->company_postal_code,
+            'company_country' => $settings->company_country,
+            'company_phone' => $settings->company_phone,
+            'company_email' => $settings->company_email,
+            'company_website' => $settings->company_website,
+            'company_privacy_url' => $settings->company_privacy_url,
+            'company_terms_url' => $settings->company_terms_url,
             'vat_enabled' => (bool) $settings->vat_enabled,
             'free_shipping_threshold' => (float) $settings->free_shipping_threshold,
             'low_stock_threshold' => (int) ($settings->low_stock_threshold ?? 5),

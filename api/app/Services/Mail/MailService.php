@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Mail;
 
+use App\Services\Company\CompanyProfile;
 use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mime\Address;
@@ -25,8 +26,10 @@ class MailService implements MailerInterface
     ) {
         $config = require dirname(__DIR__, 4) . '/config/mail.php';
 
-        $this->fromAddress = $fromAddress ?? $config['from_address'];
-        $this->fromName = $fromName ?? $config['from_name'];
+        $company = CompanyProfile::get();
+        $companyEmail = trim((string) ($company['email'] ?? ''));
+        $this->fromAddress = $fromAddress ?? (filter_var($companyEmail, FILTER_VALIDATE_EMAIL) ? $companyEmail : $config['from_address']);
+        $this->fromName = $fromName ?? (trim((string) ($company['name'] ?? '')) ?: $config['from_name']);
         $this->mailer = new Mailer(Transport::fromDsn($dsn ?? $config['dsn']));
     }
 

@@ -10,6 +10,7 @@ use App\Models\DeviceLoginCode;
 use App\Models\User;
 use App\Services\Mail\MailerInterface;
 use App\Services\Mail\MailService;
+use App\Services\Company\CompanyProfile;
 use Illuminate\Support\Carbon;
 
 class DeviceLoginService
@@ -89,7 +90,7 @@ class DeviceLoginService
     private function send(User $user, string $code, int $minutes): void
     {
         $subject = 'Код за вход от ново устройство';
-        $company = require dirname(__DIR__, 4) . '/config/company.php';
+        $company = CompanyProfile::get();
         $vatLine = $company['vat'] !== '' ? 'ДДС № ' . $company['vat'] . "\n" : '';
 
         $text = implode("\n", [

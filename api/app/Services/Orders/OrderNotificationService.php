@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Resources\OrderResource;
 use App\Services\Mail\MailerInterface;
 use App\Services\Mail\MailService;
+use App\Services\Company\CompanyProfile;
 
 class OrderNotificationService
 {
@@ -19,9 +20,10 @@ class OrderNotificationService
     public function __construct(
         private readonly ?MailerInterface $mailer = null
     ) {
-        $this->company = require dirname(__DIR__, 4) . '/config/company.php';
+        $this->company = CompanyProfile::get();
         $mail = require dirname(__DIR__, 4) . '/config/mail.php';
-        $this->adminEmail = trim((string) ($mail['order_admin_address'] ?? ''));
+        $companyEmail = trim((string) ($this->company['email'] ?? ''));
+        $this->adminEmail = filter_var($companyEmail, FILTER_VALIDATE_EMAIL) ? $companyEmail : trim((string) ($mail['order_admin_address'] ?? ''));
     }
 
     /** @return array{customer: bool, admin: bool} */

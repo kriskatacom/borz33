@@ -8,6 +8,7 @@ use App\Models\ContactMessage;
 use App\Models\ContactMessageReply;
 use App\Services\Mail\MailerInterface;
 use App\Services\Mail\MailService;
+use App\Services\Company\CompanyProfile;
 
 class ContactReplyNotificationService
 {
@@ -18,8 +19,9 @@ class ContactReplyNotificationService
     public function __construct(private readonly MailerInterface $mailer = new MailService())
     {
         $mail = require dirname(__DIR__, 4) . '/config/mail.php';
-        $company = require dirname(__DIR__, 4) . '/config/company.php';
-        $this->adminEmail = trim((string) ($mail['contact_admin_address'] ?? ''));
+        $company = CompanyProfile::get();
+        $companyEmail = trim((string) ($company['email'] ?? ''));
+        $this->adminEmail = filter_var($companyEmail, FILTER_VALIDATE_EMAIL) ? $companyEmail : trim((string) ($mail['contact_admin_address'] ?? ''));
         $this->adminUrl = rtrim((string) ($mail['admin_url'] ?? ''), '/');
         $this->websiteUrl = rtrim((string) ($company['website'] ?? ''), '/');
     }

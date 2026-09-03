@@ -9,6 +9,7 @@ use App\Models\EmailVerificationToken;
 use App\Models\User;
 use App\Services\Mail\MailerInterface;
 use App\Services\Mail\MailService;
+use App\Services\Company\CompanyProfile;
 use Illuminate\Support\Carbon;
 
 class EmailVerificationService
@@ -128,7 +129,7 @@ class EmailVerificationService
 
     private function plainText(string $firstName, string $code, int $minutes): string
     {
-        $company = require dirname(__DIR__, 4) . '/config/company.php';
+        $company = CompanyProfile::get();
         $vatLine = $company['vat'] !== '' ? 'ДДС № ' . $company['vat'] . "\n" : '';
 
         return implode("\n", [

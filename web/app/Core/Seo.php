@@ -16,7 +16,8 @@ final class Seo
         $path = (string) ($data['currentPath'] ?? '/');
         $title = trim((string) ($data['title'] ?? $siteName));
         $description = trim((string) ($data['metaDescription'] ?? self::description($path, $siteName)));
-        $robots = (string) ($data['robots'] ?? (self::isPrivate($path, (int) ($data['status'] ?? 200)) ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'));
+        $indexingEnabled = self::storefrontIndexingEnabled();
+        $robots = (string) ($data['robots'] ?? ((!$indexingEnabled || self::isPrivate($path, (int) ($data['status'] ?? 200))) ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'));
         $canonicalPath = (string) ($data['canonicalPath'] ?? $path);
         $pageValue = $data['paginationPage'] ?? $data['page'] ?? 1;
         $page = max(1, is_numeric($pageValue) ? (int) $pageValue : 1);
@@ -90,6 +91,15 @@ final class Seo
         }
 
         return false;
+    }
+
+    private static function storefrontIndexingEnabled(): bool
+    {
+        try {
+            return (bool) (\App\Models\SiteSetting::query()->value('storefront_indexing_enabled') ?? false);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private static function absoluteUrl(mixed $url, string $baseUrl): ?string

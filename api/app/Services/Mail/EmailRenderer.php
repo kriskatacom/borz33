@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services\Mail;
 
+use App\Services\Company\CompanyProfile;
+
 class EmailRenderer
 {
     public function render(string $template, array $data = []): string
     {
-        $data['company'] = require dirname(__DIR__, 4) . '/config/company.php';
+        $data['company'] = CompanyProfile::get();
         $data['content'] = $this->renderFile($template, $data);
 
         return $this->renderFile('layout', $data);

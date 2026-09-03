@@ -20,9 +20,9 @@ export function SettingsPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
-  const activeTab = requestedTab === 'delivery' || requestedTab === 'taxes' || requestedTab === 'sitemap' ? requestedTab : 'general';
+  const activeTab = requestedTab === 'delivery' || requestedTab === 'taxes' || requestedTab === 'company' || requestedTab === 'sitemap' ? requestedTab : 'general';
   const uploadRef = useRef<HTMLInputElement>(null);
-  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, admin_background: null, admin_background_overlay: 48, storefront_status: 'live', vat_enabled: true, free_shipping_threshold: 0, low_stock_threshold: 5, econt_operations_enabled: true, econt: { environment: 'demo', production_username: '', production_password_configured: false, production_password_masked: '', production_verified_at: null } });
+  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, admin_background: null, admin_background_overlay: 48, storefront_status: 'live', storefront_indexing_enabled: true, company_name: null, company_legal_name: null, company_eik: null, company_vat: null, company_mol: null, company_address: null, company_city: null, company_postal_code: null, company_country: null, company_phone: null, company_email: null, company_website: null, company_privacy_url: null, company_terms_url: null, vat_enabled: true, free_shipping_threshold: 0, low_stock_threshold: 5, econt_operations_enabled: true, econt: { environment: 'demo', production_username: '', production_password_configured: false, production_password_masked: '', production_verified_at: null } });
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('');
   const [lowStockThreshold, setLowStockThreshold] = useState('5');
   const [econtForm, setEcontForm] = useState({ environment: 'demo' as 'demo' | 'production', username: '', password: '' });
@@ -125,6 +125,47 @@ export function SettingsPage() {
     }
   }
 
+  async function saveStorefrontIndexing(storefront_indexing_enabled: boolean) {
+    setBusy(true);
+    try {
+      const response = await updateSiteSettings(token, { storefront_indexing_enabled });
+      setSettings(response.data.settings);
+      toast.success(storefront_indexing_enabled ? 'Индексирането от ботове е разрешено.' : 'Индексирането от ботове е забранено.');
+    } catch (error) {
+      toastError(error, 'Настройката за индексиране не можа да се запази.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveCompanyData() {
+    setBusy(true);
+    try {
+      const response = await updateSiteSettings(token, {
+        company_name: settings.company_name,
+        company_legal_name: settings.company_legal_name,
+        company_eik: settings.company_eik,
+        company_vat: settings.company_vat,
+        company_mol: settings.company_mol,
+        company_address: settings.company_address,
+        company_city: settings.company_city,
+        company_postal_code: settings.company_postal_code,
+        company_country: settings.company_country,
+        company_phone: settings.company_phone,
+        company_email: settings.company_email,
+        company_website: settings.company_website,
+        company_privacy_url: settings.company_privacy_url,
+        company_terms_url: settings.company_terms_url,
+      });
+      setSettings(response.data.settings);
+      toast.success('Фирмените данни са запазени.');
+    } catch (error) {
+      toastError(error, 'Фирмените данни не можаха да се запазят.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function saveEcontOperationsEnabled(econt_operations_enabled: boolean) {
     setBusy(true);
     try {
@@ -219,6 +260,7 @@ export function SettingsPage() {
           <TabsTrigger value="general">Основни</TabsTrigger>
           <TabsTrigger value="delivery">Доставки</TabsTrigger>
           <TabsTrigger value="taxes">Данъци</TabsTrigger>
+          <TabsTrigger value="company">Фирмени данни</TabsTrigger>
           <TabsTrigger value="sitemap">Sitemap</TabsTrigger>
         </TabsList>
 
@@ -286,6 +328,10 @@ export function SettingsPage() {
             <div><h3 className="m-0 text-base">Сайтът е в процес на разработка</h3><p className="mt-1 mb-0 text-sm leading-relaxed text-muted-foreground">Когато е включено, посетителите виждат съобщение вместо съдържанието на магазина. Изключено означава „На живо“.</p></div>
             <Switch checked={settings.storefront_status === 'development'} disabled={busy} aria-label="Сайтът е в процес на разработка" onCheckedChange={(checked) => void saveStorefrontStatus(checked ? 'development' : 'live')} />
           </div>
+          <div className="mt-3 flex max-w-xl items-center justify-between gap-5 rounded-[6px] border border-border bg-card p-4">
+            <div><h3 className="m-0 text-base">Разреши индексиране от търсачки</h3><p className="mt-1 mb-0 text-sm leading-relaxed text-muted-foreground">При включване публичните страници използват <code>index, follow</code>. При изключване използват <code>noindex, nofollow</code>.</p></div>
+            <Switch checked={settings.storefront_indexing_enabled} disabled={busy} aria-label="Разреши индексиране от търсачки" onCheckedChange={(checked) => void saveStorefrontIndexing(checked)} />
+          </div>
         </CollapsibleSection>
         <CollapsibleSection title="Наличности" icon={PackageCheck} persistKey="settings.inventory" help="Определя кога продукт или негов вариант се счита за ниско наличен в администрацията.">
           <div className="grid max-w-xl gap-3 rounded-[6px] border border-border bg-card p-4">
@@ -310,6 +356,23 @@ export function SettingsPage() {
               </div>
               <input ref={uploadRef} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadLogo(file); }} />
             </div>
+          </div>
+        </CollapsibleSection>
+        </TabsContent>
+
+        <TabsContent value="company" className="grid gap-3">
+        <CollapsibleSection title="Фирмена идентичност и данни" icon={Landmark} persistKey="settings.company" help="Тези данни се съхраняват в настройките и ще могат да се използват в имейли, документи и правни страници. Секретни данни като пароли и API ключове не се съхраняват тук.">
+          <div className="grid max-w-4xl gap-4 rounded-[6px] border border-border bg-card p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {([['company-name', 'company_name', 'Име на магазина/марката'], ['company-legal-name', 'company_legal_name', 'Юридическо име'], ['company-eik', 'company_eik', 'ЕИК / Булстат'], ['company-vat', 'company_vat', 'ДДС номер'], ['company-mol', 'company_mol', 'МОЛ / представляващо лице']] as const).map(([id, field, label]) => <Label key={field} htmlFor={id} className="grid gap-2 font-sans"><span>{label}</span><input id={id} className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" value={settings[field] ?? ''} onChange={(event) => setSettings((current) => ({ ...current, [field]: event.target.value }))} /></Label>)}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {([['company-address', 'company_address', 'Адрес'], ['company-city', 'company_city', 'Град'], ['company-postal-code', 'company_postal_code', 'Пощенски код'], ['company-country', 'company_country', 'Държава'], ['company-phone', 'company_phone', 'Телефон'], ['company-email', 'company_email', 'Имейл']] as const).map(([id, field, label]) => <Label key={field} htmlFor={id} className="grid gap-2 font-sans"><span>{label}</span><input id={id} type={field === 'company_email' ? 'email' : 'text'} className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" value={settings[field] ?? ''} onChange={(event) => setSettings((current) => ({ ...current, [field]: event.target.value }))} /></Label>)}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {([['company-website', 'company_website', 'Уебсайт'], ['company-privacy-url', 'company_privacy_url', 'Страница за поверителност'], ['company-terms-url', 'company_terms_url', 'Страница с общи условия']] as const).map(([id, field, label]) => <Label key={field} htmlFor={id} className="grid gap-2 font-sans"><span>{label}</span><input id={id} type="url" placeholder="https://" className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" value={settings[field] ?? ''} onChange={(event) => setSettings((current) => ({ ...current, [field]: event.target.value }))} /></Label>)}
+            </div>
+            <div><Button type="button" disabled={busy} onClick={() => void saveCompanyData()}><Landmark />Запази фирмените данни</Button></div>
           </div>
         </CollapsibleSection>
         </TabsContent>

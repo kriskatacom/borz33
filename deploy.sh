@@ -21,6 +21,7 @@ rsync -az --delete \
   --exclude='admin/node_modules/' \
   --exclude='web/node_modules/' \
   --exclude='vendor/' \
+  --exclude='storage/accounting/packages/' \
   ./ "$SERVER:$REMOTE_DIR/"
 
 if [ "$UPLOAD_ENV" = true ]; then

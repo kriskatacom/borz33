@@ -9,7 +9,7 @@ export type EcontSettings = {
   production_verified_at: string | null;
 };
 
-export type SiteSettings = { logo_media_file_id: number | null; logo: MediaFile | null; admin_background: string | null; admin_background_overlay: number; storefront_status: 'live' | 'development'; vat_enabled: boolean; free_shipping_threshold: number; low_stock_threshold: number; econt_operations_enabled: boolean; econt: EcontSettings };
+export type SiteSettings = { logo_media_file_id: number | null; logo: MediaFile | null; admin_background: string | null; admin_background_overlay: number; storefront_status: 'live' | 'development'; storefront_indexing_enabled: boolean; company_name: string | null; company_legal_name: string | null; company_eik: string | null; company_vat: string | null; company_mol: string | null; company_address: string | null; company_city: string | null; company_postal_code: string | null; company_country: string | null; company_phone: string | null; company_email: string | null; company_website: string | null; company_privacy_url: string | null; company_terms_url: string | null; vat_enabled: boolean; free_shipping_threshold: number; low_stock_threshold: number; econt_operations_enabled: boolean; econt: EcontSettings };
 export type AdminBackground = { value: string; label: string; help: string };
 export type SitemapStatus = { url: string; generated: boolean; generated_at: string | null; checked_at?: string; counts: { pages: number; categories: number; products: number } };
 
@@ -17,7 +17,7 @@ export function getSiteSettings(token: string) {
   return apiRequest<{ settings: SiteSettings }>('/admin/settings', { token });
 }
 
-export function updateSiteSettings(token: string, body: { logo_media_file_id?: number | null; admin_background?: string | null; admin_background_overlay?: number; storefront_status?: 'live' | 'development'; vat_enabled?: boolean; free_shipping_threshold?: number; low_stock_threshold?: number; econt_operations_enabled?: boolean; econt_environment?: 'demo' | 'production'; econt_production_username?: string; econt_production_password?: string }) {
+export function updateSiteSettings(token: string, body: Partial<Pick<SiteSettings, 'logo_media_file_id' | 'admin_background' | 'admin_background_overlay' | 'storefront_status' | 'storefront_indexing_enabled' | 'company_name' | 'company_legal_name' | 'company_eik' | 'company_vat' | 'company_mol' | 'company_address' | 'company_city' | 'company_postal_code' | 'company_country' | 'company_phone' | 'company_email' | 'company_website' | 'company_privacy_url' | 'company_terms_url' | 'vat_enabled' | 'free_shipping_threshold' | 'low_stock_threshold' | 'econt_operations_enabled'>> & { econt_environment?: 'demo' | 'production'; econt_production_username?: string; econt_production_password?: string }) {
   return apiRequest<{ settings: SiteSettings }>('/admin/settings', { method: 'PATCH', token, body });
 }
 
