@@ -66,6 +66,8 @@ $router->post('/admin/ai/transcribe', [VoiceTranscriptionController::class, 'sto
 $router->post('/admin/assistant', [AdminAssistantController::class, 'ask'], $admin);
 $router->get('/admin/settings', [SettingsController::class, 'show'], $admin);
 $router->get('/admin/settings/admin-backgrounds', [SettingsController::class, 'adminBackgrounds'], $admin);
+$router->get('/admin/settings/sitemap', [SettingsController::class, 'sitemapStatus'], $admin);
+$router->post('/admin/settings/sitemap/generate', [SettingsController::class, 'generateSitemap'], $admin);
 $router->patch('/admin/settings', [SettingsController::class, 'update'], $admin);
 $router->post('/admin/settings/econt/test', [SettingsController::class, 'testEcont'], $admin);
 $router->get('/admin/users', [UsersController::class, 'index'], $admin);

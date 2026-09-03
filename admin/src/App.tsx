@@ -43,6 +43,9 @@ import { UsersPage } from '@/pages/UsersPage';
 
 export function App() {
   const dispatch = useAppDispatch();
+  const adminBasename = import.meta.env.DEV
+    ? (window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/') ? '/admin' : undefined)
+    : '/admin';
   useFormSaveShortcut();
 
   useEffect(() => {
@@ -54,7 +57,7 @@ export function App() {
       <LoadingProvider>
         <Toaster />
         <VoiceDictationProvider />
-        <BrowserRouter basename="/admin">
+        <BrowserRouter basename={adminBasename}>
           <Routes>
             <Route element={<GuestOnly />}>
               <Route path={routes.login} element={<LoginPage />} />

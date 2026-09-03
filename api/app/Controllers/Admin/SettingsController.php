@@ -12,6 +12,7 @@ use App\Models\MediaFile;
 use App\Models\SiteSetting;
 use App\Resources\MediaFileResource;
 use App\Services\Security\CredentialCipher;
+use App\Services\SitemapService;
 use App\Services\Shipping\EcontApiClient;
 use App\Services\Shipping\EcontConfigurationService;
 use Illuminate\Validation\Rule;
@@ -28,12 +29,30 @@ class SettingsController extends Controller
         $this->ok(['backgrounds' => $this->adminBackgroundsList()], 'Фоновите изображения са заредени.');
     }
 
+    public function sitemapStatus(): never
+    {
+        $status = (new SitemapService())->status();
+        $status['checked_at'] = date(DATE_ATOM);
+        $this->ok(['sitemap' => $status], 'Статусът на картата на сайта е проверен.');
+    }
+
+    public function generateSitemap(): never
+    {
+        try {
+            $this->ok(['sitemap' => (new SitemapService())->generate()], 'Картата на сайта е генерирана.');
+        } catch (\Throwable $exception) {
+            error_log('Sitemap generation failed: ' . $exception::class);
+            $this->error('Картата на сайта не можа да бъде генерирана.', 500);
+        }
+    }
+
     public function update(): never
     {
         $validator = ValidatorFactory::make()->make(Request::input(), [
             'logo_media_file_id' => ['nullable', 'integer', 'min:1', Rule::exists('media_files', 'id')],
             'admin_background' => ['sometimes', 'nullable', 'string', 'max:191', Rule::in(array_merge([''], $this->adminBackgroundValues(), $this->adminColorValues()))],
             'admin_background_overlay' => ['sometimes', 'integer', 'min:0', 'max:80'],
+            'storefront_status' => ['sometimes', 'required', 'string', Rule::in(['live', 'development'])],
             'vat_enabled' => ['sometimes', 'boolean'],
             'free_shipping_threshold' => ['sometimes', 'numeric', 'min:0', 'max:999999.99'],
             'low_stock_threshold' => ['sometimes', 'integer', 'min:0', 'max:999999'],
@@ -61,6 +80,7 @@ class SettingsController extends Controller
         $settings->logo_media_file_id = $logoId !== null ? (int) $logoId : null;
         if (array_key_exists('admin_background', $data)) $settings->admin_background = $data['admin_background'] !== '' ? $data['admin_background'] : null;
         if (array_key_exists('admin_background_overlay', $data)) $settings->admin_background_overlay = (int) $data['admin_background_overlay'];
+        if (array_key_exists('storefront_status', $data)) $settings->storefront_status = $data['storefront_status'];
         if (array_key_exists('vat_enabled', $data)) $settings->vat_enabled = (bool) $data['vat_enabled'];
         if (array_key_exists('free_shipping_threshold', $data)) $settings->free_shipping_threshold = round((float) $data['free_shipping_threshold'], 2);
         if (array_key_exists('low_stock_threshold', $data)) $settings->low_stock_threshold = (int) $data['low_stock_threshold'];
@@ -187,6 +207,7 @@ class SettingsController extends Controller
             'logo' => $settings->logo ? MediaFileResource::toArray($settings->logo) : null,
             'admin_background' => $settings->admin_background,
             'admin_background_overlay' => (int) ($settings->admin_background_overlay ?? 48),
+            'storefront_status' => in_array($settings->storefront_status, ['live', 'development'], true) ? $settings->storefront_status : 'live',
             'vat_enabled' => (bool) $settings->vat_enabled,
             'free_shipping_threshold' => (float) $settings->free_shipping_threshold,
             'low_stock_threshold' => (int) ($settings->low_stock_threshold ?? 5),

@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+Allow: /admin
+Sitemap: https://borz33.com/sitemap.xml

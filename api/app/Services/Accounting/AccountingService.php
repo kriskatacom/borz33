@@ -33,19 +33,27 @@ final class AccountingService
     public function dashboard(array $input): array
     {
         $filters = $this->filters($input); $orders = $this->orders($filters); $orderIds = $orders->pluck('id')->map(fn($v)=>(int)$v)->all();
-        $invoices = Invoice::query()->whereIn('order_id', $orderIds ?: [0])->whereIn('status',['issued','credited'])->whereBetween('issue_date',[$filters['date_from'],$filters['date_to']])->get();
-        $salesDocs = $invoices->where('type','invoice'); $credits = $invoices->where('type','credit_note');
+        $invoices = Invoice::query()->whereIn('order_id', $orderIds ?: [0])->where('type', 'invoice')->whereIn('status',['issued','credited'])->whereBetween('issue_date',[$filters['date_from'],$filters['date_to']])->get();
+        $salesDocs = $invoices;
+        $creditQuery = Invoice::query()->where('type', 'credit_note')->whereIn('status', ['issued', 'credited'])->whereBetween('issue_date', [$filters['date_from'], $filters['date_to']]);
+        $this->applyOrderFilters($creditQuery, $filters);
+        $credits = $creditQuery->get();
         $covered = $salesDocs->pluck('order_id')->flip(); $turnover=0.0; $net=0.0; $vat=0.0;
         foreach ($orders as $order) {
-            $doc = $salesDocs->firstWhere('order_id',$order->id);
-            if ($doc) { $turnover += (float)$doc->total_gross; $net += (float)$doc->subtotal_net-(float)$doc->discount_net+(float)$doc->shipping_net; $vat += (float)$doc->tax_amount; }
-            else { $gross=(float)$order->total; $rate=$order->vat_enabled?(float)$order->vat_rate:0.0; $base=round($gross/(1+$rate/100),2); $turnover += $gross; $net += $base; $vat += round($gross-$base,2); }
+            $amounts = $this->orderAmounts($order, $salesDocs->firstWhere('order_id', $order->id));
+            $turnover += $amounts['gross']; $net += $amounts['base']; $vat += $amounts['vat'];
         }
-        foreach ($credits as $credit) { $turnover += (float)$credit->total_gross; $net += (float)$credit->subtotal_net-(float)$credit->discount_net+(float)$credit->shipping_net; $vat += (float)$credit->tax_amount; }
+        foreach ($credits as $credit) {
+            // Credit note snapshots currently use negative values. Normalize the
+            // sign here so legacy positive snapshots cannot increase the totals.
+            $turnover -= abs((float) $credit->total_gross);
+            $net -= abs((float) $credit->subtotal_net - (float) $credit->discount_net + (float) $credit->shipping_net);
+            $vat -= abs((float) $credit->tax_amount);
+        }
         $transactions = AccountingTransaction::query()->whereIn('order_id',$orderIds ?: [0])->where('status','completed')->whereBetween('occurred_at',[$filters['date_from'].' 00:00:00',$filters['date_to'].' 23:59:59'])->get();
         $payments=$transactions->where('type','payment'); $refunds=$transactions->where('type','refund'); $paidIds=$payments->groupBy('order_id')->filter(fn($rows,$id)=>(float)$rows->sum('amount') >= (float)($orders->firstWhere('id',(int)$id)?->total ?? PHP_FLOAT_MAX)-0.009)->keys();
-        $paidOrders=$orders->where('status','paid'); $paidOrderIds=$paidOrders->pluck('id')->all(); $paidCredits=$credits->whereIn('order_id',$paidOrderIds); $paidOrdersAmount=round((float)$paidOrders->sum('total')-abs((float)$paidCredits->sum('total_gross')),2); $byMethod=[]; foreach(self::METHODS as $method) $byMethod[$method]=round((float)$payments->where('method',$method)->sum('amount'),2);
-        return ['filters'=>$filters,'summary'=>['turnover'=>round($turnover,2),'tax_base'=>round($net,2),'vat'=>round($vat,2),'paid_orders'=>$paidOrders->count(),'paid_orders_amount'=>$paidOrdersAmount,'unpaid_orders'=>max(0,$orders->count()-$paidOrders->count()),'refunded_amount'=>round((float)$refunds->sum('amount'),2),'credit_notes_count'=>$credits->count(),'credit_notes_amount'=>round(abs((float)$credits->sum('total_gross')),2),'orders_count'=>$orders->count(),'currency'=>'EUR'],'payment_methods'=>$byMethod,'closures'=>$this->closures()];
+        $paidOrders=$orders->filter(fn(Order $order): bool => $paidIds->contains((int) $order->id)); $unpaidOrders=$orders->reject(fn(Order $order): bool => $paidIds->contains((int) $order->id)); $paidOrderIds=$paidOrders->pluck('id')->all(); $paidCredits=$credits->whereIn('order_id',$paidOrderIds); $paidOrdersAmount=round((float)$paidOrders->sum('total')-$paidCredits->sum(fn(Invoice $credit): float => abs((float)$credit->total_gross)),2); $creditNotesAmount=round($credits->sum(fn(Invoice $credit): float => abs((float)$credit->total_gross)),2); $byMethod=[]; foreach(self::METHODS as $method) $byMethod[$method]=round((float)$payments->where('method',$method)->sum('amount'),2);
+        return ['filters'=>$filters,'date_basis'=>self::dateBasis(),'summary'=>['turnover'=>round($turnover,2),'tax_base'=>round($net,2),'vat'=>round($vat,2),'paid_orders'=>$paidOrders->count(),'paid_orders_amount'=>$paidOrdersAmount,'unpaid_orders'=>$unpaidOrders->count(),'refunded_amount'=>round((float)$refunds->sum('amount'),2),'credit_notes_count'=>$credits->count(),'credit_notes_amount'=>$creditNotesAmount,'orders_count'=>$orders->count(),'currency'=>'EUR'],'payment_methods'=>$byMethod,'closures'=>$this->closures()];
     }
 
     public function report(string $type, array $input): array
@@ -55,8 +63,8 @@ final class AccountingService
             $kind=$type==='invoices'?'invoice':'credit_note';
             $query=Invoice::query()->with('order')->where('type',$kind)->whereBetween('issue_date',[$filters['date_from'],$filters['date_to']]);
             $this->applyOrderFilters($query,$filters);
-            $rows=$query->orderBy('issue_date')->get()->map(fn(Invoice $i)=>['date'=>$i->issue_date?->format('Y-m-d'),'number'=>$i->number,'order'=>$i->order?->number,'client'=>$i->buyer_snapshot['company']??'','eik'=>$i->buyer_snapshot['eik']??'','tax_base'=>round((float)$i->subtotal_net-(float)$i->discount_net+(float)$i->shipping_net,2),'vat'=>(float)$i->tax_amount,'total'=>(float)$i->total_gross,'status'=>$i->status])->all();
-            return ['type'=>$type,'filters'=>$filters,'rows'=>$rows];
+            $rows=$query->orderBy('issue_date')->get()->map(function(Invoice $i) use ($kind){$base=round((float)$i->subtotal_net-(float)$i->discount_net+(float)$i->shipping_net,2); return ['date'=>$i->issue_date?->format('Y-m-d'),'number'=>$i->number,'order'=>$i->order?->number,'client'=>$i->buyer_snapshot['company']??'','eik'=>$i->buyer_snapshot['eik']??'','tax_base'=>$kind==='credit_note'?-abs($base):$base,'vat'=>$kind==='credit_note'?-abs((float)$i->tax_amount):(float)$i->tax_amount,'total'=>$kind==='credit_note'?-abs((float)$i->total_gross):(float)$i->total_gross,'status'=>$i->status];})->all();
+            return ['type'=>$type,'filters'=>$filters,'date_basis'=>self::dateBasis(),'rows'=>$rows];
         }
         if (in_array($type,['payments','refunds','card','bank_transfer','cash_on_delivery'],true)) {
             $query=AccountingTransaction::query()->with('order')->whereBetween('occurred_at',[$filters['date_from'].' 00:00:00',$filters['date_to'].' 23:59:59']);
@@ -64,15 +72,18 @@ final class AccountingService
             if ($type==='refunds') $query->where('type','refund'); else $query->where('type','payment');
             if (in_array($type,self::METHODS,true)) $query->where('method',$type);
             $rows=$query->orderBy('occurred_at')->get()->map(fn(AccountingTransaction $t)=>['date'=>$t->occurred_at?->format('Y-m-d H:i'),'order'=>$t->order?->number,'type'=>$t->type,'method'=>$t->method,'amount'=>(float)$t->amount,'status'=>$t->status,'reference'=>$t->external_reference])->all();
-            return ['type'=>$type,'filters'=>$filters,'rows'=>$rows];
+            return ['type'=>$type,'filters'=>$filters,'date_basis'=>self::dateBasis(),'rows'=>$rows];
         }
         if ($type==='deliveries') {
             $rows=EcontReconciliation::query()->with('order')->whereIn('order_id',$ids?:[0])->get()->map(fn(EcontReconciliation $e)=>['order'=>$e->order?->number,'tracking_number'=>$e->tracking_number_snapshot,'status'=>$e->shipment_status,'cod_amount'=>(float)$e->cod_amount,'received_amount'=>(float)$e->company_received_amount,'difference'=>round((float)$e->cod_amount-(float)$e->company_received_amount,2),'received_at'=>$e->received_at?->format('Y-m-d H:i')])->all();
-            return ['type'=>$type,'filters'=>$filters,'rows'=>$rows];
+            return ['type'=>$type,'filters'=>$filters,'date_basis'=>self::dateBasis(),'rows'=>$rows];
         }
         if ($type!=='sales') throw new ValidationException(['report'=>['Невалиден вид справка.']]);
-        $rows=$orders->map(function(Order $o){ $invoice=$o->invoices->first(fn(Invoice $i)=>$i->type==='invoice'&&$i->status!=='cancelled'); $gross=$invoice?(float)$invoice->total_gross:(float)$o->total; $base=$invoice?round((float)$invoice->subtotal_net-(float)$invoice->discount_net+(float)$invoice->shipping_net,2):round($gross/(1+($o->vat_enabled?(float)$o->vat_rate:0)/100),2); return ['date'=>$o->created_at?->format('Y-m-d'),'order'=>$o->number,'customer'=>trim($o->first_name.' '.$o->last_name),'status'=>$o->status,'payment_method'=>$o->payment_method,'invoiced'=>(bool)$invoice,'tax_base'=>$base,'vat'=>round($gross-$base,2),'total'=>$gross]; })->all();
-        return ['type'=>$type,'filters'=>$filters,'rows'=>$rows];
+        $rows=$orders->map(function(Order $o){ $invoice=$o->invoices->first(fn(Invoice $i)=>$i->type==='invoice'&&$i->status!=='cancelled'); $amounts=$this->orderAmounts($o,$invoice); return ['date'=>$o->created_at?->format('Y-m-d'),'order'=>$o->number,'customer'=>trim($o->first_name.' '.$o->last_name),'status'=>$o->status,'payment_method'=>$o->payment_method,'invoiced'=>(bool)$invoice,'tax_base'=>$amounts['base'],'vat'=>$amounts['vat'],'total'=>$amounts['gross']]; })->all();
+        $creditQuery=Invoice::query()->with('order')->where('type','credit_note')->whereIn('status',['issued','credited'])->whereBetween('issue_date',[$filters['date_from'],$filters['date_to']]); $this->applyOrderFilters($creditQuery,$filters);
+        foreach($creditQuery->orderBy('issue_date')->get() as $credit){$order=$credit->order; $rows[]=['date'=>$credit->issue_date?->format('Y-m-d'),'order'=>$order?->number,'customer'=>$credit->buyer_snapshot['company']??($order !== null ? trim($order->first_name.' '.$order->last_name) : ''),'status'=>$credit->status,'payment_method'=>$order?->payment_method,'invoiced'=>true,'tax_base'=>-abs(round((float)$credit->subtotal_net-(float)$credit->discount_net+(float)$credit->shipping_net,2)),'vat'=>-abs((float)$credit->tax_amount),'total'=>-abs((float)$credit->total_gross)];}
+        usort($rows,static fn(array $left,array $right): int => strcmp((string)($left['date']??''),(string)($right['date']??'')));
+        return ['type'=>$type,'filters'=>$filters,'date_basis'=>self::dateBasis(),'rows'=>$rows];
     }
 
     public function createTransaction(array $input): AccountingTransaction
@@ -80,7 +91,14 @@ final class AccountingService
         $order=Order::query()->find((int)($input['order_id']??0)); if(!$order) throw new ValidationException(['order_id'=>['Изберете валидна поръчка.']]);
         $type=$this->choice($input['type']??'', ['payment','refund']); $method=$this->choice($input['method']??$order->payment_method,self::METHODS); $status=$this->choice($input['status']??'completed',['pending','completed','failed','cancelled']);
         $amount=round((float)($input['amount']??0),2); if($amount<=0) throw new ValidationException(['amount'=>['Сумата трябва да е по-голяма от нула.']]);
-        if($type==='refund'&&$status==='completed'){$payments=(float)$order->accountingTransactions()->where('type','payment')->where('status','completed')->sum('amount');$refunded=(float)$order->accountingTransactions()->where('type','refund')->where('status','completed')->sum('amount');if($amount>$payments-$refunded+0.009)throw new ValidationException(['amount'=>['Възстановяването надвишава наличната платена сума по поръчката.']]);}
+        if($status==='completed'){
+            $payments=(float)$order->accountingTransactions()->where('type','payment')->where('status','completed')->sum('amount');
+            $refunded=(float)$order->accountingTransactions()->where('type','refund')->where('status','completed')->sum('amount');
+            $credits=(float)$order->invoices()->where('type','credit_note')->whereIn('status',['issued','credited'])->sum('total_gross');
+            $creditAmount=abs($credits);
+            if($type==='payment' && $amount>$order->total-$payments+0.009) throw new ValidationException(['amount'=>['Плащането надвишава оставащата сума по поръчката.']]);
+            if($type==='refund' && $amount>$payments-$refunded-$creditAmount+0.009) throw new ValidationException(['amount'=>['Възстановяването надвишава наличната сума след плащанията и кредитните известия.']]);
+        }
         $occurred=(string)($input['occurred_at']??date('Y-m-d H:i:s')); $this->lock->assertUnlocked($occurred);
         $tx=AccountingTransaction::query()->create(['order_id'=>$order->id,'type'=>$type,'method'=>$method,'status'=>$status,'amount'=>$amount,'currency'=>$order->currency,'external_reference'=>$this->nullable($input['external_reference']??null),'notes'=>$this->nullable($input['notes']??null),'occurred_at'=>$occurred,'created_by'=>Auth::user()?->id]);
         $this->audit->write('transaction.created','accounting_transaction',(int)$tx->id,null,$tx->toArray()); return $tx->load('order');
@@ -128,4 +146,16 @@ final class AccountingService
     private function date(string $value,string $field): string { $d=\DateTimeImmutable::createFromFormat('!Y-m-d',$value); if(!$d||$d->format('Y-m-d')!==$value)throw new ValidationException([$field=>['Невалидна дата.']]);return $value; }
     private function choice(mixed $value,array $allowed): string { $value=(string)$value;if(!in_array($value,$allowed,true))throw new ValidationException(['filter'=>['Невалидна стойност.']]);return $value; }
     private function nullable(mixed $value): ?string { $v=trim((string)$value);return $v===''?null:$v; }
+    private static function dateBasis(): array { return ['sales'=>'Дата на поръчката','documents'=>'Дата на издаване','payments'=>'Дата на платежната операция','deliveries'=>'Дата на поръчката']; }
+    private function orderAmounts(Order $order, ?Invoice $invoice): array
+    {
+        if ($invoice !== null) {
+            $gross = round((float) $invoice->total_gross, 2);
+            $base = round((float) $invoice->subtotal_net - (float) $invoice->discount_net + (float) $invoice->shipping_net, 2);
+            return ['gross' => $gross, 'base' => $base, 'vat' => round($gross - $base, 2)];
+        }
+        $gross = round((float) $order->total, 2); $rate = $order->vat_enabled ? max(0.0, (float) $order->vat_rate) : 0.0;
+        $base = round($gross / (1 + $rate / 100), 2);
+        return ['gross' => $gross, 'base' => $base, 'vat' => round($gross - $base, 2)];
+    }
 }

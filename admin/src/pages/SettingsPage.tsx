@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, FolderOpen, Image, Landmark, PackageCheck, PlugZap, Trash2, Truck, Upload } from 'lucide-react';
-import { getSiteSettings, testEcontConnection, updateSiteSettings, type SiteSettings } from '@/api/settings';
+import { AlertTriangle, ExternalLink, FolderOpen, Image, Landmark, PackageCheck, PlugZap, RefreshCw, Trash2, Truck, Upload } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { generateSitemap, getSiteSettings, getSitemapStatus, testEcontConnection, updateSiteSettings, type SiteSettings, type SitemapStatus } from '@/api/settings';
 import { uploadMediaFile } from '@/api/media';
 import { routes } from '@/app/constants';
 import { useAppSelector } from '@/app/hooks';
@@ -17,13 +18,18 @@ import { toast, toastError } from '@/lib/toast';
 
 export function SettingsPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const activeTab = requestedTab === 'delivery' || requestedTab === 'taxes' || requestedTab === 'sitemap' ? requestedTab : 'general';
   const uploadRef = useRef<HTMLInputElement>(null);
-  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, admin_background: null, admin_background_overlay: 48, vat_enabled: true, free_shipping_threshold: 0, low_stock_threshold: 5, econt_operations_enabled: true, econt: { environment: 'demo', production_username: '', production_password_configured: false, production_password_masked: '', production_verified_at: null } });
+  const [settings, setSettings] = useState<SiteSettings>({ logo_media_file_id: null, logo: null, admin_background: null, admin_background_overlay: 48, storefront_status: 'live', vat_enabled: true, free_shipping_threshold: 0, low_stock_threshold: 5, econt_operations_enabled: true, econt: { environment: 'demo', production_username: '', production_password_configured: false, production_password_masked: '', production_verified_at: null } });
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('');
   const [lowStockThreshold, setLowStockThreshold] = useState('5');
   const [econtForm, setEcontForm] = useState({ environment: 'demo' as 'demo' | 'production', username: '', password: '' });
   const [busy, setBusy] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [sitemap, setSitemap] = useState<SitemapStatus | null>(null);
+  const [sitemapBusy, setSitemapBusy] = useState(true);
   useGlobalLoading(busy);
 
   useEffect(() => {
@@ -35,6 +41,33 @@ export function SettingsPage() {
       .finally(() => { if (!cancelled) setBusy(false); });
     return () => { cancelled = true; };
   }, [token]);
+
+  async function checkSitemap() {
+    setSitemapBusy(true);
+    try {
+      const response = await getSitemapStatus(token);
+      setSitemap(response.data.sitemap);
+    } catch (error) {
+      toastError(error, 'Картата на сайта не можа да се провери.');
+    } finally {
+      setSitemapBusy(false);
+    }
+  }
+
+  async function createSitemap() {
+    setSitemapBusy(true);
+    try {
+      const response = await generateSitemap(token);
+      setSitemap(response.data.sitemap);
+      toast.success('Картата на сайта е генерирана.');
+    } catch (error) {
+      toastError(error, 'Картата на сайта не можа да бъде генерирана.');
+    } finally {
+      setSitemapBusy(false);
+    }
+  }
+
+  useEffect(() => { void checkSitemap(); }, [token]);
 
   async function saveLogo(id: number | null) {
     setBusy(true);
@@ -74,6 +107,19 @@ export function SettingsPage() {
       toast.success(vat_enabled ? 'ДДС е включено за новите поръчки.' : 'ДДС е изключено за новите поръчки.');
     } catch (error) {
       toastError(error, 'Настройката за ДДС не можа да се запази.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveStorefrontStatus(storefront_status: 'live' | 'development') {
+    setBusy(true);
+    try {
+      const response = await updateSiteSettings(token, { storefront_status });
+      setSettings(response.data.settings);
+      toast.success(storefront_status === 'live' ? 'Магазинът е публикуван.' : 'Магазинът е превключен в режим разработка.');
+    } catch (error) {
+      toastError(error, 'Статусът на магазина не можа да се запази.');
     } finally {
       setBusy(false);
     }
@@ -168,11 +214,12 @@ export function SettingsPage() {
   return (
     <div className="page">
       <PageHeader title="Настройки" help="Външен вид на администрацията и визуална идентичност на магазина." crumbs={[{ label: 'Табло', to: routes.home }, { label: 'Настройки' }]} />
-      <Tabs defaultValue="general">
+      <Tabs value={activeTab} onValueChange={(value) => { const next = new URLSearchParams(searchParams); if (value === 'general') next.delete('tab'); else next.set('tab', value); setSearchParams(next, { replace: true }); }}>
         <TabsList className="h-auto w-full justify-start overflow-x-auto">
           <TabsTrigger value="general">Основни</TabsTrigger>
           <TabsTrigger value="delivery">Доставки</TabsTrigger>
           <TabsTrigger value="taxes">Данъци</TabsTrigger>
+          <TabsTrigger value="sitemap">Sitemap</TabsTrigger>
         </TabsList>
 
         <TabsContent value="taxes" className="grid gap-3">
@@ -234,6 +281,12 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="general" className="grid gap-3">
+        <CollapsibleSection title="Статус на магазина" icon={Landmark} persistKey="settings.storefront-status" help="В режим разработка публичният магазин показва съобщение и не зарежда съдържанието си за посетители.">
+          <div className="flex max-w-xl items-center justify-between gap-5 rounded-[6px] border border-border bg-card p-4">
+            <div><h3 className="m-0 text-base">Сайтът е в процес на разработка</h3><p className="mt-1 mb-0 text-sm leading-relaxed text-muted-foreground">Когато е включено, посетителите виждат съобщение вместо съдържанието на магазина. Изключено означава „На живо“.</p></div>
+            <Switch checked={settings.storefront_status === 'development'} disabled={busy} aria-label="Сайтът е в процес на разработка" onCheckedChange={(checked) => void saveStorefrontStatus(checked ? 'development' : 'live')} />
+          </div>
+        </CollapsibleSection>
         <CollapsibleSection title="Наличности" icon={PackageCheck} persistKey="settings.inventory" help="Определя кога продукт или негов вариант се счита за ниско наличен в администрацията.">
           <div className="grid max-w-xl gap-3 rounded-[6px] border border-border bg-card p-4">
             <Label htmlFor="low-stock-threshold" className="grid gap-2 font-sans"><span>Минимална наличност (бр.)</span><input id="low-stock-threshold" type="number" min="0" max="999999" step="1" className="h-10 border border-input bg-background px-3 text-foreground outline-none focus:border-ring" value={lowStockThreshold} onChange={(event) => setLowStockThreshold(event.target.value)} /><small className="leading-relaxed text-muted-foreground">Вариант с наличност под тази стойност се отбелязва в редакцията на продукта. Филтърът „Под минималната наличност“ показва продуктите с поне един такъв вариант. Стойност 0 изключва отбелязването.</small></Label>
@@ -259,6 +312,26 @@ export function SettingsPage() {
             </div>
           </div>
         </CollapsibleSection>
+        </TabsContent>
+
+        <TabsContent value="sitemap" className="grid gap-3">
+          <CollapsibleSection title="Карта на сайта" icon={Landmark} persistKey="settings.sitemap" help="Картата се генерира автоматично от активните страници, категории и продукти.">
+            <div className="grid max-w-3xl gap-4 rounded-[6px] border border-border bg-card p-4">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div><h3 className="m-0 text-base">Предварително генерирана карта</h3><p className="mt-1 mb-0 text-sm leading-relaxed text-muted-foreground">Генерирайте карта след промени по страниците, категориите или продуктите. След това сайтът подава готовия файл при посещение на sitemap.xml.</p></div>
+                <div className="flex flex-wrap gap-2"><Button type="button" disabled={sitemapBusy} onClick={() => void createSitemap()}><RefreshCw className={sitemapBusy ? 'animate-spin' : ''} />Генерирай sitemap</Button><Button type="button" variant="outline" disabled={sitemapBusy} onClick={() => void checkSitemap()}>Провери</Button></div>
+              </div>
+              {sitemap ? <>
+                <a href={sitemap.url} target="_blank" rel="noreferrer" className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-primary underline-offset-4 hover:underline">{sitemap.url}<ExternalLink className="size-4" /></a>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="border border-border bg-muted/40 p-3"><strong className="block text-xl">{sitemap.counts.pages}</strong><span className="text-sm text-muted-foreground">Активни страници</span></div>
+                  <div className="border border-border bg-muted/40 p-3"><strong className="block text-xl">{sitemap.counts.categories}</strong><span className="text-sm text-muted-foreground">Активни категории</span></div>
+                  <div className="border border-border bg-muted/40 p-3"><strong className="block text-xl">{sitemap.counts.products}</strong><span className="text-sm text-muted-foreground">Активни продукти</span></div>
+                </div>
+                <small className="text-muted-foreground">{sitemap.generated ? `Генерирана: ${new Date(sitemap.generated_at ?? sitemap.checked_at ?? '').toLocaleString('bg-BG')}` : 'Картата още не е генерирана.'} · Проверка: {new Date(sitemap.checked_at ?? '').toLocaleString('bg-BG')}</small>
+              </> : <p className="m-0 text-sm text-muted-foreground">Проверката се изпълнява…</p>}
+            </div>
+          </CollapsibleSection>
         </TabsContent>
       </Tabs>
 

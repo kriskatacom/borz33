@@ -37,12 +37,15 @@ class MonthlyRevenueReportService
             $ordersCount = (clone $base)->count();
             $delivered = (clone $base)->where('status', 'delivered');
             $deliveredCount = (clone $delivered)->count();
-            $paidOrders = (clone $base)->where('status', 'paid')->with('items')->get();
+            $paidOrders = (clone $base)->with(['items', 'accountingTransactions'])->get()->filter(static function (Order $order): bool {
+                $paid = (float) $order->accountingTransactions->where('type', 'payment')->where('status', 'completed')->sum('amount');
+                return $paid >= (float) $order->total - 0.009;
+            })->values();
             $paidOrderIds = $paidOrders->pluck('id')->all();
             $paidOrdersCount = $paidOrders->count();
             $cancelledCount = (clone $base)->where('status', 'cancelled')->count();
             $gross = round((float) $paidOrders->sum('total'), 2);
-            $creditNotes = Invoice::query()->whereIn('order_id', $paidOrderIds ?: [0])->where('type', 'credit_note')->whereIn('status', ['issued', 'credited'])->get();
+            $creditNotes = Invoice::query()->where('type', 'credit_note')->whereIn('status', ['issued', 'credited'])->whereBetween('issue_date', [$startLocal->format('Y-m-d'), $endLocal->format('Y-m-d')])->get();
             $creditNotesAmount = round(abs((float) $creditNotes->sum('total_gross')), 2);
             $creditedProductAmount = 0.0;
             foreach ($creditNotes as $creditNote) foreach ($creditNote->items_snapshot as $item) $creditedProductAmount += abs((float) ($item['gross_total'] ?? 0));
