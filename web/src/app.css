@@ -3208,6 +3208,53 @@ body:has(.store-banner--width-full) {
     margin-top: 2.75rem;
 }
 
+.store-home-benefits {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    width: min(1320px, calc(100% - 2rem));
+    margin: 2.25rem auto 0;
+}
+
+.store-home-benefit {
+    display: flex;
+    min-height: 5.6rem;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--line);
+    border-radius: 0.85rem;
+    background: color-mix(in srgb, var(--section) 72%, transparent);
+    transition: border-color 180ms ease, transform 180ms ease;
+}
+
+.store-home-benefit:hover {
+    border-color: color-mix(in srgb, var(--ink) 35%, var(--line));
+    transform: translateY(-2px);
+}
+
+.store-home-benefit-icon {
+    display: grid;
+    flex: 0 0 2.7rem;
+    width: 2.7rem;
+    height: 2.7rem;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--ink) 22%, var(--line));
+    border-radius: 50%;
+    color: var(--ink);
+}
+
+.store-home-benefit-icon svg {
+    width: 1.35rem;
+    height: 1.35rem;
+}
+
+.store-home-benefit h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.35;
+}
+
 .store-catalog-page {
     margin-top: 0.65rem;
 }
@@ -4237,10 +4284,12 @@ body.store-quick-open { overflow: hidden; }
 }
 
 .store-empty-state-copy h2,
+.store-empty-state-copy h1,
 .store-empty-state-copy p {
     margin: 0;
 }
 
+.store-empty-state-copy h1,
 .store-empty-state-copy h2 {
     font-size: clamp(1.35rem, 3vw, 1.85rem);
     line-height: 1.2;
@@ -4253,6 +4302,7 @@ body.store-quick-open { overflow: hidden; }
 }
 
 .store-empty-state-eyebrow {
+    margin-top: 0.35rem !important;
     margin-bottom: 0.35rem !important;
     color: #72866a;
     font-size: 0.72rem;
@@ -4301,6 +4351,11 @@ body.store-quick-open { overflow: hidden; }
 }
 
 @media (max-width: 44rem) {
+    .store-home-benefits {
+        grid-template-columns: 1fr;
+        margin-top: 1.75rem;
+    }
+
     .store-empty-state--cart {
         grid-template-columns: 1fr;
         padding: 1.25rem 1.25rem 2rem;

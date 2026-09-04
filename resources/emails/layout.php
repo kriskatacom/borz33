@@ -11,6 +11,7 @@ $company = $company ?? [];
 $title = $title ?? ($company['name'] ?? 'Съобщение');
 $preheader = $preheader ?? '';
 $vatLine = ($company['vat'] ?? '') !== '' ? 'ДДС № ' . htmlspecialchars($company['vat']) . '<br>' : '';
+$molLine = ($company['mol'] ?? '') !== '' ? 'МОЛ ' . htmlspecialchars($company['mol']) . '<br>' : '';
 $phoneLine = ($company['phone'] ?? '') !== '' ? ' · ' . htmlspecialchars($company['phone']) : '';
 ?>
 <!DOCTYPE html>
@@ -47,6 +48,7 @@ $phoneLine = ($company['phone'] ?? '') !== '' ? ' · ' . htmlspecialchars($compa
                                 <?= htmlspecialchars($company['legal_name'] ?? '') ?><br>
                                 ЕИК <?= htmlspecialchars($company['eik'] ?? '') ?><br>
                                 <?= $vatLine ?>
+                                <?= $molLine ?>
                                 <?= htmlspecialchars($company['address'] ?? '') ?>, <?= htmlspecialchars($company['postal_code'] ?? '') ?> <?= htmlspecialchars($company['city'] ?? '') ?>, <?= htmlspecialchars($company['country'] ?? '') ?><br>
                                 <?= htmlspecialchars($company['email'] ?? '') ?><?= $phoneLine ?>
                             </p>

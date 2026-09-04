@@ -4,7 +4,7 @@ import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Minus, Underline as UnderlineIcon, Unlink } from 'lucide-react';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Braces, Image as ImageIcon, Italic, Link as LinkIcon, List, ListOrdered, Minus, Underline as UnderlineIcon, Unlink } from 'lucide-react';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -63,12 +63,30 @@ function bannerSlugFromInput(value: string): string {
   return (shortcode?.[1] ?? input).trim().toLowerCase();
 }
 
+const COMPANY_CONSTANTS = [
+  ['{{company_name}}', 'Име на магазина/марката'],
+  ['{{company_legal_name}}', 'Юридическо име'],
+  ['{{company_eik}}', 'ЕИК / Булстат'],
+  ['{{company_vat}}', 'ДДС номер'],
+  ['{{company_mol}}', 'МОЛ'],
+  ['{{company_address}}', 'Адрес'],
+  ['{{company_city}}', 'Град'],
+  ['{{company_postal_code}}', 'Пощенски код'],
+  ['{{company_country}}', 'Държава'],
+  ['{{company_phone}}', 'Телефон'],
+  ['{{company_email}}', 'Имейл'],
+  ['{{company_website}}', 'Уебсайт'],
+  ['{{company_privacy_url}}', 'Поверителност'],
+  ['{{company_terms_url}}', 'Общи условия'],
+] as const;
+
 export function TextEditor({ id, label, help, value, onChange, error, disabled = false }: TextEditorProps) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkNewTab, setLinkNewTab] = useState(false);
   const [bannerOpen, setBannerOpen] = useState(false);
   const [bannerSlug, setBannerSlug] = useState('');
+  const [constantOpen, setConstantOpen] = useState(false);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -144,6 +162,12 @@ export function TextEditor({ id, label, help, value, onChange, error, disabled =
     editor.chain().focus().insertContent(`<p>[banner:${slug}]</p>`).run();
     setBannerSlug('');
     setBannerOpen(false);
+  }
+
+  function insertConstant(value: string) {
+    if (!editor) return;
+    editor.chain().focus().insertContent(value).run();
+    setConstantOpen(false);
   }
 
   function normalizedLink(value: string): string {
@@ -313,6 +337,13 @@ export function TextEditor({ id, label, help, value, onChange, error, disabled =
           >
             <ImageIcon className="size-4" aria-hidden />
           </ToolbarButton>
+          <ToolbarButton
+            label="Вмъкни фирмена константа"
+            disabled={!editor || disabled}
+            onClick={() => { setConstantOpen((open) => !open); setLinkOpen(false); setBannerOpen(false); }}
+          >
+            <Braces className="size-4" aria-hidden />
+          </ToolbarButton>
         </div>
         {linkOpen ? (
           <div className="text-editor-link-panel">
@@ -365,6 +396,15 @@ export function TextEditor({ id, label, help, value, onChange, error, disabled =
             />
             <span className="text-sm text-muted-foreground">Код: [banner:{bannerSlugFromInput(bannerSlug) || 'slug'}]</span>
             <button type="button" disabled={!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(bannerSlugFromInput(bannerSlug))} onClick={insertBanner}>Вмъкни банер</button>
+          </div>
+        ) : null}
+        {constantOpen ? (
+          <div className="text-editor-link-panel">
+            <span className="text-sm font-semibold text-foreground">Фирмена константа</span>
+            <span className="text-sm text-muted-foreground">Изберете име, което ще се замени с актуалната стойност от настройките при показване на страницата.</span>
+            <div className="flex flex-wrap gap-2">
+              {COMPANY_CONSTANTS.map(([constant, label]) => <button key={constant} type="button" onClick={() => insertConstant(constant)}>{label} <code>{constant}</code></button>)}
+            </div>
           </div>
         ) : null}
         <EditorContent editor={editor} />

@@ -18,6 +18,27 @@ $bestSellers = $bestSellers ?? [];
     <?php Banners::render('proletna-promociya'); ?>
 </div>
 
+<section class="store-home-benefits" aria-label="Предимства на магазина">
+    <article class="store-home-benefit">
+        <span class="store-home-benefit-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 5.5h11l1 5.5H5.5l1-5.5Z"/><path d="M5.5 11v6.5h13V11M8.5 17.5v2m7-2v2M8 5.5l1.25-2h5.5L16 5.5"/></svg>
+        </span>
+        <h2>DTF &amp; DTG печат върху дрехи</h2>
+    </article>
+    <article class="store-home-benefit">
+        <span class="store-home-benefit-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 3.5 6 6-11 11-6-6 11-11Z"/><path d="m13 5 6 6M5.5 14.5l4-4M8.5 17.5l4-4"/></svg>
+        </span>
+        <h2>Персонализирани дизайни</h2>
+    </article>
+    <article class="store-home-benefit">
+        <span class="store-home-benefit-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5h11v10H3zM14 10h3l4 4v2.5h-7z"/><circle cx="7" cy="18" r="1.75"/><circle cx="18" cy="18" r="1.75"/><path d="M14 14h6"/></svg>
+        </span>
+        <h2>Бърза доставка в цяла България</h2>
+    </article>
+</section>
+
 <?php if ($bestSellers !== []): ?>
     <section class="store-home-products" aria-labelledby="store-best-sellers-title">
         <header class="store-home-products-head">

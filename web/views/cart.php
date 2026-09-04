@@ -26,8 +26,6 @@ $favoriteIds = $favoriteIds ?? [];
 $cartProductIds = $cartProductIds ?? [];
 ?>
 <section class="store-cart <?= $lines === [] ? 'is-empty' : '' ?>" data-cart-page data-csrf="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
-    <h1 class="store-cart-title">Количка</h1>
-
     <?php if ($message): ?>
         <p class="store-pdp-flash <?= $isError ? 'is-error' : '' ?>" role="status"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>
@@ -37,8 +35,8 @@ $cartProductIds = $cartProductIds ?? [];
         <div class="store-empty-state store-empty-state--cart">
             <img src="/images/empty-cart.webp" alt="" width="768" height="512">
             <div class="store-empty-state-copy">
-                <p class="store-empty-state-eyebrow">Вашата количка</p>
-                <h2>Тук все още е празно</h2>
+                <p class="store-empty-state-eyebrow">Тук все още е празно</p>
+                <h1 class="store-empty-state-title">Количка</h1>
                 <p>Разгледайте продуктите и добавете нещо, което ви харесва. Избраните артикули ще ви очакват тук.</p>
                 <a class="store-empty-state-action" href="/catalog">Разгледайте каталога</a>
             </div>

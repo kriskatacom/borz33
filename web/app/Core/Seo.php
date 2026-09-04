@@ -14,8 +14,8 @@ final class Seo
         $siteName = trim((string) ($_ENV['COMPANY_NAME'] ?? 'Borz33')) ?: 'Borz33';
         $baseUrl = rtrim((string) ($_ENV['WEB_PUBLIC_URL'] ?? 'http://localhost:4000'), '/');
         $path = (string) ($data['currentPath'] ?? '/');
-        $title = trim((string) ($data['title'] ?? $siteName));
-        $description = trim((string) ($data['metaDescription'] ?? self::description($path, $siteName)));
+        $title = CompanyConstants::expand(trim((string) ($data['title'] ?? $siteName)));
+        $description = CompanyConstants::expand(trim((string) ($data['metaDescription'] ?? self::description($path, $siteName))));
         $indexingEnabled = self::storefrontIndexingEnabled();
         $robots = (string) ($data['robots'] ?? ((!$indexingEnabled || self::isPrivate($path, (int) ($data['status'] ?? 200))) ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'));
         $canonicalPath = (string) ($data['canonicalPath'] ?? $path);

@@ -44,7 +44,7 @@ try {
     $html = (new EmailRenderer())->render('verify-registration', [
         'title' => 'Тест', 'preheader' => 'Тест', 'first_name' => 'Иван', 'code' => '123456', 'expires_minutes' => 15,
     ]);
-    $assert(str_contains($html, 'Тестова фирма ЕООД') && str_contains($html, '123456789'), 'Фирмените данни не се появяват в HTML email шаблона.');
+    $assert(str_contains($html, 'Тестова фирма ЕООД') && str_contains($html, '123456789') && str_contains($html, 'Тестов Управител'), 'Фирмените данни не се появяват в HTML email шаблона.');
 
     DB::connection()->rollBack();
     echo "Company profile email test passed.\n";

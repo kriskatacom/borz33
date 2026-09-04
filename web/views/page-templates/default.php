@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Store\Core\Banners;
+use Store\Core\CompanyConstants;
 
 /** @var \App\Models\Page $page */
 /** @var list<array{label: string, href: string|null}> $breadcrumbs */
@@ -29,6 +30,6 @@ $breadcrumbs = $breadcrumbs ?? [];
         <?php endif; ?>
     </header>
     <?php if (trim((string) $page->content) !== ''): ?>
-        <div class="store-content-page-body"><?= Banners::expandShortcodes((string) $page->content) ?></div>
+        <div class="store-content-page-body"><?= CompanyConstants::expand(Banners::expandShortcodes((string) $page->content)) ?></div>
     <?php endif; ?>
 </article>

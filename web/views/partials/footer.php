@@ -84,7 +84,7 @@ $siteName = trim((string) ($company['name'] ?? 'Borz33')) ?: 'Borz33';
                 </a>
                 <a href="<?= $footerEscape($footerInternalPath($company['terms_url'] ?? null, '/terms')) ?>">Общи условия</a>
                 <a href="<?= $footerEscape($footerInternalPath($company['privacy_url'] ?? null, '/privacy')) ?>">Поверителност</a>
-                <a href="/ceni-za-dostavka">Цени за доставка</a>
+                <a href="/delivery">Условия за доставка</a>
             </nav>
 
             <section class="store-footer-contact" aria-labelledby="footer-contact-title">
