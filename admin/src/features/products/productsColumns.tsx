@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Eye, MoreHorizontal, Pencil, RotateCcw, Shirt, Trash2 } from 'lucide-react';
+import { AlertTriangle, Eye, MoreHorizontal, Pencil, RotateCcw, Shirt, Trash2 } from 'lucide-react';
 import type { ProductListItem } from '@/api/products';
 import { createDataTableHelper } from '@/components/data-table/columnHelper';
 import { formatMoney } from '@/lib/format';
@@ -52,6 +52,16 @@ export function getProductsColumns({ onDelete, onRestore, onForceDelete }: Produ
             </Link>
             {product.short_description ? (
               <div className="m-0 mt-1 max-w-md truncate text-muted-foreground" dangerouslySetInnerHTML={{ __html: product.short_description }} />
+            ) : null}
+            {product.low_stock ? (
+              <span
+                className="badge warn mt-2 inline-flex items-center gap-1"
+                title="Поне един вариант е под минималната наличност от настройките."
+              >
+                <AlertTriangle className="size-3.5" aria-hidden />
+                Ниска наличност
+                {product.low_stock_variants_count > 1 ? ` · ${product.low_stock_variants_count} варианта` : ''}
+              </span>
             ) : null}
           </div>
         );

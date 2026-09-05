@@ -131,6 +131,8 @@ class ProductResource
             'personalization_enabled' => $product->personalization_enabled,
             'sort_order' => $product->sort_order,
             'variants_count' => (int) ($product->variants_count ?? $product->variants()->count()),
+            'low_stock' => (int) ($product->low_stock_variants_count ?? 0) > 0,
+            'low_stock_variants_count' => (int) ($product->low_stock_variants_count ?? 0),
             'front_image' => $product->frontImage
                 ? ProductImageResource::toArray($product->frontImage)
                 : null,

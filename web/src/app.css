@@ -2388,6 +2388,31 @@ body:has(.store-banner--width-full) {
     object-fit: cover;
 }
 
+.store-pdp-magnifier {
+    position: absolute;
+    z-index: 1;
+    display: none;
+    width: 12rem;
+    height: 12rem;
+    transform: translate(-50%, -50%);
+    border: 2px solid color-mix(in srgb, var(--canvas) 85%, var(--ink));
+    border-radius: 50%;
+    background-color: var(--section);
+    background-repeat: no-repeat;
+    background-size: 450% 450%;
+    box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 22%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .store-pdp-magnifier.is-active {
+        display: block;
+        opacity: 1;
+    }
+}
+
 .store-pdp-empty {
     display: grid;
     place-items: center;

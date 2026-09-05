@@ -81,8 +81,9 @@ $jsonLd = [
         <div class="store-pdp-media">
             <div class="store-pdp-stage">
                 <template x-if="image">
-                    <button type="button" class="store-pdp-photo-btn" @click="openLightbox()" aria-label="Отвори снимката">
+                    <button type="button" class="store-pdp-photo-btn" @click="openLightbox()" @mouseenter="startZoom($event)" @mousemove="moveZoom($event)" @mouseleave="stopZoom()" aria-label="Отвори снимката">
                         <img class="store-pdp-photo" :src="image.url" :alt="image.alt" width="900" height="1125">
+                        <span class="store-pdp-magnifier" :class="zoomActive && 'is-active'" :style="zoomStyle()" aria-hidden="true"></span>
                     </button>
                 </template>
                 <div class="store-pdp-empty" x-cloak x-show="!image">Няма снимка</div>

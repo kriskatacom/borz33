@@ -34,6 +34,8 @@ export type ProductListItem = {
   personalization_enabled: boolean;
   sort_order: number;
   variants_count: number;
+  low_stock: boolean;
+  low_stock_variants_count: number;
   front_image: ProductImage | null;
   created_at: string | null;
   updated_at: string | null;

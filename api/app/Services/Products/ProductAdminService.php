@@ -34,6 +34,11 @@ class ProductAdminService
         $page = max(1, (int) ($filters['page'] ?? 1));
         $perPage = min(100, max(1, (int) ($filters['per_page'] ?? 20)));
         $query = $this->filteredQuery($filters);
+        $lowStockThreshold = (int) (SiteSetting::query()->value('low_stock_threshold') ?? 5);
+        $query->withCount([
+            'variants as low_stock_variants_count' => static fn (Builder $builder) =>
+                $builder->where('stock', '<', $lowStockThreshold),
+        ]);
         $total = (clone $query)->count();
         $products = $query
             ->with(['frontImage', 'category'])

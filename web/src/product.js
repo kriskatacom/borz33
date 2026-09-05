@@ -41,9 +41,47 @@ export function registerStoreProduct(Alpine) {
       photoSwipe: null,
       lightboxOpening: false,
       lightboxImageData: {},
+      zoomActive: false,
+      zoomX: 50,
+      zoomY: 50,
 
       init() {
         this.syncVariantImage();
+      },
+
+      zoomStyle() {
+        if (!this.image) return {};
+
+        const zoomFactor = 4.5;
+        // Keep the point under the cursor in the centre of the lens,
+        // including when the cursor is close to an image edge.
+        const backgroundPosition = (coordinate) =>
+          ((zoomFactor * (coordinate / 100) - 0.5) / (zoomFactor - 1)) * 100;
+
+        return {
+          left: `${this.zoomX}%`,
+          top: `${this.zoomY}%`,
+          backgroundImage: `url("${this.image.url}")`,
+          backgroundSize: `${zoomFactor * 100}% ${zoomFactor * 100}%`,
+          backgroundPosition: `${backgroundPosition(this.zoomX)}% ${backgroundPosition(this.zoomY)}%`,
+        };
+      },
+
+      startZoom(event) {
+        if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+        this.zoomActive = true;
+        this.moveZoom(event);
+      },
+
+      moveZoom(event) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        this.zoomX = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100));
+        this.zoomY = Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100));
+      },
+
+      stopZoom() {
+        this.zoomActive = false;
       },
 
       get variant() {
@@ -167,6 +205,7 @@ export function registerStoreProduct(Alpine) {
       setImage(index) {
         if (index >= 0 && index < this.images.length) {
           this.imageIndex = index;
+          this.stopZoom();
         }
       },
 
