@@ -1,9 +1,12 @@
+import type { LucideIcon } from 'lucide-react';
+import { BarChart3, Bell, Box, FileText, FolderTree, Image, LayoutDashboard, Landmark, Megaphone, MessageCircle, Palette, ReceiptText, Settings, ShoppingBag, Users } from 'lucide-react';
 import { routes } from '@/app/constants';
 
 export type NavItem = {
   to: string;
   label: string;
   hint: string;
+  icon: LucideIcon;
   mobile?: boolean;
 };
 
@@ -13,30 +16,29 @@ export type NavSection = {
 };
 
 export const navItems: NavItem[] = [
-  { to: routes.home, label: 'Табло', hint: 'Преглед и бързи връзки', mobile: true },
-  { to: routes.notifications, label: 'Известия', hint: 'Важни събития в магазина', mobile: true },
-  { to: routes.orders, label: 'Поръчки', hint: 'Нови заявки, статуси и плащания', mobile: true },
-  { to: routes.invoices, label: 'Фактури', hint: 'Издадени фактури и експорт' },
-  { to: routes.creditNotes, label: 'Кредитни известия', hint: 'Кредитни известия и експорт' },
-  { to: routes.products, label: 'Продукти', hint: 'Каталог, цени и наличности', mobile: true },
-  { to: routes.categories, label: 'Категории', hint: 'Дърво на каталога и изображения' },
-  { to: routes.media, label: 'Медия', hint: 'Файлове и изображения' },
-  { to: routes.users, label: 'Потребители', hint: 'Екип и клиентски профили' },
-  { to: routes.pages, label: 'Страници', hint: 'CMS страници и персонални полета' },
-  { to: routes.banners, label: 'Банери', hint: 'Текст, изображение и бутони за сайта' },
-  { to: routes.campaigns, label: 'Кампании', hint: 'Промоции и купони' },
-  { to: routes.messages, label: 'Съобщения', hint: 'Писма и известия' },
-  { to: routes.reports, label: 'Отчети', hint: 'Продажби и счетоводни данни' },
-  { to: routes.accounting, label: 'Счетоводство', hint: 'Плащания, справки и месечно приключване' },
-  { to: routes.settings, label: 'Настройки', hint: 'Магазин, екип и достъп' },
-  { to: routes.customization, label: 'Персонализиране', hint: 'Фон на административния панел' },
+  { to: routes.home, label: 'Табло', hint: 'Преглед и бързи връзки', icon: LayoutDashboard, mobile: true },
+  { to: routes.notifications, label: 'Известия', hint: 'Важни събития в магазина', icon: Bell, mobile: true },
+  { to: routes.orders, label: 'Поръчки', hint: 'Нови заявки, статуси и плащания', icon: ShoppingBag, mobile: true },
+  { to: routes.invoices, label: 'Фактури', hint: 'Издадени фактури и експорт', icon: ReceiptText },
+  { to: routes.creditNotes, label: 'Кредитни известия', hint: 'Кредитни известия и експорт', icon: FileText },
+  { to: routes.products, label: 'Продукти', hint: 'Каталог, цени и наличности', icon: Box, mobile: true },
+  { to: routes.categories, label: 'Категории', hint: 'Дърво на каталога и изображения', icon: FolderTree },
+  { to: routes.media, label: 'Медия', hint: 'Файлове и изображения', icon: Image },
+  { to: routes.users, label: 'Потребители', hint: 'Екип и клиентски профили', icon: Users },
+  { to: routes.pages, label: 'Страници', hint: 'CMS страници и персонални полета', icon: FileText },
+  { to: routes.banners, label: 'Банери', hint: 'Текст, изображение и бутони за сайта', icon: Megaphone },
+  { to: routes.messages, label: 'Съобщения', hint: 'Писма и известия', icon: MessageCircle },
+  { to: routes.reports, label: 'Отчети', hint: 'Продажби и счетоводни данни', icon: BarChart3 },
+  { to: routes.accounting, label: 'Счетоводство', hint: 'Плащания, справки и месечно приключване', icon: Landmark },
+  { to: routes.settings, label: 'Настройки', hint: 'Магазин, екип и достъп', icon: Settings },
+  { to: routes.customization, label: 'Персонализиране', hint: 'Фон на административния панел', icon: Palette },
 ];
 
 export const navSections: NavSection[] = [
   { label: 'Начало', items: navItems.filter((item) => item.to === routes.home || item.to === routes.notifications) },
   { label: 'Продажби', items: navItems.filter((item) => new Set<string>([routes.orders, routes.invoices, routes.creditNotes]).has(item.to)) },
   { label: 'Каталог', items: navItems.filter((item) => new Set<string>([routes.products, routes.categories, routes.media]).has(item.to)) },
-  { label: 'Съдържание', items: navItems.filter((item) => new Set<string>([routes.pages, routes.banners, routes.campaigns]).has(item.to)) },
+  { label: 'Съдържание', items: navItems.filter((item) => new Set<string>([routes.pages, routes.banners]).has(item.to)) },
   { label: 'Комуникация', items: navItems.filter((item) => item.to === routes.messages) },
   { label: 'Анализи и настройки', items: navItems.filter((item) => new Set<string>([routes.reports, routes.accounting, routes.users, routes.settings, routes.customization]).has(item.to)) },
 ];

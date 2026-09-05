@@ -37,7 +37,6 @@ export const routes = {
   usersEdit: '/users/:id',
   customers: '/customers',
   content: '/content',
-  campaigns: '/campaigns',
   shipments: '/shipments',
   messages: '/messages',
   messagesShow: '/messages/:id',

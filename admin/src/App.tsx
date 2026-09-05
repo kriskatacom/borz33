@@ -94,7 +94,6 @@ export function App() {
               <Route path={routes.bannersEdit} element={<BannerFormPage />} />
               <Route path={routes.banners} element={<BannersPage />} />
               <Route path={routes.content} element={<Navigate to={routes.pages} replace />} />
-              <Route path={routes.campaigns} element={<ComingSoonPage />} />
               <Route path={routes.shipments} element={<ComingSoonPage />} />
               <Route path={routes.messagesShow} element={<MessageDetailsPage />} />
               <Route path={routes.messages} element={<MessagesPage />} />

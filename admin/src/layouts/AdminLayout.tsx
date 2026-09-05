@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { routes } from '@/app/constants';
@@ -25,6 +25,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem('admin-sidebar-collapsed') === '1');
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const stored = Number(window.localStorage.getItem('admin-sidebar-width'));
+    return Number.isFinite(stored) ? Math.min(400, Math.max(200, stored)) : 232;
+  });
+  const resizingSidebar = useRef(false);
   const menuId = useId();
   const location = useLocation();
   const displayName = user ? `${user.first_name} ${user.last_name}`.trim() : 'Екип';
@@ -55,6 +60,47 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       window.localStorage.setItem('admin-sidebar-collapsed', next ? '1' : '0');
       return next;
     });
+  }
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sidebar', `${sidebarWidth}px`);
+  }, [sidebarWidth]);
+
+  function saveSidebarWidth(width: number) {
+    window.localStorage.setItem('admin-sidebar-width', String(width));
+  }
+
+  function resizeSidebar(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (sidebarCollapsed) return;
+    event.preventDefault();
+    resizingSidebar.current = true;
+    const startX = event.clientX;
+    const startWidth = sidebarWidth;
+    let currentWidth = startWidth;
+    document.body.classList.add('sidebar-resizing');
+
+    const onMove = (moveEvent: globalThis.PointerEvent) => {
+      currentWidth = Math.min(400, Math.max(200, startWidth + moveEvent.clientX - startX));
+      setSidebarWidth(currentWidth);
+    };
+    const onUp = () => {
+      saveSidebarWidth(currentWidth);
+      resizingSidebar.current = false;
+      document.body.classList.remove('sidebar-resizing');
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+  }
+
+  function resizeSidebarWithKeyboard(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (sidebarCollapsed || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    const next = Math.min(400, Math.max(200, sidebarWidth + (event.key === 'ArrowRight' ? 8 : -8)));
+    setSidebarWidth(next);
+    saveSidebarWidth(next);
   }
 
   useEffect(() => {
@@ -140,13 +186,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {navSections.map((section) => (
             <section key={section.label} className="nav-section" aria-labelledby={`nav-section-${section.label}`}>
               <h2 id={`nav-section-${section.label}`} className="nav-section-title">{section.label}</h2>
-              {section.items.map((item) => (
-                <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
+                  <span className="nav-link-icon"><Icon aria-hidden /></span>
                   <span>{item.label}</span>
                   {item.to === routes.messages && unreadMessages > 0 ? <span className="sidebar-unread-badge" aria-label={`${unreadMessages} непрочетени съобщения`}>{unreadMessages > 99 ? '99+' : unreadMessages}</span> : null}
                   {item.to === routes.notifications && unreadNotifications > 0 ? <span className="sidebar-unread-badge" aria-label={`${unreadNotifications} непрочетени известия`}>{unreadNotifications > 99 ? '99+' : unreadNotifications}</span> : null}
-                </NavLink>
-              ))}
+                  <span className="nav-link-arrow" aria-hidden="true">›</span>
+                </NavLink>;
+              })}
             </section>
           ))}
         </nav>
@@ -189,6 +238,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </Button>
         </div>
       </aside>
+
+      <button
+        type="button"
+        className="sidebar-resize-handle"
+        aria-label="Промени ширината на страничната лента"
+        aria-valuemin={200}
+        aria-valuemax={400}
+        aria-valuenow={sidebarWidth}
+        title="Промени ширината на страничната лента"
+        onPointerDown={resizeSidebar}
+        onKeyDown={resizeSidebarWithKeyboard}
+      />
 
       <div className="admin-main">{children}</div>
 

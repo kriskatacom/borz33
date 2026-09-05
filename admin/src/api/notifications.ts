@@ -27,6 +27,7 @@ export function setNotificationRead(token: string, id: number, read: boolean) {
 }
 export function readAllNotifications(token: string) { return apiRequest('/admin/notifications/read-all', { method: 'POST', token }); }
 export function archiveNotification(token: string, id: number) { return apiRequest(`/admin/notifications/${id}/archive`, { method: 'POST', token }); }
+export function unarchiveNotification(token: string, id: number) { return apiRequest(`/admin/notifications/${id}/unarchive`, { method: 'POST', token }); }
 export function deleteNotification(token: string, id: number) { return apiRequest(`/admin/notifications/${id}`, { method: 'DELETE', token }); }
 export function archiveAllNotifications(token: string) { return apiRequest('/admin/notifications/archive-all', { method: 'POST', token }); }
 export function deleteAllNotifications(token: string, archived = false) { return apiRequest('/admin/notifications', { method: 'DELETE', token, query: { archived } }); }

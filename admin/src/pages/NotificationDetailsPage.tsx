@@ -53,8 +53,8 @@ export function NotificationDetailsPage() {
     return () => { cancelled = true; };
   }, [id, navigate, token]);
 
-  if (error) return <div className="page"><PageHeader title="Известие" crumbs={[{ label: 'Известия', to: routes.notifications }, { label: 'Грешка' }]} /><div className="notification-empty"><Bell /><h2>Известието не може да бъде заредено</h2><p>{error}</p><Button asChild variant="outline"><Link to={routes.notifications}><ArrowLeft />Към известията</Link></Button></div></div>;
-  if (!item) return <div className="page"><PageHeader title="Известие" crumbs={[{ label: 'Известия', to: routes.notifications }, { label: 'Зареждане' }]} /><AdminPageSkeleton sections={2} /></div>;
+  if (error) return <div className="page"><PageHeader title="Известие" crumbs={[{ label: 'Табло', to: routes.home }, { label: 'Известия', to: routes.notifications }, { label: 'Грешка' }]} /><div className="notification-empty"><Bell /><h2>Известието не може да бъде заредено</h2><p>{error}</p><Button asChild variant="outline"><Link to={routes.notifications}><ArrowLeft />Към известията</Link></Button></div></div>;
+  if (!item) return <div className="page"><PageHeader title="Известие" crumbs={[{ label: 'Табло', to: routes.home }, { label: 'Известия', to: routes.notifications }, { label: 'Зареждане' }]} /><AdminPageSkeleton sections={2} /></div>;
   const Icon = icons[item.level] ?? Bell;
   const metadata = item.metadata ?? {};
   const image = metadata.image_url;

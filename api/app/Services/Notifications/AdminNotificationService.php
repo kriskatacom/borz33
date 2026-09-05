@@ -60,6 +60,14 @@ final class AdminNotificationService
         return $notification;
     }
 
+    public function unarchive(int $id): AdminNotification
+    {
+        $notification = $this->find($id);
+        $notification->archived_at = null;
+        $notification->save();
+        return $notification;
+    }
+
     public function delete(int $id): void { $this->find($id)->delete(); }
     public function archiveAll(): void { AdminNotification::query()->whereNull('archived_at')->update(['archived_at' => Carbon::now(), 'updated_at' => Carbon::now()]); }
     public function deleteAll(bool $archived = false): void { $query = AdminNotification::query(); $archived ? $query->whereNotNull('archived_at') : $query->whereNull('archived_at'); $query->delete(); }

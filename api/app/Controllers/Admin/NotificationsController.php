@@ -27,6 +27,7 @@ final class NotificationsController extends Controller
     public function update(string $id): never { $this->ok(['notification' => $this->notifications->toArray($this->notifications->markRead((int) $id, Request::wantsTrue('read')))]); }
     public function readAll(): never { $this->notifications->markAllRead(); $this->ok([], 'Всички известия са прочетени.'); }
     public function archive(string $id): never { $this->notifications->archive((int) $id); $this->ok([], 'Известието е архивирано.'); }
+    public function unarchive(string $id): never { $this->notifications->unarchive((int) $id); $this->ok([], 'Известието е разархивирано.'); }
     public function delete(string $id): never { $this->notifications->delete((int) $id); $this->ok([], 'Известието е изтрито.'); }
     public function archiveAll(): never { $this->notifications->archiveAll(); $this->ok([], 'Всички известия са архивирани.'); }
     public function deleteAll(): never { $this->notifications->deleteAll(Request::wantsTrue('archived')); $this->ok([], 'Всички известия са изтрити.'); }

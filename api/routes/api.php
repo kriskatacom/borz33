@@ -62,6 +62,7 @@ $router->post('/admin/notifications/{id}/read', [NotificationsController::class,
 $router->patch('/admin/notifications/{id}', [NotificationsController::class, 'update'], $admin);
 $router->post('/admin/notifications/read-all', [NotificationsController::class, 'readAll'], $admin);
 $router->post('/admin/notifications/{id}/archive', [NotificationsController::class, 'archive'], $admin);
+$router->post('/admin/notifications/{id}/unarchive', [NotificationsController::class, 'unarchive'], $admin);
 $router->delete('/admin/notifications/{id}', [NotificationsController::class, 'delete'], $admin);
 $router->post('/admin/notifications/archive-all', [NotificationsController::class, 'archiveAll'], $admin);
 $router->delete('/admin/notifications', [NotificationsController::class, 'deleteAll'], $admin);
