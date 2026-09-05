@@ -50,19 +50,26 @@ class PasswordResetService
             ]
         );
 
-        $base = rtrim((string) ($this->config['admin_public_url'] ?? 'http://localhost:3000'), '/');
+        $base = rtrim((string) ($adminOnly
+            ? ($this->config['admin_public_url'] ?? 'http://localhost:3000')
+            : ($this->config['public_url'] ?? 'http://localhost:3000')), '/');
         $url = $base . '/reset-password?' . http_build_query([
             'email' => $email,
             'token' => $plain,
         ]);
 
+        $subject = $adminOnly ? 'Нова парола за админ панела' : 'Нова парола за профила Ви';
+        $preheader = $adminOnly
+            ? 'Линк за нова парола в админ панела на Borz33.'
+            : 'Линк за нова парола в профила Ви в Borz33.';
+
         $this->mailer->sendTemplate(
             $user->email,
-            'Нова парола за админ панела',
+            $subject,
             'password-reset',
             [
-                'title' => 'Нова парола',
-                'preheader' => 'Линк за нова парола в админ панела на Borz33.',
+                'title' => $subject,
+                'preheader' => $preheader,
                 'first_name' => $user->first_name,
                 'reset_url' => $url,
                 'expires_minutes' => $minutes,

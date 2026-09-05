@@ -35,6 +35,10 @@ $router->post('/contact', [ContactController::class, 'store']);
 
 $router->get('/login', [AuthController::class, 'showLogin']);
 $router->post('/login', [AuthController::class, 'login']);
+$router->get('/forgot-password', [AuthController::class, 'showForgotPassword']);
+$router->post('/forgot-password', [AuthController::class, 'forgotPassword']);
+$router->get('/reset-password', [AuthController::class, 'showResetPassword']);
+$router->post('/reset-password', [AuthController::class, 'resetPassword']);
 $router->post('/login/code', [AuthController::class, 'resendCode']);
 $router->post('/register', [AuthController::class, 'register']);
 $router->post('/register/verify', [AuthController::class, 'verifyEmail']);

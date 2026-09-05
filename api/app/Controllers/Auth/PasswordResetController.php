@@ -27,11 +27,27 @@ class PasswordResetController extends Controller
         $this->ok([], 'Ако този имейл принадлежи на администраторски профил, изпратихме линк за нова парола.');
     }
 
+    public function forgot(): never
+    {
+        $payload = $this->forgotValidator->validate(Request::input());
+        $this->passwordResetService->sendResetLink((string) $payload['email']);
+
+        $this->ok([], 'Ако този имейл принадлежи на активен профил, изпратихме линк за нова парола.');
+    }
+
     public function resetAdmin(): never
     {
         $payload = $this->resetValidator->validate(Request::input());
         $this->passwordResetService->reset($payload, true);
 
         $this->ok([], 'Паролата е обновена. Влезте с новата парола.');
+    }
+
+    public function reset(): never
+    {
+        $payload = $this->resetValidator->validate(Request::input());
+        $this->passwordResetService->reset($payload);
+
+        $this->ok([], 'Паролата е обновена. Вече можете да влезете в профила си.');
     }
 }

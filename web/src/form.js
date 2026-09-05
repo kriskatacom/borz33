@@ -25,6 +25,8 @@ function digits(value) {
 }
 
 export function registerStoreForm(Alpine) {
+  registerStoreSubmitStates();
+
   document.addEventListener('alpine:init', () => {
     Alpine.data('storeAccountForm', (config = {}) => ({
       busy: false,
@@ -36,6 +38,40 @@ export function registerStoreForm(Alpine) {
       showConfirm: false,
       errors: flattenErrors(config.errors),
       touched: Object.fromEntries(Object.keys(flattenErrors(config.errors)).map((key) => [key, true])),
+
+      initPhone() {
+        const phone = this.read('phone').trim();
+        const country = this.$refs.phoneCountry;
+        const number = this.$refs.phoneNumber;
+
+        if (!(country instanceof HTMLSelectElement) || !(number instanceof HTMLInputElement)) {
+          return;
+        }
+
+        const option = [...country.options]
+          .sort((a, b) => b.value.length - a.value.length)
+          .find((item) => phone.startsWith(item.value));
+
+        if (option) {
+          country.value = option.value;
+          number.value = phone.slice(option.value.length).trim();
+        }
+      },
+
+      syncPhone() {
+        const country = this.$refs.phoneCountry;
+        const number = this.$refs.phoneNumber;
+        const hidden = this.$el.elements?.namedItem('phone');
+
+        if (!(country instanceof HTMLSelectElement) || !(number instanceof HTMLInputElement) || !(hidden instanceof HTMLInputElement)) {
+          return;
+        }
+
+        const local = number.value.trim();
+        hidden.value = local === '' ? '' : `${country.value} ${local}`;
+        hidden.dispatchEvent(new Event('input', { bubbles: true }));
+        this.onInput('phone');
+      },
 
       error(name) {
         return this.errors[name] || '';
@@ -319,5 +355,35 @@ export function registerStoreForm(Alpine) {
         return '';
       },
     }));
+  });
+}
+
+function registerStoreSubmitStates() {
+  const selector = 'form button[type="submit"]';
+  const excluded = (button) => button.closest('[data-cart-action], [data-account-message-reply], [data-review-submit], [data-checkout-submit], [action="/logout"]');
+
+  document.querySelectorAll(selector).forEach((button) => {
+    if (!(button instanceof HTMLButtonElement) || excluded(button)) return;
+    button.classList.add('store-submit');
+  });
+
+  document.addEventListener('submit', (event) => {
+    if (event.defaultPrevented) return;
+
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    const button = event.submitter instanceof HTMLButtonElement
+      ? event.submitter
+      : form.querySelector('button[type="submit"]');
+
+    if (!(button instanceof HTMLButtonElement) || excluded(button)) return;
+
+    button.classList.add('store-submit', 'is-loading');
+    button.setAttribute('aria-busy', 'true');
+    button.disabled = true;
+    button.replaceChildren(
+      Object.assign(document.createElement('span'), { className: 'store-submit-spinner', ariaHidden: 'true' }),
+      document.createTextNode(button.dataset.loadingLabel || 'Изпращане…'),
+    );
   });
 }

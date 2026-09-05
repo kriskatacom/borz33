@@ -155,6 +155,13 @@ $navGroups = [
                                 <?php endforeach; ?>
                             </div>
                         <?php endforeach; ?>
+                        <?php if ($user->isAdmin()): ?>
+                            <a class="store-account-nav-admin" href="/admin/">
+                                <span class="store-account-nav-icon"><?= Html::iconSvg('layout') ?></span>
+                                <span>Админ панел</span>
+                                <span class="store-account-nav-arrow" aria-hidden="true"><?= Html::iconSvg('chevron-right') ?></span>
+                            </a>
+                        <?php endif; ?>
                         <form method="post" action="/logout">
                             <input type="hidden" name="_token" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
                             <button type="submit">

@@ -9,7 +9,7 @@ use Store\Core\Banners;
 
 $media = $banner->mediaFile;
 $alt = trim((string) ($media->alt ?? '')) !== '' ? (string) $media->alt : (string) $banner->title;
-$path = '/' . ltrim((string) $media->path, '/');
+$path = \App\Resources\StorageUrl::forPath((string) $media->path) ?? '';
 $text = (string) $banner->text;
 $layout = $banner->layoutKey();
 $height = (int) ($banner->height ?? 0);

@@ -17,7 +17,8 @@ $renderAttachments = static function ($attachments) use ($escape, $formatSize): 
     foreach ($attachments as $attachment) {
         $file = $attachment->file;
         if ($file === null) continue;
-        echo '<a href="/' . $escape(ltrim((string) $file->path, '/')) . '" target="_blank" rel="noopener"><span>' . Html::iconSvg('paperclip') . '</span><span><strong>' . $escape($file->original_name) . '</strong><small>' . $escape($formatSize((int) $file->size)) . '</small></span></a>';
+        $fileUrl = \App\Resources\StorageUrl::forPath((string) $file->path) ?? '#';
+        echo '<a href="' . $escape($fileUrl) . '" target="_blank" rel="noopener"><span>' . Html::iconSvg('paperclip') . '</span><span><strong>' . $escape($file->original_name) . '</strong><small>' . $escape($formatSize((int) $file->size)) . '</small></span></a>';
     }
     echo '</div>';
 };

@@ -70,7 +70,7 @@ class MediaService
     }
 
     /** @param array<string, mixed> $file */
-    public function store(array $file): MediaFile
+    public function store(array $file, ?int $originalSize = null): MediaFile
     {
         $this->validator->validateUpload($file);
         $stored = $this->storage->store($file);
@@ -82,7 +82,11 @@ class MediaService
             'extension' => $stored['extension'],
             'kind' => MediaStorage::kindFor($stored['mime'], $stored['extension']),
             'size' => $stored['size'],
+            'original_size' => $originalSize !== null && $originalSize >= $stored['size'] ? $originalSize : null,
             'alt' => null,
+            'title' => null,
+            'width' => $stored['width'],
+            'height' => $stored['height'],
             'uploaded_by' => Auth::user()?->id,
         ]);
         $media->save();
@@ -103,6 +107,11 @@ class MediaService
         if (array_key_exists('alt', $payload)) {
             $alt = $payload['alt'];
             $file->alt = is_string($alt) && trim($alt) !== '' ? trim($alt) : null;
+        }
+
+        if (array_key_exists('title', $payload)) {
+            $title = $payload['title'];
+            $file->title = is_string($title) && trim($title) !== '' ? trim($title) : null;
         }
 
         $file->save();

@@ -53,7 +53,7 @@ class ContactMessageResource
             $items[] = [
                 'id' => (int) $attachment->id,
                 'name' => (string) $attachment->file->original_name,
-                'url' => '/' . ltrim((string) $attachment->file->path, '/'),
+                'url' => StorageUrl::forPath((string) $attachment->file->path),
                 'mime' => (string) $attachment->file->mime,
                 'size' => (int) $attachment->file->size,
             ];

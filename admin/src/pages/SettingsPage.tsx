@@ -14,7 +14,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
+import { prepareImageFiles, useImageCompressionConfirmation } from '@/features/media/useImageCompressionConfirmation';
 import { toast, toastError } from '@/lib/toast';
+import { formatBytes } from '@/lib/format';
 
 export function SettingsPage() {
   const token = useAppSelector((state) => state.auth.token) ?? '';
@@ -30,6 +32,7 @@ export function SettingsPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [sitemap, setSitemap] = useState<SitemapStatus | null>(null);
   const [sitemapBusy, setSitemapBusy] = useState(true);
+  const { ask: askImageCompression, dialog: imageCompressionDialog } = useImageCompressionConfirmation();
   useGlobalLoading(busy);
 
   useEffect(() => {
@@ -83,9 +86,13 @@ export function SettingsPage() {
   }
 
   async function uploadLogo(file: File) {
+    const originalSize = file.size;
+    file = (await prepareImageFiles([file], await askImageCompression(), (original, prepared) => {
+      toast.info(prepared.size < original.size ? `Размер: ${formatBytes(original.size)} - компресия: ${formatBytes(prepared.size)}` : `Размер: ${formatBytes(original.size)} · Компресия: няма`);
+    }))[0] ?? file;
     setBusy(true);
     try {
-      const uploaded = await uploadMediaFile(token, file);
+      const uploaded = await uploadMediaFile(token, file, { originalSize });
       const logo = uploaded.data.files[0];
       if (!logo) throw new Error('Файлът не беше качен.');
       const response = await updateSiteSettings(token, { logo_media_file_id: logo.id });
@@ -398,6 +405,7 @@ export function SettingsPage() {
         </TabsContent>
       </Tabs>
 
+      {imageCompressionDialog}
       {pickerOpen ? <MediaPickerDialog token={token} title="Избор на лого" onSelect={(files) => { setPickerOpen(false); const file = files[0]; if (file) void saveLogo(file.id); }} onClose={() => setPickerOpen(false)} /> : null}
     </div>
   );

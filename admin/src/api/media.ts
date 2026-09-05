@@ -10,7 +10,11 @@ export type MediaFile = {
   extension: string;
   kind: MediaKind | string;
   size: number;
+  original_size: number | null;
   alt: string | null;
+  title: string | null;
+  width: number | null;
+  height: number | null;
   uploaded_by: number | null;
   created_at: string | null;
   updated_at: string | null;
@@ -80,10 +84,11 @@ export function getMediaFile(token: string, id: number) {
 export function uploadMediaFile(
   token: string,
   file: File,
-  options: { signal?: AbortSignal; onProgress?: (percent: number) => void } = {}
+  options: { signal?: AbortSignal; onProgress?: (percent: number) => void; originalSize?: number } = {}
 ) {
   const form = new FormData();
   form.append('file', file);
+  if (options.originalSize !== undefined) form.append('original_size', String(options.originalSize));
 
   return apiUpload<{ files: MediaFile[] }>('/admin/media', {
     token,
@@ -96,7 +101,7 @@ export function uploadMediaFile(
   });
 }
 
-export function updateMediaFile(token: string, id: number, body: { original_name?: string; alt?: string | null }) {
+export function updateMediaFile(token: string, id: number, body: { original_name?: string; alt?: string | null; title?: string | null }) {
   return apiRequest<{ file: MediaFile }>(`/admin/media/${id}`, { method: 'PATCH', token, body }).then((response) => {
     invalidateMediaListCache();
     return response;

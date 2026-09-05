@@ -5,6 +5,7 @@ import { listMediaCached, uploadMediaFile, type MediaFile } from '@/api/media';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { mediaKindLabel, validateMediaFile } from '@/features/media/mediaFile';
+import { prepareImageFiles, useImageCompressionConfirmation } from '@/features/media/useImageCompressionConfirmation';
 import { formatBytes } from '@/lib/format';
 import { toast, toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -108,6 +109,7 @@ export function MediaPickerDialog({
   });
   const [over, setOver] = useState(false);
   const [pending, setPending] = useState<PendingUpload[]>([]);
+  const { ask: askImageCompression, dialog: imageCompressionDialog } = useImageCompressionConfirmation();
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const libraryRef = useRef<HTMLDivElement>(null);
@@ -209,6 +211,13 @@ export function MediaPickerDialog({
   async function uploadAll(incoming: File[]) {
     if (incoming.length === 0) return;
 
+    const originalSizes = new Map<File, number>();
+    const compress = incoming.some((file) => file.type.startsWith('image/')) ? await askImageCompression() : false;
+    incoming = await prepareImageFiles(incoming, compress, (original, prepared) => {
+      toast.info(prepared.size < original.size ? `Размер: ${formatBytes(original.size)} - компресия: ${formatBytes(prepared.size)}` : `Размер: ${formatBytes(original.size)} · Компресия: няма`);
+      originalSizes.set(prepared, original.size);
+    });
+
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     const signal = abortRef.current.signal;
@@ -231,6 +240,7 @@ export function MediaPickerDialog({
 
       try {
         await uploadMediaFile(token, file, {
+          originalSize: originalSizes.get(file) ?? file.size,
           signal,
           onProgress: (progress) => setPending((current) => current.map((item) => item.key === key ? { ...item, progress } : item)),
         });
@@ -421,7 +431,7 @@ export function MediaPickerDialog({
             >
               <ImagePlus className="size-10 text-muted-foreground" aria-hidden />
               <span className="text-lg font-bold">Пуснете файлове тук или изберете от устройството</span>
-              <span className="text-sm text-muted-foreground">До 32 MB на файл{allFiles ? '' : ' · JPEG, PNG, WebP или GIF'}</span>
+              <span className="text-sm text-muted-foreground">До 128 MB на файл{allFiles ? '' : ' · JPEG, PNG, WebP или GIF'}</span>
             </button>
             {pending.length > 0 ? (
               <ul className="mt-4 grid list-none gap-2 p-0" aria-live="polite">
@@ -456,6 +466,7 @@ export function MediaPickerDialog({
             </Button>
           </div>
         </div>
+        {imageCompressionDialog}
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ namespace App\Services\Media;
 use App\Exceptions\ValidationException;
 use App\Models\MediaFile;
 use App\Services\Products\ProductImageStorage;
+use App\Services\Storage\ObjectStorage;
 use Illuminate\Support\Str;
 
 class MediaStorage
@@ -44,25 +45,43 @@ class MediaStorage
     ];
 
     public function __construct(
-        private readonly ProductImageStorage $images = new ProductImageStorage()
+        private readonly ProductImageStorage $images = new ProductImageStorage(),
+        private readonly ObjectStorage $remote = new ObjectStorage()
     ) {
     }
 
     /**
      * @param array<string, mixed> $file
-     * @return array{path: string, mime: string, size: int, extension: string, original_name: string}
+     * @return array{path: string, mime: string, size: int, extension: string, original_name: string, width: int|null, height: int|null}
      */
     public function store(array $file): array
     {
         $original = $this->originalName($file);
         $mime = $this->detectMime($file);
         $extension = $this->extension($original, $mime);
+        [$width, $height] = $this->dimensions((string) $file['tmp_name'], $mime);
 
         if ($this->isBlocked($extension, $mime)) {
             throw new ValidationException(['file' => ['Този тип файл не е разрешен.']]);
         }
 
         $directory = 'uploads/media/' . date('Y/m');
+        if ($this->remote->enabled()) {
+            $filename = $this->remoteFilename($this->safeStem($original), $extension);
+            $relative = $directory . '/' . $filename;
+            $this->remote->put($relative, (string) $file['tmp_name'], $mime);
+
+            return [
+                'path' => $relative,
+                'mime' => $mime,
+                'size' => (int) ($file['size'] ?? filesize((string) $file['tmp_name']) ?: 0),
+                'extension' => $extension,
+                'original_name' => $original,
+                'width' => $width,
+                'height' => $height,
+            ];
+        }
+
         $absoluteDirectory = $this->images->publicRoot() . '/' . $directory;
         $this->images->ensureDirectory($absoluteDirectory, 'file');
 
@@ -87,11 +106,31 @@ class MediaStorage
             'size' => (int) ($file['size'] ?? filesize($target) ?: 0),
             'extension' => $extension,
             'original_name' => $original,
+            'width' => $width,
+            'height' => $height,
         ];
+    }
+
+    /** @return array{0: int|null, 1: int|null} */
+    private function dimensions(string $path, string $mime): array
+    {
+        if (!str_starts_with($mime, 'image/') || !is_file($path)) {
+            return [null, null];
+        }
+
+        $size = @getimagesize($path);
+
+        return is_array($size) && isset($size[0], $size[1]) ? [(int) $size[0], (int) $size[1]] : [null, null];
     }
 
     public function deleteFile(string $relativePath): void
     {
+        if ($this->remote->enabled()) {
+            $this->remote->delete($relativePath);
+
+            return;
+        }
+
         $this->images->deleteFile($relativePath);
     }
 
@@ -183,5 +222,12 @@ class MediaStorage
         }
 
         return $candidate;
+    }
+
+    private function remoteFilename(string $stem, string $extension): string
+    {
+        $suffix = bin2hex(random_bytes(8));
+
+        return $extension === '' ? $stem . '-' . $suffix : $stem . '-' . $suffix . '.' . $extension;
     }
 }

@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
+import { prepareImageFiles, useImageCompressionConfirmation } from '@/features/media/useImageCompressionConfirmation';
 import { AltField, ImageLightbox, ProductImageAsset } from '@/features/products/ProductImagesSection';
 import { toast, toastError } from '@/lib/toast';
+import { formatBytes } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
-const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_BYTES = 128 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
 function isAllowedImage(file: File): boolean {
@@ -28,7 +30,7 @@ function validateFile(file: File): string | null {
   }
 
   if (file.size > MAX_BYTES) {
-    return `${file.name}: най-много 8 MB.`;
+    return `${file.name}: най-много 128 MB.`;
   }
 
   return null;
@@ -58,6 +60,7 @@ export function VariantImageField({
   const [deleting, setDeleting] = useState(false);
   const [lightbox, setLightbox] = useState(false);
   const [picker, setPicker] = useState(false);
+  const { ask: askImageCompression, dialog: imageCompressionDialog } = useImageCompressionConfirmation();
 
   const image = product.variants.find((variant) => variant.id === variantId)?.image ?? null;
 
@@ -94,6 +97,10 @@ export function VariantImageField({
       toast.error(reason);
       return;
     }
+
+    file = (await prepareImageFiles([file], await askImageCompression(), (original, prepared) => {
+      toast.info(prepared.size < original.size ? `Размер: ${formatBytes(original.size)} - компресия: ${formatBytes(prepared.size)}` : `Размер: ${formatBytes(original.size)} · Компресия: няма`);
+    }))[0] ?? file;
 
     abortRef.current?.abort();
     abortRef.current = new AbortController();
@@ -183,7 +190,7 @@ export function VariantImageField({
     <div>
       <LabelWithHelp
         label="Изображение"
-        help="По една снимка на вариант. Качването я записва и в медията. JPEG, PNG или WebP, до 8 MB."
+          help="По една снимка на вариант. Качването я записва и в медията. JPEG, PNG или WebP, до 128 MB."
       />
       {createPortal(
         <input
@@ -289,6 +296,7 @@ export function VariantImageField({
       {lightbox && image ? (
         <ImageLightbox images={[image]} index={0} onIndex={() => {}} onClose={() => setLightbox(false)} />
       ) : null}
+      {imageCompressionDialog}
       {picker ? (
         <MediaPickerDialog
           token={token}

@@ -10,7 +10,7 @@ use App\Services\Products\ProductImageStorage;
 
 class ProductImageValidator
 {
-    private const MAX_BYTES = 8 * 1024 * 1024;
+    private const MAX_BYTES = 128 * 1024 * 1024;
 
     public function __construct(
         private readonly ProductImageStorage $storage = new ProductImageStorage()
@@ -33,7 +33,7 @@ class ProductImageValidator
         }
 
         if ((int) ($file['size'] ?? 0) > self::MAX_BYTES) {
-            throw new ValidationException(['image' => ['Изображението трябва да е най-много 8 MB.']]);
+            throw new ValidationException(['image' => ['Изображението трябва да е най-много 128 MB.']]);
         }
 
         $mime = $this->storage->detectMime($file);

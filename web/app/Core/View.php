@@ -81,7 +81,7 @@ class View
             }
 
             return [
-                'url' => '/' . ltrim((string) $logo->path, '/'),
+                'url' => \App\Resources\StorageUrl::forPath((string) $logo->path),
                 'alt' => trim((string) $logo->alt),
             ];
         } catch (\Throwable) {

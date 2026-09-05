@@ -25,7 +25,7 @@ class Banners
             return null;
         }
 
-        return '/' . ltrim((string) $banner->mediaFile->path, '/');
+        return \App\Resources\StorageUrl::forPath((string) $banner->mediaFile->path);
     }
 
     public static function render(string $slug): void

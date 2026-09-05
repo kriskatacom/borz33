@@ -34,21 +34,6 @@ $siteName = trim((string) ($company['name'] ?? 'Borz33')) ?: 'Borz33';
 ?>
 <footer class="store-footer">
     <div class="store-footer-inner">
-        <section class="store-footer-benefits" aria-label="Предимства на магазина">
-            <div>
-                <span aria-hidden="true"><?= Html::iconSvg('package') ?></span>
-                <p><strong>Доставка с Еконт</strong><small>До удобен офис или личен адрес</small></p>
-            </div>
-            <div>
-                <span aria-hidden="true"><?= Html::iconSvg('badge-check') ?></span>
-                <p><strong>Сигурна поръчка</strong><small>Ясна крайна цена преди завършване</small></p>
-            </div>
-            <div>
-                <span aria-hidden="true"><?= Html::iconSvg('phone') ?></span>
-                <p><strong>Лично отношение</strong><small>Свързваме се с вас при необходимост</small></p>
-            </div>
-        </section>
-
         <div class="store-footer-main">
             <section class="store-footer-brand" aria-labelledby="footer-brand-title">
                 <a class="store-footer-logo" href="/" id="footer-brand-title" aria-label="<?= $footerEscape($company['name'] ?? 'Borz33') ?>, начало">

@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { setCredentials, type AdminUser } from '@/features/auth/authSlice';
 import { UserAvatarField } from '@/features/users/UserAvatarField';
+import { composePhone, defaultPhoneCountry, phoneCountries, splitPhone } from '@/features/users/phoneCountries';
 import { toast, toastError } from '@/lib/toast';
 
 type FormState = {
@@ -111,6 +112,8 @@ export function UserFormPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [phoneCountry, setPhoneCountry] = useState<string>(defaultPhoneCountry);
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(!isNew);
   const [message, setMessage] = useState<string | null>(null);
@@ -136,6 +139,7 @@ export function UserFormPage() {
           return;
         }
         const user = response.data.user;
+        const parsedPhone = splitPhone(user.phone);
         setForm({
           first_name: user.first_name,
           last_name: user.last_name,
@@ -146,6 +150,8 @@ export function UserFormPage() {
           password: '',
           password_confirmation: '',
         });
+        setPhoneCountry(parsedPhone.country);
+        setPhoneNumber(parsedPhone.number);
         setAvatarUrl(user.avatar_url ?? null);
       } catch (error) {
         if (!cancelled) {
@@ -186,7 +192,7 @@ export function UserFormPage() {
       first_name: form.first_name.trim(),
       last_name: form.last_name.trim(),
       email: form.email.trim(),
-      phone: form.phone.trim() === '' ? null : form.phone.trim(),
+      phone: composePhone(phoneCountry, phoneNumber) || null,
       role: form.role,
       is_active: form.is_active,
       ...(form.password
@@ -284,15 +290,17 @@ export function UserFormPage() {
               onChange={(event) => patch('email', event.target.value)}
               error={errors.email}
             />
-            <Field
-              id="phone"
-              label="Телефон"
-              help="По желание. Използва се за връзка и за търсене в списъка."
-              placeholder="+359 88 123 4567"
-              value={form.phone}
-              onChange={(event) => patch('phone', event.target.value)}
-              error={errors.phone}
-            />
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold" htmlFor="phone-number">Телефон</label>
+              <div className="flex min-w-0 rounded-md border border-input bg-background focus-within:border-ring">
+                <select id="phone-country" aria-label="Код на държавата за телефон" className="h-10 max-w-[11rem] shrink-0 border-0 border-r border-input bg-transparent px-2 text-sm text-foreground outline-none" value={phoneCountry} onChange={(event) => setPhoneCountry(event.target.value)}>
+                  {phoneCountries.map(([code, name, dialCode]) => <option key={code} value={dialCode}>{name} ({dialCode})</option>)}
+                </select>
+                <input id="phone-number" type="tel" className="h-10 min-w-0 flex-1 bg-transparent px-3 text-foreground outline-none" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} autoComplete="tel-national" placeholder="88 123 4567" />
+              </div>
+              {errors.phone ? <p className="m-0 text-sm text-destructive">{errors.phone}</p> : null}
+              <p className="m-0 text-xs text-muted-foreground">Кодът и номерът се записват заедно, например +359 88 123 4567.</p>
+            </div>
           </SectionForm>
         </CollapsibleSection>
 
@@ -303,7 +311,7 @@ export function UserFormPage() {
           help={
             isNew
               ? 'Първо запишете профила. След това се отваря тази страница и можете да качите снимка.'
-              : 'Качете файл, вземете от медията или изберете готов аватар. JPEG, PNG или WebP, до 8 MB.'
+              : 'Качете файл, вземете от медията или изберете готов аватар. JPEG, PNG или WebP, до 128 MB.'
           }
         >
           <UserAvatarField

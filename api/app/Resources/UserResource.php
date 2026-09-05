@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Resources;
 
 use App\Models\User;
+use App\Services\Storage\ObjectStorage;
 
 class UserResource
 {
@@ -61,6 +62,6 @@ class UserResource
             return '/assets/' . rawurlencode(substr($path, strlen('assets/')));
         }
 
-        return '/' . $path;
+        return (new ObjectStorage())->publicUrl($path);
     }
 }

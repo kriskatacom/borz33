@@ -1,4 +1,4 @@
-export const MEDIA_MAX_BYTES = 32 * 1024 * 1024;
+export const MEDIA_MAX_BYTES = 128 * 1024 * 1024;
 
 export const BLOCKED_EXTENSIONS = new Set([
   'php',
@@ -64,7 +64,7 @@ export function validateMediaFile(file: File): string | null {
   }
 
   if (file.size > MEDIA_MAX_BYTES) {
-    return `${file.name}: най-много 32 MB.`;
+    return `${file.name}: най-много 128 MB.`;
   }
 
   return null;

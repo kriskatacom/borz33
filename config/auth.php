@@ -11,4 +11,5 @@ return [
     'token_ttl_days' => (int) (getenv('AUTH_TOKEN_TTL_DAYS') ?: 30),
     'password_reset_ttl_minutes' => (int) (getenv('AUTH_PASSWORD_RESET_TTL_MINUTES') ?: 60),
     'admin_public_url' => getenv('ADMIN_PUBLIC_URL') ?: 'http://localhost:3000',
+    'public_url' => getenv('WEB_PUBLIC_URL') ?: 'http://localhost:3000',
 ];

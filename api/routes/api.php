@@ -47,6 +47,8 @@ $router->post('/auth/admin/login/device', [LoginController::class, 'verifyDevice
 $router->post('/auth/admin/login/device/resend', [LoginController::class, 'resendDeviceCodeAdmin']);
 $router->post('/auth/admin/password/forgot', [PasswordResetController::class, 'forgotAdmin']);
 $router->post('/auth/admin/password/reset', [PasswordResetController::class, 'resetAdmin']);
+$router->post('/auth/password/forgot', [PasswordResetController::class, 'forgot']);
+$router->post('/auth/password/reset', [PasswordResetController::class, 'reset']);
 
 $router->get('/auth/me', [SessionController::class, 'show'], [Authenticate::class]);
 $router->post('/auth/logout', [SessionController::class, 'destroy'], [Authenticate::class]);

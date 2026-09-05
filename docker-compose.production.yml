@@ -101,6 +101,13 @@ services:
       STORE_VITE_PUBLIC_ORIGIN: ${STORE_VITE_PUBLIC_ORIGIN:-https://borz33.com}
       DEV_RELOAD_ENABLED: "false"
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://borz33.com,https://www.borz33.com}
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      R2_REGION: ${R2_REGION:-auto}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
       HOST_UID: ${HOST_UID:-1000}
     volumes:
       - .:/var/www

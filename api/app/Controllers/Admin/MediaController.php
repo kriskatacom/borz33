@@ -45,7 +45,8 @@ class MediaController extends Controller
         $stored = [];
 
         foreach ($files as $file) {
-            $stored[] = MediaFileResource::toArray($this->media->store($file));
+            $originalSize = Request::input('original_size');
+            $stored[] = MediaFileResource::toArray($this->media->store($file, is_numeric($originalSize) ? (int) $originalSize : null));
         }
 
         $this->created(

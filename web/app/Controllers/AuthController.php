@@ -11,13 +11,16 @@ use App\Exceptions\ValidationException;
 use App\Services\Auth\EmailVerificationService;
 use App\Services\Auth\DeviceService;
 use App\Services\Auth\LoginService;
+use App\Services\Auth\PasswordResetService;
 use App\Services\Auth\RegisterService;
 use App\Services\Auth\TokenService;
 use App\Validation\DeviceLoginResendValidator;
 use App\Validation\DeviceLoginValidator;
+use App\Validation\ForgotPasswordValidator;
 use App\Validation\LoginValidator;
 use App\Validation\RegisterValidator;
 use App\Validation\ResendVerificationValidator;
+use App\Validation\ResetPasswordValidator;
 use App\Validation\VerifyEmailValidator;
 use Store\Core\StoreAuth;
 
@@ -28,6 +31,9 @@ class AuthController extends Controller
         private readonly LoginValidator $loginValidator = new LoginValidator(),
         private readonly DeviceLoginValidator $deviceValidator = new DeviceLoginValidator(),
         private readonly DeviceLoginResendValidator $resendValidator = new DeviceLoginResendValidator(),
+        private readonly ForgotPasswordValidator $forgotPasswordValidator = new ForgotPasswordValidator(),
+        private readonly ResetPasswordValidator $resetPasswordValidator = new ResetPasswordValidator(),
+        private readonly PasswordResetService $passwordReset = new PasswordResetService(),
         private readonly RegisterService $register = new RegisterService(),
         private readonly RegisterValidator $registerValidator = new RegisterValidator(),
         private readonly EmailVerificationService $emailVerification = new EmailVerificationService(),
@@ -45,6 +51,100 @@ class AuthController extends Controller
         }
 
         $this->authPage();
+    }
+
+    public function showForgotPassword(): never
+    {
+        if (Auth::user() !== null) {
+            $this->redirect('/account');
+        }
+
+        $this->forgotPasswordPage();
+    }
+
+    public function forgotPassword(): never
+    {
+        if (Auth::user() !== null) {
+            $this->redirect('/account');
+        }
+
+        try {
+            $this->assertCsrf();
+            $payload = $this->forgotPasswordValidator->validate([
+                'email' => Request::input('email'),
+            ]);
+            $this->passwordReset->sendResetLink((string) $payload['email']);
+        } catch (ValidationException $exception) {
+            $this->forgotPasswordPage([
+                'email' => (string) Request::input('email', ''),
+                'errors' => $exception->errors(),
+                'message' => $exception->getMessage(),
+                'isError' => true,
+            ]);
+        } catch (AuthException $exception) {
+            $this->forgotPasswordPage([
+                'email' => (string) Request::input('email', ''),
+                'message' => $exception->getMessage(),
+                'isError' => true,
+            ]);
+        }
+
+        $this->forgotPasswordPage([
+            'email' => (string) Request::input('email', ''),
+            'message' => 'Ако този имейл принадлежи на активен профил, изпратихме линк за нова парола.',
+            'isError' => false,
+        ]);
+    }
+
+    public function showResetPassword(): never
+    {
+        if (Auth::user() !== null) {
+            $this->redirect('/account');
+        }
+
+        $this->resetPasswordPage([
+            'email' => (string) Request::query('email', ''),
+            'token' => (string) Request::query('token', ''),
+        ]);
+    }
+
+    public function resetPassword(): never
+    {
+        if (Auth::user() !== null) {
+            $this->redirect('/account');
+        }
+
+        $email = (string) Request::input('email', '');
+        $token = (string) Request::input('token', '');
+
+        try {
+            $this->assertCsrf();
+            $payload = $this->resetPasswordValidator->validate(Request::input());
+            $this->passwordReset->reset($payload);
+        } catch (ValidationException $exception) {
+            $this->resetPasswordPage([
+                'email' => $email,
+                'token' => $token,
+                'errors' => $exception->errors(),
+                'message' => $exception->getMessage(),
+                'isError' => true,
+            ]);
+        } catch (AuthException $exception) {
+            $this->resetPasswordPage([
+                'email' => $email,
+                'token' => $token,
+                'message' => $exception->getMessage(),
+                'isError' => true,
+            ]);
+        }
+
+        $this->resetPasswordPage([
+            'email' => $email,
+            'token' => $token,
+            'message' => 'Паролата е обновена. Вече можете да влезете в профила си.',
+            'isError' => false,
+            'done' => true,
+        ]);
     }
 
     public function login(): never
@@ -344,6 +444,32 @@ class AuthController extends Controller
             'returnTo' => $this->returnPath((string) ($extra['returnTo'] ?? Request::input('return', Request::query('return', '')))),
             'deviceUuid' => StoreAuth::deviceUuid(),
             'deviceName' => StoreAuth::deviceName(),
+        ]);
+    }
+
+    /** @param array<string, mixed> $extra */
+    private function forgotPasswordPage(array $extra = []): never
+    {
+        $this->view('forgot-password', [
+            'title' => 'Забравена парола · Borz33',
+            'email' => $extra['email'] ?? '',
+            'errors' => $extra['errors'] ?? [],
+            'message' => $extra['message'] ?? null,
+            'isError' => $extra['isError'] ?? false,
+        ]);
+    }
+
+    /** @param array<string, mixed> $extra */
+    private function resetPasswordPage(array $extra = []): never
+    {
+        $this->view('reset-password', [
+            'title' => 'Нова парола · Borz33',
+            'email' => $extra['email'] ?? '',
+            'token' => $extra['token'] ?? '',
+            'errors' => $extra['errors'] ?? [],
+            'message' => $extra['message'] ?? null,
+            'isError' => $extra['isError'] ?? false,
+            'done' => $extra['done'] ?? false,
         ]);
     }
 

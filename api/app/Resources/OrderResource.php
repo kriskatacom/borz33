@@ -69,7 +69,7 @@ class OrderResource
                 'qty' => $item->qty,
                 'unit_price' => $item->unit_price,
                 'total' => $item->total,
-                'product_image_url' => $item->product?->frontImage?->path ? '/' . ltrim((string) $item->product->frontImage->path, '/') : null,
+                'product_image_url' => StorageUrl::forPath($item->product?->frontImage?->path),
             ])->values()->all(),
         ]);
     }

@@ -10,7 +10,7 @@ use App\Services\Media\MediaStorage;
 
 class MediaFileValidator
 {
-    private const MAX_BYTES = 32 * 1024 * 1024;
+    private const MAX_BYTES = 128 * 1024 * 1024;
 
     public function __construct(
         private readonly MediaStorage $storage = new MediaStorage()
@@ -23,7 +23,7 @@ class MediaFileValidator
         $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
 
         if ($error === UPLOAD_ERR_INI_SIZE || $error === UPLOAD_ERR_FORM_SIZE) {
-            throw new ValidationException(['file' => ['Файлът трябва да е най-много 32 MB.']]);
+            throw new ValidationException(['file' => ['Файлът трябва да е най-много 128 MB.']]);
         }
 
         if ($error !== UPLOAD_ERR_OK) {
@@ -37,7 +37,7 @@ class MediaFileValidator
         }
 
         if ((int) ($file['size'] ?? 0) > self::MAX_BYTES) {
-            throw new ValidationException(['file' => ['Файлът трябва да е най-много 32 MB.']]);
+            throw new ValidationException(['file' => ['Файлът трябва да е най-много 128 MB.']]);
         }
 
         $name = (string) ($file['name'] ?? '');
@@ -58,9 +58,11 @@ class MediaFileValidator
         $validator = ValidatorFactory::make()->make($data, [
             'original_name' => ['sometimes', 'string', 'max:255'],
             'alt' => ['nullable', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
         ], [], [
             'original_name' => 'име на файла',
             'alt' => 'алтернативен текст',
+            'title' => 'заглавие на изображението',
         ]);
 
         if ($validator->fails()) {

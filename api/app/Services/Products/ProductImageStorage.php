@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace App\Services\Products;
 
 use App\Exceptions\ValidationException;
+use App\Services\Storage\ObjectStorage;
 use Illuminate\Support\Str;
 
 class ProductImageStorage
 {
+    public function __construct(private readonly ObjectStorage $remote = new ObjectStorage())
+    {
+    }
+
     /** @var array<string, string> */
     public const MIME_EXTENSIONS = [
         'image/jpeg' => 'jpg',
@@ -54,6 +59,13 @@ class ProductImageStorage
         }
 
         $directory = trim($directory, '/');
+        if ($this->remote->enabled()) {
+            $relative = $directory . '/' . $this->remoteFilename($this->safeStem($stem), $extension);
+            $this->remote->put($relative, (string) $file['tmp_name'], $mime);
+
+            return ['path' => $relative, 'mime' => $mime];
+        }
+
         $absoluteDirectory = $this->publicRoot() . '/' . $directory;
         $this->ensureDirectory($absoluteDirectory);
 
@@ -77,6 +89,12 @@ class ProductImageStorage
 
     public function deleteFile(string $relativePath): void
     {
+        if ($this->remote->enabled()) {
+            $this->remote->delete($relativePath);
+
+            return;
+        }
+
         $absolute = $this->absolutePath($relativePath);
 
         if (is_file($absolute)) {
@@ -152,6 +170,11 @@ class ProductImageStorage
         }
 
         return $candidate;
+    }
+
+    private function remoteFilename(string $stem, string $extension): string
+    {
+        return $stem . '-' . bin2hex(random_bytes(8)) . '.' . $extension;
     }
 
     /** @param array<string, mixed> $file */

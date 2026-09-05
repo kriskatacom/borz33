@@ -22,7 +22,11 @@ class MediaFile extends Model
         'extension',
         'kind',
         'size',
+        'original_size',
         'alt',
+        'title',
+        'width',
+        'height',
         'uploaded_by',
     ];
 
@@ -30,6 +34,9 @@ class MediaFile extends Model
     {
         return [
             'size' => 'integer',
+            'original_size' => 'integer',
+            'width' => 'integer',
+            'height' => 'integer',
             'uploaded_by' => 'integer',
         ];
     }

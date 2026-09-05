@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,6 +10,7 @@ import {
   FilePenLine,
   FileText,
   Film,
+  Check,
   ImagePlus,
   Music,
   Trash2,
@@ -37,6 +38,7 @@ import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MediaLightbox } from '@/features/media/MediaLightbox';
 import { mediaKindLabel, validateMediaFile } from '@/features/media/mediaFile';
+import { prepareImageFiles, useImageCompressionConfirmation } from '@/features/media/useImageCompressionConfirmation';
 import { formatBytes, formatDateTime } from '@/lib/format';
 import { toast, toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -112,12 +114,17 @@ export function MediaPage() {
   const [over, setOver] = useState(false);
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [confirm, setConfirm] = useState<MediaFile | null>(null);
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [details, setDetails] = useState<MediaFile | null>(null);
   const [detailName, setDetailName] = useState('');
   const [detailAlt, setDetailAlt] = useState('');
+  const [detailTitle, setDetailTitle] = useState('');
+  const [detailDimensions, setDetailDimensions] = useState<{ width: number; height: number } | null>(null);
   const [savingDetails, setSavingDetails] = useState(false);
+  const { ask: askImageCompression, dialog: imageCompressionDialog } = useImageCompressionConfirmation();
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -134,6 +141,13 @@ export function MediaPage() {
   );
 
   const previewFiles = preview ? files.filter((file) => file.kind === preview.kind) : [];
+  const detailWidth = details?.width ?? detailDimensions?.width ?? null;
+  const detailHeight = details?.height ?? detailDimensions?.height ?? null;
+  const allVisibleSelected = files.length > 0 && files.every((file) => selectedIds.has(file.id));
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filters]);
 
   function updateParams(next: Record<string, string>, resetPage = true) {
     const merged = new URLSearchParams(params);
@@ -215,6 +229,13 @@ export function MediaPage() {
       return;
     }
 
+    const originalSizes = new Map<File, number>();
+    const compress = selected.some((file) => file.type.startsWith('image/')) ? await askImageCompression() : false;
+    selected = await prepareImageFiles(selected, compress, (original, prepared) => {
+      toast.info(prepared.size < original.size ? `Размер: ${formatBytes(original.size)} - компресия: ${formatBytes(prepared.size)}` : `Размер: ${formatBytes(original.size)} · Компресия: няма`);
+      originalSizes.set(prepared, original.size);
+    });
+
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     const signal = abortRef.current.signal;
@@ -231,6 +252,7 @@ export function MediaPage() {
 
       try {
         const response = await uploadMediaFile(token, file, {
+          originalSize: originalSizes.get(file) ?? file.size,
           signal,
           onProgress: (percent) => {
             setPending((current) => current.map((item) => (item.key === key ? { ...item, progress: percent } : item)));
@@ -280,10 +302,64 @@ export function MediaPage() {
     }
   }
 
+  function toggleSelected(id: number) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleAllVisible() {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        files.forEach((file) => next.delete(file.id));
+      } else {
+        files.forEach((file) => next.add(file.id));
+      }
+      return next;
+    });
+  }
+
+  async function onDeleteMany() {
+    const ids = files.filter((file) => selectedIds.has(file.id)).map((file) => file.id);
+    if (ids.length === 0) {
+      return;
+    }
+
+    setDeleting(true);
+    const results = await Promise.allSettled(ids.map((id) => deleteMediaFile(token, id)));
+    const deleted = results.filter((result) => result.status === 'fulfilled').length;
+    const failed = results.length - deleted;
+
+    setDeleting(false);
+    setBulkConfirm(false);
+    setSelectedIds(new Set());
+
+    if (deleted > 0) {
+      toast.success(failed > 0 ? `${deleted} файла са изтрити. ${failed} не можаха да бъдат изтрити.` : `${deleted} файла са изтрити.`);
+    } else {
+      toast.error('Избраните файлове не можаха да бъдат изтрити.');
+    }
+
+    try {
+      await reload();
+    } catch (error) {
+      toastError(error, 'Списъкът не можа да се обнови.');
+    }
+  }
+
   function openDetails(file: MediaFile) {
     setDetails(file);
     setDetailName(file.original_name);
     setDetailAlt(file.alt ?? '');
+    setDetailTitle(file.title ?? '');
+    setDetailDimensions(file.width && file.height ? { width: file.width, height: file.height } : null);
   }
 
   async function onSaveDetails(event: FormEvent) {
@@ -298,6 +374,7 @@ export function MediaPage() {
       const response = await updateMediaFile(token, details.id, {
         original_name: detailName.trim() === '' ? details.original_name : detailName.trim(),
         alt: detailAlt.trim() === '' ? null : detailAlt.trim(),
+        title: detailTitle.trim() === '' ? null : detailTitle.trim(),
       });
       const next = response.data.file;
       openDetails(next);
@@ -385,7 +462,7 @@ export function MediaPage() {
       >
         <ImagePlus className="size-6 text-muted-foreground" aria-hidden />
         <span className="font-bold">Пуснете файлове тук или изберете</span>
-        <span className="text-sm text-muted-foreground">До 32 MB на файл. PHP, HTML и изпълними файлове не се приемат.</span>
+        <span className="text-sm text-muted-foreground">До 128 MB на файл. PHP, HTML и изпълними файлове не се приемат.</span>
       </button>
 
       {pending.length > 0 ? (
@@ -434,6 +511,24 @@ export function MediaPage() {
         </div>
       </form>
 
+      {files.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[6px] border border-border bg-card px-3 py-2">
+          <Button type="button" variant="outline" size="sm" disabled={busy || deleting} onClick={toggleAllVisible}>
+            {allVisibleSelected ? <Check /> : null}
+            {allVisibleSelected ? 'Премахни избора' : 'Избери всички на страницата'}
+          </Button>
+          {selectedIds.size > 0 ? (
+            <>
+              <span className="font-sans text-sm text-muted-foreground">Избрани: {selectedIds.size}</span>
+              <Button type="button" variant="destructive" size="sm" disabled={busy || deleting} onClick={() => setBulkConfirm(true)}>
+                <Trash2 />
+                Изтрий избраните
+              </Button>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
       {message ? (
         <p className="form-message is-error" role="alert">
           {message}
@@ -445,7 +540,17 @@ export function MediaPage() {
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {files.map((file) => (
-            <article key={file.id} className="overflow-hidden rounded-[6px] border border-border bg-card">
+            <article key={file.id} className={cn('relative overflow-hidden rounded-[6px] border border-border bg-card', selectedIds.has(file.id) && 'ring-2 ring-primary')}>
+              <label className="absolute top-2 left-2 z-10 flex size-8 cursor-pointer items-center justify-center rounded-[6px] border border-border bg-card/95 shadow-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-primary"
+                  checked={selectedIds.has(file.id)}
+                  disabled={deleting}
+                  aria-label={`Избери ${file.original_name}`}
+                  onChange={() => toggleSelected(file.id)}
+                />
+              </label>
               <button
                 type="button"
                 className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-muted p-0"
@@ -568,6 +673,8 @@ export function MediaPage() {
         />
       ) : null}
 
+      {imageCompressionDialog}
+
       {details ? (
         <div className="dialog-root">
           <button type="button" className="dialog-backdrop" aria-label="Затвори" onClick={() => setDetails(null)} />
@@ -577,6 +684,14 @@ export function MediaPage() {
               <img
                 src={details.url}
                 alt={details.alt || details.original_name}
+                title={details.title || details.original_name}
+                width={detailWidth ?? undefined}
+                height={detailHeight ?? undefined}
+                onLoad={(event) => {
+                  if (!detailWidth || !detailHeight) {
+                    setDetailDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight });
+                  }
+                }}
                 className="mb-3 max-h-48 w-full rounded-[6px] object-contain"
               />
             ) : null}
@@ -597,10 +712,40 @@ export function MediaPage() {
                   onChange={(event) => setDetailAlt(event.target.value)}
                 />
               ) : null}
-              <p className="m-0 font-sans text-sm text-muted-foreground">
-                {mediaKindLabel(details.kind)} · {formatBytes(details.size)} · {details.mime}
-                {details.created_at ? ` · ${formatDateTime(details.created_at)}` : ''}
-              </p>
+              {details.kind === 'image' ? (
+                <Field
+                  id="title"
+                  label="Заглавие (title)"
+                  help="Заглавие за SEO и атрибута title на изображението."
+                  value={detailTitle}
+                  onChange={(event) => setDetailTitle(event.target.value)}
+                />
+              ) : null}
+              <div className="grid gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground sm:grid-cols-2">
+                <div><strong className="text-foreground">Тип:</strong> {mediaKindLabel(details.kind)}</div>
+                <div><strong className="text-foreground">Размер:</strong> {details.original_size && details.original_size > details.size ? `${formatBytes(details.original_size)} - компресия: ${formatBytes(details.size)}` : `${formatBytes(details.size)} · Компресия: няма`}</div>
+                <div><strong className="text-foreground">MIME:</strong> {details.mime}</div>
+                <div><strong className="text-foreground">Разширение:</strong> .{details.extension}</div>
+                {details.kind === 'image' ? <div><strong className="text-foreground">Размери:</strong> {detailWidth && detailHeight ? `${detailWidth} × ${detailHeight} px` : 'Не е налично'}</div> : null}
+                <div><strong className="text-foreground">Качен:</strong> {details.created_at ? formatDateTime(details.created_at) : 'Не е налично'}</div>
+                <div><strong className="text-foreground">Актуализиран:</strong> {details.updated_at ? formatDateTime(details.updated_at) : 'Не е налично'}</div>
+                <div>
+                  <strong className="text-foreground">Качил потребител:</strong>{' '}
+                  {details.uploaded_by ? (
+                    <Link className="font-semibold text-primary underline-offset-2 hover:underline" to={`/users/${details.uploaded_by}`}>
+                      Виж профила
+                    </Link>
+                  ) : (
+                    'Не е налично'
+                  )}
+                </div>
+              </div>
+              {details.kind === 'image' ? (
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">HTML атрибути</p>
+                  <code className="block break-all whitespace-pre-wrap text-xs text-foreground">{`alt="${details.alt ?? ''}" title="${details.title ?? ''}"${detailWidth ? ` width="${detailWidth}"` : ''}${detailHeight ? ` height="${detailHeight}"` : ''} loading="lazy" decoding="async"`}</code>
+                </div>
+              ) : null}
               <div className="mt-1 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="outline" onClick={() => void copyUrl(details)}>
@@ -631,6 +776,18 @@ export function MediaPage() {
           busy={deleting}
           onConfirm={() => void onDelete()}
           onCancel={() => setConfirm(null)}
+        />
+      ) : null}
+
+      {bulkConfirm ? (
+        <ConfirmDialog
+          title="Изтриване на избрани файлове"
+          message={`Да изтрием ли избраните ${selectedIds.size} файла?`}
+          description="Файловете, които се използват от банер, продукт или профил, ще бъдат пропуснати и ще останат в медията."
+          confirmLabel="Изтрий избраните"
+          busy={deleting}
+          onConfirm={() => void onDeleteMany()}
+          onCancel={() => setBulkConfirm(false)}
         />
       ) : null}
     </div>

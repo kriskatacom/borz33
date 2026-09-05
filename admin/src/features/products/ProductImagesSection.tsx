@@ -31,12 +31,13 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { MediaPickerDialog } from '@/features/media/MediaPickerDialog';
+import { prepareImageFiles, useImageCompressionConfirmation } from '@/features/media/useImageCompressionConfirmation';
 import { formatBytes } from '@/lib/format';
 import { toast, toastError } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
-const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_BYTES = 128 * 1024 * 1024;
 const DRAG_IMAGE_ID = 'application/x-borz-image-id';
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
@@ -69,7 +70,7 @@ function validateFile(file: File): string | null {
   }
 
   if (file.size > MAX_BYTES) {
-    return `${file.name}: най-много 8 MB.`;
+    return `${file.name}: най-много 128 MB.`;
   }
 
   return null;
@@ -118,6 +119,7 @@ export function ProductImagesEditor({
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
   const [picker, setPicker] = useState<'front' | 'gallery' | null>(null);
+  const { ask: askImageCompression, dialog: imageCompressionDialog } = useImageCompressionConfirmation();
 
   const pendingFront = pending.find((item) => item.target === 'front');
   const pendingGallery = pending.filter((item) => item.target === 'gallery');
@@ -158,7 +160,7 @@ export function ProductImagesEditor({
     }
   }
 
-  function enqueue(files: File[], target: 'front' | 'gallery') {
+  async function enqueue(files: File[], target: 'front' | 'gallery') {
     const accepted: File[] = [];
     const errors: string[] = [];
 
@@ -178,6 +180,11 @@ export function ProductImagesEditor({
     if (accepted.length === 0) {
       return;
     }
+
+    const compressed = await prepareImageFiles(accepted, await askImageCompression(), (original, prepared) => {
+      toast.info(prepared.size < original.size ? `Размер: ${formatBytes(original.size)} - компресия: ${formatBytes(prepared.size)}` : `Размер: ${formatBytes(original.size)} · Компресия: няма`);
+    });
+    accepted.splice(0, accepted.length, ...compressed);
 
     let frontFile: File | null = null;
     let galleryFiles = accepted;
@@ -491,7 +498,7 @@ export function ProductImagesEditor({
       <div>
         <LabelWithHelp
           label="Предно изображение"
-          help="Показва се в списъка и като основна снимка. Качването записва файла и в медията. JPEG, PNG или WebP, до 8 MB."
+          help="Показва се в списъка и като основна снимка. Качването записва файла и в медията. JPEG, PNG или WebP, до 128 MB."
         />
         <div
           className={cn(
@@ -692,6 +699,8 @@ export function ProductImagesEditor({
           onClose={() => setPicker(null)}
         />
       ) : null}
+
+      {imageCompressionDialog}
 
       {lightbox !== null && viewerImages[lightbox] ? (
         <ImageLightbox
