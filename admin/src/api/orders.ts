@@ -63,6 +63,7 @@ export type AdminOrder = OrderListItem & {
 
 export type OrderFilters = {
   q?: string;
+  user_id?: number;
   status?: string;
   delivery_method?: string;
   payment_method?: string;

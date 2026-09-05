@@ -110,6 +110,7 @@ $router->post('/admin/messages/{id}/replies', [MessagesController::class, 'reply
 $router->get('/admin/reports', [ReportsController::class, 'index'], $admin);
 $router->post('/admin/reports', [ReportsController::class, 'store'], $admin);
 $router->get('/admin/accounting', [AccountingController::class, 'dashboard'], $admin);
+$router->get('/admin/accounting/audit-log', [AccountingController::class, 'auditLog'], $admin);
 $router->get('/admin/accounting/reports/{type}', [AccountingController::class, 'report'], $admin);
 $router->get('/admin/accounting/export/{type}/{format}', [AccountingController::class, 'export'], $admin);
 $router->post('/admin/accounting/transactions', [AccountingController::class, 'transaction'], $admin);

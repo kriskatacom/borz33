@@ -45,6 +45,7 @@ export function CategoriesPage() {
   const [acting, setActing] = useState(false);
   const [treeTick, setTreeTick] = useState(0);
   const [bulkParent, setBulkParent] = useState('none');
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   useGlobalLoading(busy);
 
   const filters = useMemo(
@@ -220,17 +221,10 @@ export function CategoriesPage() {
           { label: 'Табло', to: routes.home },
           { label: 'Категории' },
         ]}
-        actions={
-          <Button asChild>
-            <Link to={routes.categoriesNew}>
-              <FolderPlus />
-              Нова категория
-            </Link>
-          </Button>
-        }
+        actions={<><Button type="button" variant="outline" onClick={() => setFilterDialogOpen(true)}>Филтри (3)</Button><Button asChild><Link to={routes.categoriesNew}><FolderPlus />Нова категория</Link></Button></>}
       />
 
-      <form className="filters" onSubmit={(event) => event.preventDefault()}>
+      {filterDialogOpen ? <div className="dialog-root"><button type="button" className="dialog-backdrop" aria-label="Затвори филтрите" onClick={() => setFilterDialogOpen(false)} /><div className="dialog dialog-wide catalog-filters-dialog" role="dialog" aria-modal="true" aria-labelledby="categories-filters-title"><header className="orders-filters-dialog-header"><h2 id="categories-filters-title">Филтри на категориите</h2><Button type="button" variant="ghost" size="icon" aria-label="Затвори филтрите" onClick={() => setFilterDialogOpen(false)}>×</Button></header><form className="filters catalog-filters catalog-category-filters" onSubmit={(event) => event.preventDefault()}>
         <Field
           id="q"
           label="Търсене"
@@ -269,7 +263,7 @@ export function CategoriesPage() {
           ]}
           onValueChange={(value) => updateParams({ parent: value === 'all' ? '' : value })}
         />
-      </form>
+      </form></div></div> : null}
 
       {message ? (
         <p className="form-message is-error" role="alert">

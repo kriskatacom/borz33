@@ -29,6 +29,7 @@ class OrderAdminService
         $status = trim((string) ($filters['status'] ?? ''));
         $dateFrom = trim((string) ($filters['date_from'] ?? ''));
         $dateTo = trim((string) ($filters['date_to'] ?? ''));
+        $userId = (int) ($filters['user_id'] ?? 0);
 
         if ($search !== '') {
             foreach (preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $term) {
@@ -44,6 +45,10 @@ class OrderAdminService
 
         if ($status !== '' && $status !== 'all' && in_array($status, self::STATUSES, true)) {
             $query->where('status', $status);
+        }
+
+        if ($userId > 0) {
+            $query->where('user_id', $userId);
         }
 
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom) === 1) {

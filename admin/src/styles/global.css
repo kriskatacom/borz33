@@ -1103,13 +1103,13 @@ a.stat-card {
 .dashboard-empty { margin: 0; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--cream); color: var(--muted-foreground); text-align: center; }
 
 .stat-card.accent {
-  background: var(--coral);
-  color: #fff;
-  border-color: transparent;
+  background: var(--cream);
+  color: inherit;
+  border-color: var(--line);
 }
 
 .stat-card.accent p {
-  color: rgb(255 255 255 / 75%);
+  color: var(--muted-foreground);
 }
 
 .section-label {
@@ -1878,6 +1878,11 @@ a.stat-card {
 .accounting-table-wrap td{background:var(--card);color:var(--card-foreground)}
 .accounting-kpis svg,.accounting-section-title>svg{color:var(--forest)}
 .accounting-page .field>label,.accounting-page .field label{color:var(--foreground)}
+.accounting-filters> *{min-width:0}
+.accounting-filters{column-gap:1rem}
+@media(max-width:1300px){.accounting-filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:800px){.accounting-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.accounting-filters{grid-template-columns:minmax(0,1fr)}}
 .accounting-page [data-slot="select-trigger"]{background:var(--field);color:var(--foreground);border-color:var(--input)}
 .accounting-guide-intro,.accounting-guide-checklist{background:color-mix(in srgb,var(--card) 82%,var(--muted));color:var(--card-foreground)}
 .accounting-guide-section{background:var(--card);color:var(--card-foreground)}
@@ -1996,3 +2001,37 @@ a.stat-card {
 .admin-assistant-answer-row{display:flex;align-items:flex-start;gap:.5rem}.admin-assistant-answer-row .admin-assistant-answer{min-width:0;flex:1}.admin-assistant-speech{flex:none}
 /* Accounting report pagination */
 .accounting-pagination{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:.75rem 1rem;border-top:1px solid var(--border);font-size:.9rem}.accounting-pagination label{display:flex;align-items:center;gap:.5rem}.accounting-pagination select{min-height:2.25rem;border:1px solid var(--input);border-radius:6px;background:var(--field);color:var(--foreground);padding:.25rem .5rem}.accounting-pagination nav{display:flex;align-items:center;gap:.35rem}.accounting-pagination nav button{min-width:2.25rem}
+.accounting-payment-entry{grid-column:1 / -1}
+.accounting-final-sections{grid-template-columns:1fr}
+.accounting-page .accounting-final-sections{grid-template-columns:minmax(0,1fr)}
+.media-url-block{display:flex;align-items:center;gap:.25rem;min-width:0;padding:.4rem .5rem;border-top:1px solid var(--border);background:color-mix(in srgb,var(--card) 92%,var(--muted))}
+.media-url{min-width:0;flex:1;overflow:hidden;color:var(--primary);font-family:var(--font-sans);font-size:.7rem;line-height:1.25;text-overflow:ellipsis;white-space:nowrap;text-decoration:none}
+.media-url:hover{text-decoration:underline}
+.media-url-actions{display:flex;flex:none;gap:.1rem}
+.media-url-actions [data-slot="button"]{width:1.75rem;height:1.75rem;padding:0}
+.orders-filters-dialog{max-height:calc(100% - 32px);overflow:auto}
+.orders-filters-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem}
+.orders-filters-dialog-header h2{margin:0}
+.orders-filters-dialog .filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:0}
+.document-filters-dialog{max-height:calc(100% - 32px);overflow:auto}
+.document-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:0}
+.catalog-filters-dialog{max-height:calc(100% - 32px);overflow:auto}
+.catalog-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:0}
+.catalog-category-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:560px){.catalog-filters{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.orders-filters-dialog .filters,.document-filters{grid-template-columns:minmax(0,1fr)}}
+.accounting-filters{grid-template-columns:minmax(0,1fr);gap:1rem}
+.accounting-filter-section{display:grid;gap:.75rem;padding:1rem;border:1px solid var(--border);background:color-mix(in srgb,var(--card) 92%,var(--muted))}
+.accounting-filter-section h3{grid-column:1 / -1;margin:0;font-size:1rem;color:var(--card-foreground)}
+.accounting-filter-period{grid-template-columns:repeat(2,minmax(0,1fr))}
+.accounting-filter-options{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:900px){.accounting-filter-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.accounting-filter-period,.accounting-filter-options{grid-template-columns:minmax(0,1fr)}}
+.accounting-closures-list{margin-top:1rem}
+.accounting-audit-dialog{max-height:calc(100% - 32px);overflow:auto}
+.accounting-audit-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem}
+.accounting-audit-header h2{margin:0 0 .35rem}
+.accounting-audit-header p{margin:0;color:var(--muted-foreground)}
+.accounting-collapsible-panel .accounting-panel{border:0;padding:0;margin:0;background:transparent}
+.accounting-collapsible-panel .accounting-section-title{display:none}
+.accounting-two-col>.accounting-payment-entry{grid-column:1 / -1}

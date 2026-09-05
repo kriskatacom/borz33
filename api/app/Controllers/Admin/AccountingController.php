@@ -11,7 +11,8 @@ use App\Services\Accounting\AccountingService;
 final class AccountingController extends Controller
 {
     public function __construct(private readonly AccountingService $accounting=new AccountingService(),private readonly AccountingExportService $exports=new AccountingExportService()){}
-    public function dashboard(): never { $data=$this->accounting->dashboard(Request::query());$data['audit_log']=$this->accounting->auditLog();$this->ok($data); }
+    public function dashboard(): never { $this->ok($this->accounting->dashboard(Request::query())); }
+    public function auditLog(): never { $this->ok(['audit_log'=>$this->accounting->auditLog()]); }
     public function report(string $type): never { $this->ok($this->accounting->report($type,Request::query())); }
     public function transaction(): never { $this->created(['transaction'=>$this->accounting->createTransaction(Request::input())->toArray()],'Операцията е записана.'); }
     public function reconcile(): never { $this->ok(['reconciliation'=>$this->accounting->reconcileEcont(Request::input())->toArray()],'Econt данните са сверени.'); }

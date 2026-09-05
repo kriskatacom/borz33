@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Copy,
   Download,
+  ExternalLink,
   File,
   FilePenLine,
   FileText,
@@ -100,6 +101,14 @@ function getPageItems(page: number, lastPage: number): Array<number | 'ellipsis'
   items.push(lastPage);
 
   return items;
+}
+
+function mediaUrl(file: MediaFile): string {
+  return new URL(file.url, window.location.origin).href;
+}
+
+function shortenedUrl(url: string): string {
+  return url.length > 72 ? `${url.slice(0, 38)}…${url.slice(-28)}` : url;
 }
 
 export function MediaPage() {
@@ -389,7 +398,7 @@ export function MediaPage() {
 
   async function copyUrl(file: MediaFile) {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}${file.url}`);
+      await navigator.clipboard.writeText(mediaUrl(file));
       toast.success('Адресът е копиран.');
     } catch {
       toast.error('Адресът не можа да се копира.');
@@ -567,6 +576,13 @@ export function MediaPage() {
                   </span>
                 ) : null}
               </button>
+              <div className="media-url-block">
+                <a className="media-url" href={mediaUrl(file)} target="_blank" rel="noreferrer" title={mediaUrl(file)}>{shortenedUrl(mediaUrl(file))}</a>
+                <div className="media-url-actions">
+                  <Button type="button" size="icon" variant="ghost" aria-label="Копирай адреса на файла" onClick={() => void copyUrl(file)}><Copy /></Button>
+                  <Button type="button" size="icon" variant="ghost" asChild aria-label="Отвори адреса на файла в нов раздел"><a href={mediaUrl(file)} target="_blank" rel="noreferrer"><ExternalLink /></a></Button>
+                </div>
+              </div>
               <div className="grid gap-1 p-2">
                 <button
                   type="button"

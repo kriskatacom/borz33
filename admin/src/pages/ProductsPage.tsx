@@ -39,6 +39,7 @@ export function ProductsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingProductAction | null>(null);
   const [acting, setActing] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [revision, setRevision] = useState(0);
   useGlobalLoading(busy);
 
@@ -178,10 +179,10 @@ export function ProductsPage() {
           { label: 'Табло', to: routes.home },
           { label: 'Продукти' },
         ]}
-        actions={<div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link to={routes.productTemplates}><CopyPlus />Шаблони</Link></Button><Button asChild><Link to={routes.productsNew}><Plus />Нов продукт</Link></Button></div>}
+        actions={<div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => setFilterDialogOpen(true)}>Филтри (4)</Button><Button asChild variant="outline"><Link to={routes.productTemplates}><CopyPlus />Шаблони</Link></Button><Button asChild><Link to={routes.productsNew}><Plus />Нов продукт</Link></Button></div>}
       />
 
-      <form className="filters" onSubmit={(event) => event.preventDefault()}>
+      {filterDialogOpen ? <div className="dialog-root"><button type="button" className="dialog-backdrop" aria-label="Затвори филтрите" onClick={() => setFilterDialogOpen(false)} /><div className="dialog dialog-wide catalog-filters-dialog" role="dialog" aria-modal="true" aria-labelledby="products-filters-title"><header className="orders-filters-dialog-header"><h2 id="products-filters-title">Филтри на продуктите</h2><Button type="button" variant="ghost" size="icon" aria-label="Затвори филтрите" onClick={() => setFilterDialogOpen(false)}>×</Button></header><form className="filters catalog-filters" onSubmit={(event) => event.preventDefault()}>
         <Field
           id="q"
           label="Търсене"
@@ -236,7 +237,7 @@ export function ProductsPage() {
             </SelectContent>
           </Select>
         </div>
-      </form>
+      </form></div></div> : null}
 
       {message ? (
         <p className="form-message is-error" role="alert">
