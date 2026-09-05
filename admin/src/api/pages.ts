@@ -21,7 +21,7 @@ export type PageListItem = {
   slug: string;
   parent_id: number | null;
   parent: { id: number; title: string; slug: string } | null;
-  page_template_id: number;
+  page_template_id?: number;
   page_template: { id: number; name: string; slug: string } | null;
   is_active: boolean;
   sort_order: number;
@@ -78,7 +78,7 @@ export type PagePayload = {
   title: string;
   slug?: string | null;
   parent_id?: number | null;
-  page_template_id: number;
+  page_template_id?: number;
   is_active: boolean;
   sort_order?: number;
   content?: string | null;

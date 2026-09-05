@@ -175,7 +175,7 @@ class PageAdminService
                 'title' => $data['title'],
                 'slug' => $slug,
                 'parent_id' => $this->resolvedParentId($data['parent_id'] ?? null, null),
-                'page_template_id' => (int) $data['page_template_id'],
+                'page_template_id' => isset($data['page_template_id']) ? (int) $data['page_template_id'] : null,
                 'is_active' => (bool) $data['is_active'],
                 'sort_order' => (int) ($data['sort_order'] ?? 0),
                 'content' => $this->sanitizeContent($data['content'] ?? null),
@@ -209,7 +209,9 @@ class PageAdminService
         }
 
         if (array_key_exists('page_template_id', $data)) {
-            $attributes['page_template_id'] = (int) $data['page_template_id'];
+            $attributes['page_template_id'] = $data['page_template_id'] === null
+                ? null
+                : (int) $data['page_template_id'];
         }
 
         if (array_key_exists('sort_order', $data)) {

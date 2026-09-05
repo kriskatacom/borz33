@@ -282,10 +282,6 @@ export function PageFormPage() {
       .then((response) => {
         if (cancelled) return;
         setTemplates(response.data.templates);
-        if (isNew) {
-          const preferred = response.data.templates.find((template) => template.is_default) ?? response.data.templates[0];
-          if (preferred) setForm((current) => ({ ...current, page_template_id: String(preferred.id) }));
-        }
       })
       .catch((error) => {
         if (!cancelled) toastError(error, 'Шаблоните не можаха да се заредят.');
@@ -299,7 +295,7 @@ export function PageFormPage() {
       title: page.title,
       slug: page.slug,
       parent_id: page.parent_id ? String(page.parent_id) : 'none',
-      page_template_id: String(page.page_template_id),
+      page_template_id: page.page_template_id ? String(page.page_template_id) : '',
       is_active: page.is_active,
       sort_order: String(page.sort_order),
       content: page.content ?? '',
@@ -336,7 +332,7 @@ export function PageFormPage() {
       title: form.title.trim(),
       slug: form.slug.trim() === '' ? null : form.slug.trim(),
       parent_id: form.parent_id === 'none' ? null : Number(form.parent_id),
-      page_template_id: Number(form.page_template_id),
+      ...(form.page_template_id ? { page_template_id: Number(form.page_template_id) } : {}),
       is_active: form.is_active,
       sort_order: Math.max(0, Number.parseInt(form.sort_order, 10) || 0),
       content: form.content.trim() === '' || form.content === '<p></p>' ? null : form.content,
@@ -402,12 +398,14 @@ export function PageFormPage() {
           { label: isNew ? title : form.title.trim() || title },
         ]}
         actions={
-          <Button asChild variant="outline">
-            <Link to={routes.pages}>
-              <ArrowLeft />
-              Към списъка
-            </Link>
-          </Button>
+          <>
+            <Button asChild variant="outline">
+              <Link to={routes.pages}>
+                <ArrowLeft />
+                Към списъка
+              </Link>
+            </Button>
+          </>
         }
       />
 
@@ -465,17 +463,18 @@ export function PageFormPage() {
                 <LabelWithHelp
                   htmlFor="page_template_id"
                   label="Шаблон"
-                  help="Шаблонът определя подредбата на публичната страница. Всяка страница има точно един шаблон."
+                  help="По желание изберете шаблон за подредбата на публичната страница. Без шаблон се използва стандартният изглед."
                 />
                 <Select
                   key={`${templates.length}:${form.page_template_id}`}
                   value={form.page_template_id || undefined}
-                  onValueChange={(value) => patchForm('page_template_id', value)}
+                  onValueChange={(value) => patchForm('page_template_id', value === 'none' ? '' : value)}
                 >
                   <SelectTrigger id="page_template_id" className="w-full min-h-12 font-sans" aria-invalid={errors.page_template_id ? 'true' : undefined}>
                     <SelectValue placeholder="Изберете шаблон" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Без шаблон</SelectItem>
                     {templates.map((template) => (
                       <SelectItem key={template.id} value={String(template.id)}>
                         {template.name}{template.is_default ? ' · по подразбиране' : ''}

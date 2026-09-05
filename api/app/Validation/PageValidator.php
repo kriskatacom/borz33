@@ -117,7 +117,7 @@ class PageValidator
             ],
             'is_active' => ['required', 'boolean'],
             'parent_id' => ['nullable', 'integer', 'min:1', $parentExists],
-            'page_template_id' => ['required', 'integer', 'min:1', Rule::exists('page_templates', 'id')],
+            'page_template_id' => ['nullable', 'integer', 'min:1', Rule::exists('page_templates', 'id')],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'content' => ['nullable', 'string'],
             'meta_title' => ['nullable', 'string', 'max:191'],

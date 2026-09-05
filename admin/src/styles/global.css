@@ -1380,6 +1380,7 @@ a.stat-card {
 .banner-preview-banner.is-overlay .banner-preview-actions span { border-color: #fff; background: #fff; color: #171717; }
 .banner-preview-banner.is-overlay .banner-preview-actions span.is-ghost { background: transparent; color: #fff; }
 .banner-preview-note { margin: 0; padding: 11px 14px; border-top: 1px solid var(--line); color: var(--muted-foreground); font-size: .7rem; line-height: 1.45; }
+
 .report-generator { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding: 18px; border: 1px solid var(--line); background: var(--cream); }
 .report-generator > div:first-child { display: flex; align-items: flex-start; gap: 12px; max-width: 46rem; }
 .report-generator > div:first-child > span { display: grid; width: 2.6rem; height: 2.6rem; flex-shrink: 0; place-items: center; border-radius: 50%; background: var(--accent); color: var(--forest); }
