@@ -6,7 +6,9 @@ namespace App\Services\Products;
 
 use App\Exceptions\AuthException;
 use App\Models\Category;
+use App\Models\ProductColorSuggestion;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use App\Validation\ProductImageValidator;
 
 final class ProductAiService
@@ -121,6 +123,91 @@ final class ProductAiService
         }
 
         return $this->generate($files);
+    }
+
+    public function suggestColorForVariant(ProductVariant $variant): ProductColorSuggestion
+    {
+        if (($this->config['product_color_enabled'] ?? false) !== true) {
+            throw new AuthException('AI предложенията за цвят са изключени от конфигурацията.', 503);
+        }
+
+        $image = $variant->image()->first();
+        if ($image === null) {
+            throw new AuthException('Добавете изображение към варианта преди AI анализа.', 422);
+        }
+
+        $path = (new ProductImageStorage())->absolutePath((string) $image->path);
+        $apiKey = trim((string) $this->config['api_key']);
+        if ($apiKey === '') {
+            throw new AuthException('OpenAI не е конфигуриран. Добавете OPENAI_API_KEY в средата на backend услугата.', 503);
+        }
+
+        $imageInput = null;
+        if (is_file($path)) {
+            $bytes = file_get_contents($path);
+            if ($bytes === false) {
+                throw new AuthException('Изображението не можа да бъде прочетено.', 422);
+            }
+            $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($path) ?: 'image/jpeg';
+            $imageInput = 'data:' . $mime . ';base64,' . base64_encode($bytes);
+        } else {
+            $imageInput = \App\Resources\StorageUrl::forPath((string) $image->path);
+            if (!is_string($imageInput) || !str_starts_with($imageInput, 'https://')) {
+                throw new AuthException('Изображението на варианта липсва или не е достъпно за AI анализа.', 422);
+            }
+        }
+
+        $payload = [
+            'model' => (string) $this->config['product_model'],
+            'store' => false,
+            'input' => [[
+                'role' => 'user',
+                'content' => [
+                    ['type' => 'input_text', 'text' => 'Определи основния цвят на дрехата/продукта в изображението. Върни име на цвета на български, представителен HEX код, увереност между 0 и 1 и дали е многоцветен. Игнорирай фона, сенките и текста върху продукта.'],
+                    ['type' => 'input_image', 'image_url' => $imageInput, 'detail' => 'high'],
+                ],
+            ]],
+            'text' => ['format' => ['type' => 'json_schema', 'name' => 'product_variant_color', 'strict' => true, 'schema' => [
+                'type' => 'object',
+                'additionalProperties' => false,
+                'properties' => [
+                    'color_name_bg' => ['type' => 'string'],
+                    'color_hex' => ['type' => 'string'],
+                    'confidence' => ['type' => 'number', 'minimum' => 0, 'maximum' => 1],
+                    'is_multicolor' => ['type' => 'boolean'],
+                ],
+                'required' => ['color_name_bg', 'color_hex', 'confidence', 'is_multicolor'],
+            ]]],
+            'max_output_tokens' => 300,
+        ];
+
+        $result = $this->request($payload, $apiKey);
+        $name = $this->capitalizeColorName(trim((string) ($result['color_name_bg'] ?? '')));
+        $hex = strtoupper(trim((string) ($result['color_hex'] ?? '')));
+        if ($name === '' || !preg_match('/^#[0-9A-F]{6}$/', $hex)) {
+            throw new AuthException('AI анализът не върна валиден цвят.', 502);
+        }
+
+        return ProductColorSuggestion::query()->create([
+            'product_id' => $variant->product_id,
+            'product_variant_id' => $variant->id,
+            'product_image_id' => $image->id,
+            'color_name_bg' => $name,
+            'color_hex' => $hex,
+            'confidence' => max(0, min(1, (float) ($result['confidence'] ?? 0))),
+            'is_multicolor' => (bool) ($result['is_multicolor'] ?? false),
+            'model' => (string) $this->config['product_model'],
+        ]);
+    }
+
+    private function capitalizeColorName(string $name): string
+    {
+        if ($name === '') {
+            return $name;
+        }
+
+        return mb_strtoupper(mb_substr($name, 0, 1, 'UTF-8'), 'UTF-8')
+            . mb_substr($name, 1, mb_strlen($name, 'UTF-8'), 'UTF-8');
     }
 
     private function prompt(): string

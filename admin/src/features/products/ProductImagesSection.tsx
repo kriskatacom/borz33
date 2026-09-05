@@ -773,7 +773,7 @@ export function ProductImageAsset({
   }, [src]);
 
   return (
-    <span className="relative block overflow-hidden bg-muted" aria-busy={!loaded}>
+    <span className="relative block size-full overflow-hidden bg-muted" aria-busy={!loaded}>
       {!loaded ? (
         <span className="absolute inset-0 z-10 grid place-items-center bg-muted text-muted-foreground">
           <LoaderCircle className="size-5 animate-spin" aria-hidden />

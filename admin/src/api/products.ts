@@ -139,6 +139,19 @@ export type ProductAiSuggestion = {
   seo_description: string | null;
 };
 
+export type ProductColorSuggestion = {
+  id: number;
+  product_id: number;
+  product_variant_id: number;
+  product_image_id: number | null;
+  color_name_bg: string;
+  color_hex: string;
+  confidence: number | null;
+  is_multicolor: boolean;
+  model: string | null;
+  created_at: string | null;
+};
+
 export type ProductAttributeTemplateValue = { name: string; slug: string; hex_color: string | null };
 export type ProductAttributeTemplateOption = { name: string; slug: string; values: ProductAttributeTemplateValue[] };
 export type ProductAttributeTemplateParameter = { name: string; value: string };
@@ -212,6 +225,22 @@ export function generateProductWithAiFromAttachedImages(token: string, productId
     token,
     form,
   });
+}
+
+export function listVariantColorSuggestions(token: string, productId: number, variantId: number) {
+  return apiRequest<{ suggestions: ProductColorSuggestion[] }>(`/admin/products/${productId}/variants/${variantId}/color-suggestions`, { token });
+}
+
+export function generateVariantColorSuggestion(token: string, productId: number, variantId: number) {
+  return apiRequest<{ suggestion: ProductColorSuggestion }>(`/admin/products/${productId}/variants/${variantId}/color-suggestions`, { method: 'POST', token });
+}
+
+export function applyVariantColorSuggestion(token: string, productId: number, variantId: number, suggestionId: number) {
+  return apiRequest<{ product: AdminProduct; suggestion: ProductColorSuggestion; color_value: ProductOptionValue }>('/admin/products/' + productId + '/variants/' + variantId + '/color-suggestions/' + suggestionId + '/apply', { method: 'POST', token });
+}
+
+export function deleteVariantColorSuggestion(token: string, productId: number, variantId: number, suggestionId: number) {
+  return apiRequest<Record<string, never>>('/admin/products/' + productId + '/variants/' + variantId + '/color-suggestions/' + suggestionId, { method: 'DELETE', token });
 }
 
 export function getProduct(token: string, id: number) {

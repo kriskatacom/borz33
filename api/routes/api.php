@@ -15,6 +15,7 @@ use App\Controllers\Admin\ReportsController;
 use App\Controllers\Admin\PagesController;
 use App\Controllers\Admin\ProductImagesController;
 use App\Controllers\Admin\ProductAiController;
+use App\Controllers\Admin\ProductColorAiController;
 use App\Controllers\Admin\ProductAttributeTemplatesController;
 use App\Controllers\Admin\ProductsController;
 use App\Controllers\Admin\SettingsController;
@@ -147,6 +148,10 @@ $router->post('/admin/categories/{id}/restore', [CategoriesController::class, 'r
 
 $router->post('/admin/products', [ProductsController::class, 'store'], $admin);
 $router->post('/admin/products/ai-generate', [ProductAiController::class, 'generate'], $admin);
+$router->get('/admin/products/{id}/variants/{variantId}/color-suggestions', [ProductColorAiController::class, 'index'], $admin);
+$router->post('/admin/products/{id}/variants/{variantId}/color-suggestions', [ProductColorAiController::class, 'generate'], $admin);
+$router->post('/admin/products/{id}/variants/{variantId}/color-suggestions/{suggestionId}/apply', [ProductColorAiController::class, 'apply'], $admin);
+$router->delete('/admin/products/{id}/variants/{variantId}/color-suggestions/{suggestionId}', [ProductColorAiController::class, 'delete'], $admin);
 $router->get('/admin/product-templates', [ProductAttributeTemplatesController::class, 'index'], $admin);
 $router->post('/admin/product-templates', [ProductAttributeTemplatesController::class, 'store'], $admin);
 $router->patch('/admin/product-templates/{id}', [ProductAttributeTemplatesController::class, 'update'], $admin);

@@ -6,10 +6,14 @@ import { listCategoryTree, type CategoryTreeNode } from '@/api/categories';
 import {
   createProduct,
   applyProductAttributeTemplate,
+  applyVariantColorSuggestion,
+  deleteVariantColorSuggestion,
   deleteProduct,
   generateProductWithAi,
   generateProductWithAiFromAttachedImages,
+  generateVariantColorSuggestion,
   getProduct,
+  listVariantColorSuggestions,
   listProductAttributeTemplates,
   attachVariantImage,
   restoreProduct,
@@ -20,6 +24,7 @@ import {
   type AdminProduct,
   type ProductAiSuggestion,
   type ProductAttributeTemplate,
+  type ProductColorSuggestion,
   type ProductImage,
   type ProductOption,
   type ProductParameter,
@@ -156,6 +161,7 @@ type GeneralFormProps = {
   onCreated?: (product: AdminProduct) => void | Promise<void>;
   aiSuggestion?: ProductAiSuggestion | null;
 };
+
 
 function GeneralForm({ product, token, onSaved, onCreated, aiSuggestion }: GeneralFormProps) {
   const isNew = product === null;
@@ -684,6 +690,126 @@ function mapOptions(options: ProductOption[]): OptionDraft[] {
   }));
 }
 
+function VariantColorSuggestions({
+  product,
+  token,
+  variantId,
+  colorOption,
+  onApply,
+  onProductChange,
+}: {
+  product: AdminProduct;
+  token: string;
+  variantId: number;
+  colorOption: ProductOption;
+  onApply: (slug: string) => void;
+  onProductChange: (product: AdminProduct) => void;
+}) {
+  const enabled = import.meta.env.VITE_OPENAI_PRODUCT_COLOR_ENABLED === 'true';
+  const [suggestions, setSuggestions] = useState<ProductColorSuggestion[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    void listVariantColorSuggestions(token, product.id, variantId)
+      .then((response) => setSuggestions(response.data.suggestions))
+      .catch(() => undefined);
+  }, [enabled, product.id, token, variantId]);
+
+  if (!enabled) return null;
+
+  async function suggest() {
+    setBusy(true);
+    try {
+      const response = await generateVariantColorSuggestion(token, product.id, variantId);
+      setSuggestions((current) => [response.data.suggestion, ...current.filter((item) => item.id !== response.data.suggestion.id)]);
+      toast.success(response.message || 'Предложението за цвят е записано.');
+    } catch (error) {
+      toastError(error, 'Предложението за цвят не можа да бъде генерирано.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applySuggestion(suggestion: ProductColorSuggestion) {
+    setBusy(true);
+    try {
+      const response = await applyVariantColorSuggestion(token, product.id, variantId, suggestion.id);
+      onApply(response.data.color_value.slug);
+      onProductChange(response.data.product);
+      toast.success(response.message || 'Цветът е приложен към варианта.');
+    } catch (error) {
+      toastError(error, 'Цветът не можа да бъде приложен.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeSuggestion(suggestion: ProductColorSuggestion) {
+    setBusy(true);
+    try {
+      const response = await deleteVariantColorSuggestion(token, product.id, variantId, suggestion.id);
+      setSuggestions((current) => current.filter((item) => item.id !== suggestion.id));
+      toast.success(response.message || 'Предложението за цвят е изтрито.');
+    } catch (error) {
+      toastError(error, 'Предложението не можа да бъде изтрито.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-2 rounded-[6px] border border-border bg-muted/30 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void suggest()}>
+          <Sparkles />{busy ? 'Анализира…' : 'Предложи цвят с AI'}
+        </Button>
+        <span className="text-xs text-muted-foreground">Анализира изображението на този вариант.</span>
+      </div>
+      {suggestions.length > 0 ? (
+        <div className="flex flex-wrap gap-2" aria-label="Запазени предложения за цвят">
+          {suggestions.map((suggestion) => {
+            const matchingValue = colorOption.values.find((value) => value.name.trim().toLocaleLowerCase('bg-BG') === suggestion.color_name_bg.trim().toLocaleLowerCase('bg-BG'));
+            return (
+              <button
+                key={suggestion.id}
+                type="button"
+                className="inline-flex items-center gap-2 rounded-[6px] border border-border bg-card px-2.5 py-1.5 text-sm transition-colors hover:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={busy}
+                title={matchingValue ? 'Избери този цвят за варианта' : 'Добави и избери този запазен цвят'}
+                onClick={() => void applySuggestion(suggestion)}
+              >
+                <span className="size-4 rounded-full border border-border" style={{ backgroundColor: suggestion.color_hex }} aria-hidden />
+                {suggestion.color_name_bg}
+                <code className="text-[0.7rem] text-muted-foreground">{suggestion.color_hex}</code>
+                <span
+                  role="button"
+                  tabIndex={busy ? -1 : 0}
+                  aria-label={'Изтрий предложението ' + suggestion.color_name_bg}
+                  className="ml-1 inline-flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (!busy) void removeSuggestion(suggestion);
+                  }}
+                  onKeyDown={(event) => {
+                    if ((event.key === 'Enter' || event.key === ' ') && !busy) {
+                      event.preventDefault();
+                      void removeSuggestion(suggestion);
+                    }
+                  }}
+                >
+                  <X className="size-3.5" aria-hidden />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function VariantsForm({ product, token, onSaved, focusVariantId, lowStockThreshold }: SectionFormProps & { focusVariantId?: number; lowStockThreshold: number }) {
   const [rows, setRows] = useState<VariantDraft[]>(() => mapVariants(product.variants));
   const [busy, setBusy] = useState(false);
@@ -892,6 +1018,7 @@ function VariantsForm({ product, token, onSaved, focusVariantId, lowStockThresho
       {rows.length === 0 ? <p className="m-0 text-muted-foreground">Няма варианти. Добавете комбинация от опциите.</p> : null}
       {rows.map((row, index) => {
         const lowStock = lowStockThreshold > 0 && (Number.parseInt(row.stock, 10) || 0) < lowStockThreshold;
+        const colorOption = product.options.find((option) => option.slug === 'color' || option.name.trim().toLocaleLowerCase('bg-BG').includes('цвят'));
 
         return (
         <div id={row.id === focusVariantId ? `product-variant-${row.id}` : undefined} key={row.key} className={`${row.id === focusVariantId ? 'product-variant-target ' : ''}${lowStock ? 'rounded-[6px] border border-amber-500/60 bg-amber-500/5 p-1' : ''}`}>
@@ -946,6 +1073,16 @@ function VariantsForm({ product, token, onSaved, focusVariantId, lowStockThresho
                 </div>
               ))}
             </div>
+            {colorOption && row.id ? (
+              <VariantColorSuggestions
+                product={product}
+                token={token}
+                variantId={row.id}
+                colorOption={colorOption}
+                onApply={(slug) => patchRow(index, { option_values: { ...row.option_values, [colorOption.slug]: slug } })}
+                onProductChange={onSaved}
+              />
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <SwitchField
                 id={`${row.key}-active`}

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { FolderOpen, ImagePlus, Trash2, Upload, ZoomIn } from 'lucide-react';
+import { FolderOpen, ImagePlus, Trash2, Upload } from 'lucide-react';
 import { attachVariantImage, deleteVariantImage, uploadVariantImage, type AdminProduct, type ProductImage } from '@/api/products';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -214,7 +214,7 @@ export function VariantImageField({
         <button
           type="button"
           className={cn(
-            'relative size-32 shrink-0 overflow-hidden rounded-[6px] border border-dashed border-border bg-field p-0 transition-colors',
+            'relative size-40 shrink-0 overflow-hidden rounded-xl border border-border bg-transparent p-0 shadow-none transition-colors',
             over && 'border-primary bg-primary/6',
             shown && !busy && 'cursor-zoom-in'
           )}
@@ -241,13 +241,6 @@ export function VariantImageField({
               <span className="px-1 text-center text-xs">Качи</span>
             </span>
           )}
-          {shown && !busy ? (
-            <span className="absolute inset-x-0 bottom-0 flex justify-end bg-gradient-to-t from-foreground/70 to-transparent p-1.5">
-              <span className="flex size-8 items-center justify-center rounded-[6px] bg-secondary text-secondary-foreground">
-                <ZoomIn className="size-4" aria-hidden />
-              </span>
-            </span>
-          ) : null}
           {busy ? (
             <span className="absolute inset-0 flex items-center justify-center bg-background/70 text-sm font-bold">
               {progress}%
