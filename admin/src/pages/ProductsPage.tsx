@@ -237,7 +237,7 @@ export function ProductsPage() {
             </SelectContent>
           </Select>
         </div>
-      </form></div></div> : null}
+      </form><footer className="dialog-actions filter-dialog-actions"><Button type="button" variant="outline" onClick={() => setFilterDialogOpen(false)}>Затвори</Button></footer></div></div> : null}
 
       {message ? (
         <p className="form-message is-error" role="alert">

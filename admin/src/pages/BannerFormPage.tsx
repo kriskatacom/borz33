@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type CSSProperties } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, ChevronUp, Copy, FolderOpen, Image, Plus, Save, Trash2, X } from 'lucide-react';
 import { ApiError } from '@/api/client';
@@ -176,6 +176,11 @@ export function BannerFormPage() {
   const [busy, setBusy] = useState(!isNew);
   const [message, setMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [previewWidth, setPreviewWidth] = useState(() => {
+    const stored = Number(window.localStorage.getItem('admin-banner-preview-width'));
+    return Number.isFinite(stored) ? Math.min(900, Math.max(390, stored)) : 520;
+  });
+  const resizingPreview = useRef(false);
   const title = isNew ? 'Нов банер' : 'Редакция';
   useGlobalLoading(busy);
 
@@ -235,6 +240,42 @@ export function BannerFormPage() {
 
   function patchForm<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function savePreviewWidth(width: number) {
+    window.localStorage.setItem('admin-banner-preview-width', String(width));
+  }
+
+  function resizePreview(event: ReactPointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    resizingPreview.current = true;
+    const startX = event.clientX;
+    const startWidth = previewWidth;
+    let currentWidth = startWidth;
+    document.body.classList.add('banner-preview-resizing');
+
+    const onMove = (moveEvent: globalThis.PointerEvent) => {
+      currentWidth = Math.min(900, Math.max(390, startWidth - moveEvent.clientX + startX));
+      setPreviewWidth(currentWidth);
+    };
+    const onUp = () => {
+      savePreviewWidth(currentWidth);
+      resizingPreview.current = false;
+      document.body.classList.remove('banner-preview-resizing');
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+  }
+
+  function resizePreviewWithKeyboard(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    const next = Math.min(900, Math.max(390, previewWidth + (event.key === 'ArrowLeft' ? 8 : -8)));
+    setPreviewWidth(next);
+    savePreviewWidth(next);
   }
 
   function patchButton(index: number, patch: Partial<ButtonDraft>) {
@@ -342,8 +383,8 @@ export function BannerFormPage() {
       ) : null}
 
       {!isNew && busy && !form.title ? <AdminPageSkeleton sections={2} /> : canEdit ? (
-        <form className="banner-form-with-preview" onSubmit={(event) => void onSubmit(event)} noValidate>
-          <div className="flex min-w-0 max-w-full flex-col gap-3">
+        <form className="banner-form-with-preview" style={{ '--banner-preview-width': `${previewWidth}px` } as CSSProperties} onSubmit={(event) => void onSubmit(event)} noValidate>
+          <div className="banner-form-column flex min-w-0 max-w-full flex-col gap-3">
           <CollapsibleSection
             title="Банер"
             icon={Image}
@@ -651,6 +692,7 @@ export function BannerFormPage() {
             </Button>
           </div>
           </div>
+          <button type="button" className="banner-preview-resizer" aria-label="Промени ширината на прегледа" title="Промени ширината на прегледа" onPointerDown={resizePreview} onKeyDown={resizePreviewWithKeyboard} aria-orientation="vertical" />
           <BannerPreview form={form} buttons={buttons} media={media} />
         </form>
       ) : null}

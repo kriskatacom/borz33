@@ -137,7 +137,7 @@ export function OrdersPage() {
         <div className="field"><LabelWithHelp htmlFor="orders-payment" label="Плащане" help="Избран метод на плащане." /><Select value={filters.payment_method} onValueChange={(value) => updateParams({ payment_method: value })}><SelectTrigger id="orders-payment" className="min-h-12 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Всички</SelectItem><SelectItem value="cash_on_delivery">Наложен платеж</SelectItem></SelectContent></Select></div>
         <Field id="orders-date-from" label="От дата" type="date" value={filters.date_from} onChange={(event) => updateParams({ date_from: event.target.value })} />
         <Field id="orders-date-to" label="До дата" type="date" value={filters.date_to} min={filters.date_from} onChange={(event) => updateParams({ date_to: event.target.value })} />
-      </form></div></div> : null}
+      </form><footer className="dialog-actions filter-dialog-actions"><Button type="button" variant="outline" onClick={() => setFilterDialogOpen(false)}>Затвори</Button></footer></div></div> : null}
       {message ? <p className="form-message is-error" role="alert">{message}</p> : null}
       <DataTable columns={columns} data={orders} loading={busy} emptyMessage="Няма поръчки за избраните филтри." caption="Поръчки" pagination={{ page: filters.page, lastPage: pagination.lastPage, total: pagination.total, pageSize: filters.per_page, onPageChange: (page) => updateParams({ page: String(page) }, false), onPageSizeChange: (size) => updateParams({ per_page: size === DEFAULT_PAGE_SIZE ? '' : String(size) }) }} />
     </div>

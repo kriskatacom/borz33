@@ -40,7 +40,9 @@ export const navSections: NavSection[] = [
   { label: 'Каталог', items: navItems.filter((item) => new Set<string>([routes.products, routes.categories, routes.media]).has(item.to)) },
   { label: 'Съдържание', items: navItems.filter((item) => new Set<string>([routes.pages, routes.banners]).has(item.to)) },
   { label: 'Комуникация', items: navItems.filter((item) => item.to === routes.messages) },
-  { label: 'Анализи и настройки', items: navItems.filter((item) => new Set<string>([routes.reports, routes.accounting, routes.users, routes.settings, routes.customization]).has(item.to)) },
+  { label: 'Анализи', items: navItems.filter((item) => new Set<string>([routes.reports, routes.accounting]).has(item.to)) },
+  { label: 'Управление', items: navItems.filter((item) => item.to === routes.users) },
+  { label: 'Настройки', items: navItems.filter((item) => new Set<string>([routes.settings, routes.customization]).has(item.to)) },
 ];
 
 export function navItemByPath(path: string): NavItem | undefined {

@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Field } from '@/components/ui/Field';
+import { FilterDialog } from '@/components/ui/FilterDialog';
 import { LabelWithHelp } from '@/components/ui/HelpHint';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getUsersColumns } from '@/features/users/usersColumns';
@@ -34,6 +35,7 @@ export function UsersPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState<ManagedUser | null>(null);
   const [acting, setActing] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   useGlobalLoading(busy);
 
   const filters = useMemo(
@@ -158,63 +160,71 @@ export function UsersPage() {
           { label: 'Потребители' },
         ]}
         actions={
-          <Button asChild>
-            <Link to={routes.usersNew}>
-              <UserPlus />
-              Нов потребител
-            </Link>
-          </Button>
+          <>
+            <Button type="button" variant="outline" onClick={() => setFilterDialogOpen(true)}>Филтри (3)</Button>
+            <Button asChild>
+              <Link to={routes.usersNew}>
+                <UserPlus />
+                Нов потребител
+              </Link>
+            </Button>
+          </>
         }
       />
 
-      <form className="filters" onSubmit={(event) => event.preventDefault()}>
-        <Field
-          id="q"
-          label="Търсене"
-          help="Търси по име, имейл или телефон. Резултатите се обновяват докато пишете."
-          value={search}
-          placeholder="Име, имейл или телефон"
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <div className="field">
-          <LabelWithHelp
-            htmlFor="role"
-            label="Роля"
-            help="Показва само потребители с избраната роля. „Всички роли“ включва и администратори, и клиенти."
-          />
-          <Select
-            value={filters.role || 'all'}
-            onValueChange={(value) => updateParams({ role: value === 'all' ? '' : value })}
-          >
-            <SelectTrigger id="role" className="w-full min-h-12 font-sans">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Всички роли</SelectItem>
-              <SelectItem value="admin">Администратор</SelectItem>
-              <SelectItem value="customer">Клиент</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="field">
-          <LabelWithHelp
-            htmlFor="status"
-            label="Статус"
-            help="По подразбиране изтритите са скрити. Активен може да влиза, неактивен е блокиран, изтрит може да се възстанови."
-          />
-          <Select value={filters.status} onValueChange={(value) => updateParams({ status: value })}>
-            <SelectTrigger id="status" className="w-full min-h-12 font-sans">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Всички (без изтрити)</SelectItem>
-              <SelectItem value="active">Активни</SelectItem>
-              <SelectItem value="inactive">Неактивни</SelectItem>
-              <SelectItem value="deleted">Изтрити</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </form>
+      <FilterDialog open={filterDialogOpen}>
+          <button type="button" className="dialog-backdrop" aria-label="Затвори филтрите" onClick={() => setFilterDialogOpen(false)} />
+          <div className="dialog dialog-wide catalog-filters-dialog" role="dialog" aria-modal="true" aria-labelledby="users-filters-title">
+            <header className="orders-filters-dialog-header">
+              <h2 id="users-filters-title">Филтри на потребителите</h2>
+              <Button type="button" variant="ghost" size="icon" aria-label="Затвори филтрите" onClick={() => setFilterDialogOpen(false)}>×</Button>
+            </header>
+            <form className="filters catalog-filters" onSubmit={(event) => event.preventDefault()}>
+              <Field
+                id="q"
+                label="Търсене"
+                help="Търси по име, имейл или телефон. Резултатите се обновяват докато пишете."
+                value={search}
+                placeholder="Име, имейл или телефон"
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <div className="field">
+                <LabelWithHelp
+                  htmlFor="role"
+                  label="Роля"
+                  help="Показва само потребители с избраната роля. „Всички роли“ включва и администратори, и клиенти."
+                />
+                <Select value={filters.role || 'all'} onValueChange={(value) => updateParams({ role: value === 'all' ? '' : value })}>
+                  <SelectTrigger id="role" className="w-full min-h-12 font-sans"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Всички роли</SelectItem>
+                    <SelectItem value="admin">Администратор</SelectItem>
+                    <SelectItem value="customer">Клиент</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="field">
+                <LabelWithHelp
+                  htmlFor="status"
+                  label="Статус"
+                  help="По подразбиране изтритите са скрити. Активен може да влиза, неактивен е блокиран, изтрит може да се възстанови."
+                />
+                <Select value={filters.status} onValueChange={(value) => updateParams({ status: value })}>
+                  <SelectTrigger id="status" className="w-full min-h-12 font-sans"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Всички (без изтрити)</SelectItem>
+                    <SelectItem value="active">Активни</SelectItem>
+                    <SelectItem value="inactive">Неактивни</SelectItem>
+                    <SelectItem value="deleted">Изтрити</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </form>
+            <footer className="dialog-actions filter-dialog-actions">
+              <Button type="button" variant="outline" onClick={() => setFilterDialogOpen(false)}>Затвори</Button>
+            </footer>
+          </div>
+      </FilterDialog>
 
       {message ? (
         <p className="form-message is-error" role="alert">

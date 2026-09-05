@@ -43,6 +43,10 @@ const emptyForm: FormState = {
   password_confirmation: '',
 };
 
+const phoneCountryOptions = phoneCountries.filter(
+  (country, index, countries) => countries.findIndex((item) => item[2] === country[2]) === index,
+);
+
 const sectionFields: Record<FormSectionId, Array<keyof FormState>> = {
   profile: ['first_name', 'last_name', 'email', 'phone'],
   access: ['role'],
@@ -292,11 +296,16 @@ export function UserFormPage() {
             />
             <div className="grid gap-2">
               <label className="text-sm font-semibold" htmlFor="phone-number">Телефон</label>
-              <div className="flex min-w-0 rounded-md border border-input bg-background focus-within:border-ring">
-                <select id="phone-country" aria-label="Код на държавата за телефон" className="h-10 max-w-[11rem] shrink-0 border-0 border-r border-input bg-transparent px-2 text-sm text-foreground outline-none" value={phoneCountry} onChange={(event) => setPhoneCountry(event.target.value)}>
-                  {phoneCountries.map(([code, name, dialCode]) => <option key={code} value={dialCode}>{name} ({dialCode})</option>)}
-                </select>
-                <input id="phone-number" type="tel" className="h-10 min-w-0 flex-1 bg-transparent px-3 text-foreground outline-none" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} autoComplete="tel-national" placeholder="88 123 4567" />
+              <div className="admin-phone-field !flex min-w-0 overflow-hidden rounded-md border border-input bg-field focus-within:border-ring">
+                <Select value={phoneCountry} onValueChange={setPhoneCountry}>
+                  <SelectTrigger id="phone-country" aria-label="Код на държавата за телефон" className="h-12 min-h-12 w-auto max-w-[11rem] shrink-0 rounded-none border-0 bg-field px-2 text-base font-sans focus-visible:ring-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {phoneCountryOptions.map(([code, name, dialCode]) => <SelectItem key={code} value={dialCode}>{name} ({dialCode})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <input id="phone-number" type="tel" className="h-12 min-h-12 min-w-0 flex-1 bg-transparent px-3 text-foreground outline-none" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} autoComplete="tel-national" placeholder="88 123 4567" />
               </div>
               {errors.phone ? <p className="m-0 text-sm text-destructive">{errors.phone}</p> : null}
               <p className="m-0 text-xs text-muted-foreground">Кодът и номерът се записват заедно, например +359 88 123 4567.</p>

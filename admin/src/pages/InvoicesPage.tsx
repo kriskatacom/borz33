@@ -66,7 +66,7 @@ export function InvoicesPage({ documentType }: { documentType: InvoiceType }) {
       <div className="field"><LabelWithHelp htmlFor="invoice-status" label="Статус" help="Статус на документа." /><Select value={filters.status} onValueChange={(value) => update({ status: value })}><SelectTrigger id="invoice-status"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Всички</SelectItem>{Object.entries(statusLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>
       <div className="field"><label htmlFor="date-from">От дата</label><DatePicker id="date-from" label="От дата" value={filters.date_from} max={filters.date_to} onChange={(value) => update({ date_from: value })} /></div>
       <div className="field"><label htmlFor="date-to">До дата</label><DatePicker id="date-to" label="До дата" value={filters.date_to} min={filters.date_from} onChange={(value) => update({ date_to: value })} /></div>
-    </form></div></div> : null}
+    </form><footer className="dialog-actions filter-dialog-actions"><Button type="button" variant="outline" onClick={() => setFilterDialogOpen(false)}>Затвори</Button></footer></div></div> : null}
     <DataTable columns={columns} data={data} loading={busy} emptyMessage="Няма документи за избраните филтри." caption="Фактури" pagination={{ page: filters.page, lastPage: pagination.lastPage, total: pagination.total, pageSize: filters.per_page, onPageChange: (page) => update({ page: String(page) }, false), onPageSizeChange: (size) => update({ per_page: String(size) }) }} />
   </div>;
 }
